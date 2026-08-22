@@ -1,0 +1,20 @@
+# NetBeans
+nbproject/private/
+nbproject/project.properties
+build/
+dist/
+
+# Local configuration (each developer has their own)
+config/config.local.php
+
+# Uploaded complaint photos - never commit user content
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini

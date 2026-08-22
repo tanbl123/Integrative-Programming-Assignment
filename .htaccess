@@ -1,0 +1,12 @@
+# EcoCampus Waste Management System
+# Routes every request through the front controller (index.php).
+
+RewriteEngine On
+
+# Allow real files and folders (css, images, uploads) to be served directly.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
+
+# Block direct browser access to the application source.
+RewriteRule ^(app|config|database)/ - [F,L]

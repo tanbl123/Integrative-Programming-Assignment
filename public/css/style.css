@@ -1,0 +1,111 @@
+/*
+ * EcoCampus Waste Management System - stylesheet
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Shared core
+ */
+
+:root {
+    --green:      #2e7d4f;
+    --green-dark: #1f5637;
+    --ink:        #1c2321;
+    --muted:      #5f6b66;
+    --line:       #dfe5e2;
+    --bg:         #f7f9f8;
+    --warn:       #b8541c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.6;
+}
+
+.wrap { width: min(1080px, 92%); margin: 0 auto; }
+
+/* ---------- Header ---------- */
+.site-header {
+    background: var(--green);
+    color: #fff;
+    padding: 0.9rem 0;
+}
+.site-header .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.brand { font-size: 1.25rem; font-weight: 700; color: #fff; text-decoration: none; }
+.site-header nav a {
+    color: #e8f2ec;
+    text-decoration: none;
+    margin-left: 1.25rem;
+    font-size: 0.95rem;
+}
+.site-header nav a:hover { color: #fff; text-decoration: underline; }
+
+/* ---------- Content ---------- */
+main { padding: 2rem 0 3rem; }
+h1 { font-size: 1.6rem; margin: 0 0 0.4rem; }
+h2 { font-size: 1.2rem; margin: 2rem 0 0.75rem; }
+.lead { color: var(--muted); margin-top: 0; }
+
+/* ---------- Stat tiles ---------- */
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+.stat {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1.1rem 1.25rem;
+}
+.stat-value { display: block; font-size: 2rem; font-weight: 700; color: var(--green-dark); }
+.stat-label { display: block; font-size: 0.85rem; color: var(--muted); }
+
+/* ---------- Tables ---------- */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.table th, .table td {
+    text-align: left;
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.93rem;
+}
+.table th { background: #eef3f0; font-weight: 600; }
+.table tr:last-child td { border-bottom: none; }
+
+.badge {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.badge-full { background: #fbe9df; color: var(--warn); }
+
+.empty { color: var(--muted); font-style: italic; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+    border-top: 1px solid var(--line);
+    padding: 1.25rem 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+    background: #fff;
+}
+.site-footer p { margin: 0.2rem 0; }
