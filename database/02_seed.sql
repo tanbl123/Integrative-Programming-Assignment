@@ -65,16 +65,16 @@ INSERT INTO bins (bin_code, location_id, category_id, fill_status, capacity_litr
 -- Complaints - sample data for the Complaint / Report Management module
 -- ---------------------------------------------------------------------
 INSERT INTO complaints (reporter_id, bin_id, complaint_type, description, complaint_status) VALUES
-(3, 3, 'Overflow',            'The bin beside the food counter is overflowing and rubbish is on the floor.', 'Pending'),
-(4, 4, 'Full Bin',            'Organic waste bin in the cafeteria is completely full since this morning.',   'In Progress'),
-(5, 8, 'Damaged Bin',         'The lid of the bin at the rear exit of LH1 is broken and will not close.',    'Pending'),
+(3, 3, 'Overflow',            'The bin beside the food counter is overflowing and rubbish is on the floor.', 'New'),
+(4, 4, 'Full Bin',            'Organic waste bin in the cafeteria is completely full since this morning.',   'Assigned'),
+(5, 8, 'Damaged Bin',         'The lid of the bin at the rear exit of LH1 is broken and will not close.',    'New'),
 (3, 9, 'Dirty Area',          'Area around the car park bin is dirty and smells strongly.',                  'Resolved'),
-(4, 1, 'Wrong Waste Disposal','Someone put food waste into the general waste bin in the main lobby.',        'Pending');
+(4, 1, 'Wrong Waste Disposal','Someone put food waste into the general waste bin in the main lobby.',        'New');
 
 -- ---------------------------------------------------------------------
 -- Status history for the complaints that have already moved on
 -- ---------------------------------------------------------------------
 INSERT INTO complaint_status_history (complaint_id, updated_by, old_status, new_status, remarks) VALUES
-(2, 1, 'Pending',     'In Progress', 'Assigned to cleaner Ahmad Zaki.'),
-(4, 1, 'Pending',     'In Progress', 'Cleaning team notified.'),
-(4, 1, 'In Progress', 'Resolved',    'Area cleaned and bin emptied.');
+(2, 1, 'New',      'Assigned', 'Assigned to cleaner Ahmad Zaki.'),
+(4, 1, 'New',      'Assigned', 'Cleaning team notified.'),
+(4, 1, 'Assigned', 'Resolved', 'Area cleaned and bin emptied.');

@@ -1,0 +1,2 @@
+# Uploaded evidence is only served through ComplaintController after access checks.
+Require all denied

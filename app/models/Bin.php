@@ -26,6 +26,9 @@ class Bin extends Model
 
     public function getBinCode(): string     { return (string) $this->get('bin_code'); }
     public function getFillStatus(): string  { return (string) $this->get('fill_status'); }
+    public function getLastUpdated(): string { return (string) $this->get('last_updated'); }
+    public function getLocationId(): int     { return (int) $this->get('location_id'); }
+    public function getCategoryId(): int     { return (int) $this->get('category_id'); }
     public function getCapacityLitre(): ?int
     {
         $capacity = $this->get('capacity_litre');
@@ -33,6 +36,42 @@ class Bin extends Model
     }
 
     public function isActive(): bool { return (int) $this->get('is_active') === 1; }
+
+    public static function statuses(): array
+    {
+        return [
+            self::STATUS_EMPTY,
+            self::STATUS_HALF,
+            self::STATUS_FULL,
+            self::STATUS_MAINTENANCE,
+        ];
+    }
+
+    public function setDetails(
+        string $code,
+        int $locationId,
+        int $categoryId,
+        ?int $capacityLitre,
+        bool $active = true
+    ): void {
+        $this->set('bin_code', $code);
+        $this->set('location_id', $locationId);
+        $this->set('category_id', $categoryId);
+        $this->set('capacity_litre', $capacityLitre);
+        $this->set('is_active', $active ? 1 : 0);
+        $this->set('last_updated', ifaTimestamp());
+    }
+
+    public function setFillStatus(string $status): void
+    {
+        $this->set('fill_status', $status);
+        $this->set('last_updated', ifaTimestamp());
+    }
+
+    public function deactivate(): void
+    {
+        $this->set('is_active', 0);
+    }
 
     /** Object reference to the Location this bin sits in. */
     public function getLocation(): ?Location
@@ -62,5 +101,57 @@ class Bin extends Model
     public static function findActive(): array
     {
         return self::where('is_active', 1);
+    }
+
+    public static function findByCode(string $code): ?Bin
+    {
+        $row = Database::getInstance()->selectOne(
+            'SELECT * FROM bins WHERE bin_code = ? LIMIT 1',
+            [$code]
+        );
+
+        return $row === null ? null : self::hydrate($row);
+    }
+
+    public static function search(
+        string $query = '',
+        string $status = '',
+        ?int $locationId = null,
+        bool $includeInactive = false
+    ): array {
+        $sql = 'SELECT DISTINCT b.* FROM bins b'
+             . ' INNER JOIN locations l ON l.location_id = b.location_id'
+             . ' WHERE 1 = 1';
+        $params = [];
+
+        if (!$includeInactive) {
+            $sql .= ' AND b.is_active = 1';
+        }
+
+        if ($query !== '') {
+            $sql .= ' AND (b.bin_code LIKE ? OR l.location_name LIKE ?'
+                  . ' OR l.building_name LIKE ?)';
+            $like = '%' . $query . '%';
+            array_push($params, $like, $like, $like);
+        }
+
+        if ($status !== '') {
+            $sql .= ' AND b.fill_status = ?';
+            $params[] = $status;
+        }
+
+        if ($locationId !== null) {
+            $sql .= ' AND b.location_id = ?';
+            $params[] = $locationId;
+        }
+
+        $sql .= ' ORDER BY b.bin_code ASC';
+
+        return self::hydrateAll(Database::getInstance()->selectAll($sql, $params));
+    }
+
+    public function getStatusUpdates(): array
+    {
+        return $this->hasMany(BinStatusUpdate::class, 'bin_id');
     }
 }

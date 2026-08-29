@@ -3,6 +3,7 @@
  * Front controller - the single entry point for every request.
  *
  * Author : Tan Boon Leong (2402865)
+ * Updated: Ong Kar Heng (2408830) - module service autoloading
  * Module : Shared core - EcoCampus Waste Management System
  *
  * .htaccess rewrites every URL to this file, so all requests are bootstrapped
@@ -22,7 +23,7 @@ require_once APP_ROOT . '/app/core/helpers.php';
  * files never need long lists of require statements.
  */
 spl_autoload_register(static function (string $class): void {
-    foreach (['/app/core/', '/app/models/'] as $directory) {
+    foreach (['/app/core/', '/app/models/', '/app/services/'] as $directory) {
         $file = APP_ROOT . $directory . $class . '.php';
         if (file_exists($file)) {
             require_once $file;

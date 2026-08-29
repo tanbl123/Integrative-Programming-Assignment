@@ -3,6 +3,7 @@
  * Shared helper functions.
  *
  * Author : Tan Boon Leong (2402865)
+ * Updated: Ong Kar Heng (2408830) - CSRF form helper
  * Module : Shared core - EcoCampus Waste Management System
  */
 
@@ -31,4 +32,10 @@ function url(string $path = ''): string
 function ifaTimestamp(): string
 {
     return date('Y-m-d H:i:s');
+}
+
+/** Hidden CSRF field required in every state-changing HTML form. */
+function csrfField(): string
+{
+    return '<input type="hidden" name="_token" value="' . e(Csrf::token()) . '">';
 }

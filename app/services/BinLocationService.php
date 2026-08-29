@@ -1,0 +1,226 @@
+<?php
+/**
+ * Real subject containing Bin & Location business rules.
+ *
+ * Author : Ong Kar Heng (2408830)
+ * Module : Bin & Location Management
+ */
+class BinLocationService implements BinLocationServiceInterface
+{
+    public function authorizeAdministrator(): void {}
+    public function authorizeCleaner(): void {}
+
+    public function searchBins(
+        string $query,
+        string $status,
+        ?int $locationId,
+        bool $includeInactive
+    ): array {
+        if ($status !== '' && !in_array($status, Bin::statuses(), true)) {
+            $status = '';
+        }
+
+        return Bin::search(trim($query), $status, $locationId, $includeInactive);
+    }
+
+    public function findBin(int $id): ?Bin
+    {
+        return Bin::find($id);
+    }
+
+    public function createBin(array $data): Bin
+    {
+        $values = $this->validateBin($data);
+        $bin = new Bin();
+        $bin->setDetails(...$values);
+        $bin->setFillStatus(Bin::STATUS_EMPTY);
+        $bin->save();
+        return $bin;
+    }
+
+    public function updateBin(int $id, array $data): Bin
+    {
+        $bin = $this->requireBin($id);
+        $values = $this->validateBin($data, $id);
+        $bin->setDetails(...$values);
+        $bin->save();
+        return $bin;
+    }
+
+    public function deactivateBin(int $id): void
+    {
+        $bin = $this->requireBin($id);
+        $bin->deactivate();
+        $bin->save();
+    }
+
+    public function updateBinStatus(
+        int $id,
+        string $status,
+        string $remarks,
+        int $cleanerId
+    ): Bin {
+        $bin = $this->requireBin($id);
+        $errors = [];
+        if (!$bin->isActive()) {
+            $errors['fill_status'] = 'An inactive bin cannot receive status updates.';
+        }
+        if (!in_array($status, Bin::statuses(), true)) {
+            $errors['fill_status'] = 'Select a valid fill status.';
+        }
+        if (mb_strlen($remarks) > 255) {
+            $errors['remarks'] = 'Remarks cannot exceed 255 characters.';
+        }
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
+
+        $oldStatus = $bin->getFillStatus();
+        $pdo = Database::getInstance()->pdo();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) {
+            $pdo->beginTransaction();
+        }
+        try {
+            $bin->setFillStatus($status);
+            $bin->save();
+
+            $update = new BinStatusUpdate();
+            $update->setDetails(
+                $bin->getKey(),
+                $cleanerId,
+                $oldStatus,
+                $status,
+                $remarks === '' ? null : $remarks
+            );
+            $update->save();
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $error;
+        }
+
+        return $bin;
+    }
+
+    public function searchLocations(string $query): array
+    {
+        return Location::search(trim($query));
+    }
+
+    public function findLocation(int $id): ?Location
+    {
+        return Location::find($id);
+    }
+
+    public function createLocation(array $data): Location
+    {
+        $values = $this->validateLocation($data);
+        $location = new Location();
+        $location->setDetails(...$values);
+        $location->save();
+        return $location;
+    }
+
+    public function updateLocation(int $id, array $data): Location
+    {
+        $location = $this->requireLocation($id);
+        $values = $this->validateLocation($data);
+        $location->setDetails(...$values);
+        $location->save();
+        return $location;
+    }
+
+    public function categories(): array
+    {
+        return WasteCategory::all();
+    }
+
+    private function validateBin(array $data, ?int $currentId = null): array
+    {
+        $code = mb_strtoupper(trim((string) ($data['bin_code'] ?? '')));
+        $locationId = filter_var($data['location_id'] ?? null, FILTER_VALIDATE_INT);
+        $categoryId = filter_var($data['category_id'] ?? null, FILTER_VALIDATE_INT);
+        $capacityRaw = trim((string) ($data['capacity_litre'] ?? ''));
+        $capacity = $capacityRaw === '' ? null : filter_var($capacityRaw, FILTER_VALIDATE_INT);
+        $active = (string) ($data['is_active'] ?? '1') === '1';
+        $errors = [];
+
+        if (!preg_match('/^[A-Z0-9-]{3,50}$/', $code)) {
+            $errors['bin_code'] = 'Use 3-50 uppercase letters, numbers, or hyphens.';
+        } else {
+            $existing = Bin::findByCode($code);
+            if ($existing !== null && $existing->getKey() !== $currentId) {
+                $errors['bin_code'] = 'That bin code is already registered.';
+            }
+        }
+        if ($locationId === false || Location::find((int) $locationId) === null) {
+            $errors['location_id'] = 'Select a valid location.';
+        }
+        if ($categoryId === false || WasteCategory::find((int) $categoryId) === null) {
+            $errors['category_id'] = 'Select a valid waste category.';
+        }
+        if ($capacity !== null && ($capacity === false || $capacity < 1 || $capacity > 10000)) {
+            $errors['capacity_litre'] = 'Capacity must be between 1 and 10,000 litres.';
+        }
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
+
+        return [$code, (int) $locationId, (int) $categoryId, $capacity, $active];
+    }
+
+    private function validateLocation(array $data): array
+    {
+        $name = trim((string) ($data['location_name'] ?? ''));
+        $building = trim((string) ($data['building_name'] ?? ''));
+        $floor = trim((string) ($data['floor_no'] ?? ''));
+        $description = trim((string) ($data['description'] ?? ''));
+        $errors = [];
+
+        if ($name === '' || mb_strlen($name) > 100) {
+            $errors['location_name'] = 'Location name is required and cannot exceed 100 characters.';
+        }
+        if (mb_strlen($building) > 100) {
+            $errors['building_name'] = 'Building name cannot exceed 100 characters.';
+        }
+        if (mb_strlen($floor) > 20) {
+            $errors['floor_no'] = 'Floor cannot exceed 20 characters.';
+        }
+        if (mb_strlen($description) > 255) {
+            $errors['description'] = 'Description cannot exceed 255 characters.';
+        }
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
+
+        return [
+            $name,
+            $building === '' ? null : $building,
+            $floor === '' ? null : $floor,
+            $description === '' ? null : $description,
+        ];
+    }
+
+    private function requireBin(int $id): Bin
+    {
+        $bin = Bin::find($id);
+        if ($bin === null) {
+            throw new OutOfBoundsException('Bin not found.');
+        }
+        return $bin;
+    }
+
+    private function requireLocation(int $id): Location
+    {
+        $location = Location::find($id);
+        if ($location === null) {
+            throw new OutOfBoundsException('Location not found.');
+        }
+        return $location;
+    }
+}

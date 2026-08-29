@@ -3,6 +3,7 @@
  * Controller - base class for every controller in the system.
  *
  * Author : Tan Boon Leong (2402865)
+ * Updated: Ong Kar Heng (2408830) - secure action/error helpers
  * Module : Shared core - EcoCampus Waste Management System
  *
  * In MVC the Controller is the middle layer: it receives the request,
@@ -70,5 +71,47 @@ abstract class Controller
     protected function input(string $field, string $default = ''): string
     {
         return trim((string) ($_POST[$field] ?? $default));
+    }
+
+    /** Rejects accidental GET requests to state-changing actions. */
+    protected function requirePost(): void
+    {
+        if (!$this->isPost()) {
+            http_response_code(405);
+            header('Allow: POST');
+            $this->view('errors/message', [
+                'title' => 'Method Not Allowed',
+                'heading' => 'Method not allowed',
+                'message' => 'This action must be submitted from its form.',
+            ]);
+            exit;
+        }
+    }
+
+    /** Converts authentication/authorization exceptions into safe responses. */
+    protected function handleAccessFailure(Throwable $error): void
+    {
+        if ($error instanceof AuthenticationException) {
+            Flash::set('error', $error->getMessage());
+            $this->redirect('auth');
+        }
+
+        http_response_code(403);
+        $this->view('errors/message', [
+            'title' => 'Access Denied',
+            'heading' => 'Access denied',
+            'message' => $error->getMessage(),
+        ]);
+    }
+
+    /** Standard not-found response for entity URLs. */
+    protected function entityNotFound(string $entity): void
+    {
+        http_response_code(404);
+        $this->view('errors/message', [
+            'title' => $entity . ' Not Found',
+            'heading' => $entity . ' not found',
+            'message' => 'The requested record does not exist.',
+        ]);
     }
 }

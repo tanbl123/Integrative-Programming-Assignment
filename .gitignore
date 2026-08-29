@@ -10,6 +10,7 @@ config/config.local.php
 # Uploaded complaint photos - never commit user content
 uploads/*
 !uploads/.gitkeep
+!uploads/.htaccess
 
 # Logs
 *.log

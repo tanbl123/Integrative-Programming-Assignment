@@ -62,6 +62,13 @@ That file is git-ignored, so credentials never reach GitHub.
 The dashboard shows bin and user counts read live from MySQL. If those
 numbers appear, MVC, the ORM and the database connection are all working.
 
+For an existing database, run the numbered module migrations in order:
+
+1. `database/03_bin_location_module.sql`
+2. `database/04_user_access_module.sql`
+3. `database/05_complaint_module.sql`
+4. `database/06_scheduling_module.sql`
+
 ### Sample accounts
 
 All seeded accounts use the password `password123`.
@@ -121,6 +128,40 @@ echo $bin->getLocation()->getFullLabel();   // object reference, not location_id
              |        +------- method     -> view()
              +---------------- controller -> ComplaintController
 ```
+
+### Bin & Location module
+
+The module is protected by `BinLocationServiceProxy`, a Protection Proxy that
+delegates to the real service only after checking the authenticated role.
+
+- Administrator: register/edit/deactivate bins and create/edit locations.
+- Cleaner: view bins and record fill-status updates with an audit history.
+- Reporter: search and view active bin/location records.
+
+Authenticated JSON endpoints are available at:
+
+- `GET /EcoCampus/bin-api`
+- `GET /EcoCampus/bin-api/show/{id}`
+- `POST /EcoCampus/bin-api/update-status/{id}` (Cleaner + CSRF token)
+- `GET /EcoCampus/location-api`
+
+### Remaining design patterns and web services
+
+- **Observer:** `ComplaintStatusSubject` notifies `ComplaintHistoryObserver`
+  whenever a complaint is created or changes status.
+- **Strategy:** `SchedulingStrategyFactory` selects Full Bins, Complaint
+  Priority, or Routine bin-selection algorithms at runtime.
+- **Decorator:** role decorators add permissions to a basic authenticated
+  user profile without modifying the User entity.
+
+Additional authenticated JSON endpoints:
+
+- `GET /EcoCampus/complaint-api/unresolved`
+- `GET /EcoCampus/user-api/cleaners`
+- `GET /EcoCampus/schedule-api/mine`
+
+The schedule generation screen consumes the Bin, Complaint, and User JSON
+services to preview eligible work and active cleaners before submission.
 
 ---
 

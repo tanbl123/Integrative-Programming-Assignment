@@ -34,6 +34,8 @@ CREATE TABLE users (
     role           ENUM('Reporter', 'Cleaner', 'Administrator') NOT NULL,
     account_status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
     created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                       ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_users_role (role)
 ) ENGINE=InnoDB;
 
@@ -88,6 +90,27 @@ CREATE TABLE bins (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
+-- bin_status_updates - audit trail for cleaner inspections/services
+-- Owner: Ong Kar Heng (Bin & Location Management)
+-- ---------------------------------------------------------------------
+CREATE TABLE bin_status_updates (
+    update_id  INT AUTO_INCREMENT PRIMARY KEY,
+    bin_id     INT NOT NULL,
+    cleaner_id INT NOT NULL,
+    old_status ENUM('Empty', 'Half', 'Full', 'Under Maintenance') NOT NULL,
+    new_status ENUM('Empty', 'Half', 'Full', 'Under Maintenance') NOT NULL,
+    remarks    VARCHAR(255) NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_bin_updates_bin
+        FOREIGN KEY (bin_id) REFERENCES bins(bin_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_bin_updates_cleaner
+        FOREIGN KEY (cleaner_id) REFERENCES users(user_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    INDEX idx_bin_updates_bin_time (bin_id, updated_at)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
 -- complaints - a waste issue reported against a bin
 -- Owner: Tan Boon Leong (Complaint / Report Management)
 -- ---------------------------------------------------------------------
@@ -99,8 +122,8 @@ CREATE TABLE complaints (
                           'Dirty Area', 'Wrong Waste Disposal', 'Other')
                          NOT NULL,
     description      TEXT NOT NULL,
-    complaint_status ENUM('Pending', 'In Progress', 'Resolved', 'Rejected')
-                         NOT NULL DEFAULT 'Pending',
+    complaint_status ENUM('New', 'Assigned', 'Resolved', 'Rejected')
+                         NOT NULL DEFAULT 'New',
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                          ON UPDATE CURRENT_TIMESTAMP,
@@ -155,4 +178,65 @@ CREATE TABLE complaint_status_history (
     CONSTRAINT fk_history_user
         FOREIGN KEY (updated_by) REFERENCES users(user_id)
         ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- Collection Scheduling & Assignment module
+-- Owner: Ng Zi Zhang (implemented/integrated by Ong Kar Heng)
+-- ---------------------------------------------------------------------
+CREATE TABLE collection_schedules (
+    schedule_id   INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id      INT NOT NULL,
+    schedule_date DATE NOT NULL,
+    time_slot     VARCHAR(50) NOT NULL,
+    strategy      ENUM('Full Bins', 'Complaint Priority', 'Routine') NOT NULL,
+    schedule_status ENUM('Planned', 'Completed', 'Cancelled') NOT NULL DEFAULT 'Planned',
+    notes         VARCHAR(500) NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_schedules_admin FOREIGN KEY (admin_id) REFERENCES users(user_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    INDEX idx_schedules_date (schedule_date, schedule_status)
+) ENGINE=InnoDB;
+
+CREATE TABLE collection_assignments (
+    assignment_id INT AUTO_INCREMENT PRIMARY KEY,
+    schedule_id   INT NOT NULL,
+    cleaner_id    INT NOT NULL,
+    bin_id        INT NOT NULL,
+    source_complaint_id INT NULL,
+    priority      ENUM('Routine', 'Normal', 'Urgent') NOT NULL DEFAULT 'Normal',
+    assignment_status ENUM('Assigned', 'Completed', 'Skipped') NOT NULL DEFAULT 'Assigned',
+    reason        VARCHAR(255) NULL,
+    completed_at  DATETIME NULL,
+    completion_notes VARCHAR(1000) NULL,
+    CONSTRAINT fk_assignments_schedule FOREIGN KEY (schedule_id) REFERENCES collection_schedules(schedule_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_assignments_cleaner FOREIGN KEY (cleaner_id) REFERENCES users(user_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_assignments_bin FOREIGN KEY (bin_id) REFERENCES bins(bin_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_assignments_complaint FOREIGN KEY (source_complaint_id) REFERENCES complaints(complaint_id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    UNIQUE KEY uq_schedule_bin (schedule_id, bin_id),
+    INDEX idx_assignments_cleaner (cleaner_id, assignment_status)
+) ENGINE=InnoDB;
+
+CREATE TABLE collection_records (
+    record_id     INT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT NOT NULL UNIQUE,
+    cleaner_id    INT NOT NULL,
+    bin_id        INT NOT NULL,
+    category_id   INT NOT NULL,
+    estimated_weight_kg DECIMAL(8,2) NULL,
+    notes         VARCHAR(1000) NULL,
+    collected_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_records_assignment FOREIGN KEY (assignment_id) REFERENCES collection_assignments(assignment_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_records_cleaner FOREIGN KEY (cleaner_id) REFERENCES users(user_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_records_bin FOREIGN KEY (bin_id) REFERENCES bins(bin_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_records_category FOREIGN KEY (category_id) REFERENCES waste_categories(category_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
