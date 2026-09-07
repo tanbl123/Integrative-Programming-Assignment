@@ -70,7 +70,8 @@ abstract class Controller
      */
     protected function input(string $field, string $default = ''): string
     {
-        return trim((string) ($_POST[$field] ?? $default));
+        $value = $_POST[$field] ?? $default;
+        return is_scalar($value) || $value === null ? trim((string) $value) : $default;
     }
 
     /** Rejects accidental GET requests to state-changing actions. */

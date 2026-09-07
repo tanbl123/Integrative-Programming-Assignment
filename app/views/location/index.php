@@ -39,6 +39,10 @@
                 <span><?= count($location->getBins()) ?> bin(s)</span>
                 <?php if ($user->isAdmin()): ?>
                     <a href="<?= url('location/edit/' . $location->getKey()) ?>">Edit</a>
+                    <form method="post" action="<?= url('location/delete/' . $location->getKey()) ?>" onsubmit="return confirm('Delete this location? Locations with bins must be emptied first.');">
+                        <?= csrfField() ?>
+                        <button type="submit" class="button button-danger">Delete</button>
+                    </form>
                 <?php endif; ?>
             </div>
         </article>

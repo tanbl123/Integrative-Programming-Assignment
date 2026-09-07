@@ -135,7 +135,10 @@ class BinController extends Controller
             Csrf::requireValid($_POST['_token'] ?? null);
             $this->service->deactivateBin($id);
             Flash::set('success', 'Bin was deactivated and retained for historical records.');
-            $this->redirect('bin?include_inactive=1');
+            $this->redirect('bin/show/' . $id);
+        } catch (ValidationException $error) {
+            Flash::set('error', implode(' ', $error->getErrors()));
+            $this->redirect('bin/show/' . $id);
         } catch (OutOfBoundsException $error) {
             $this->entityNotFound('Bin');
         } catch (AuthenticationException|AuthorizationException $error) {
@@ -159,6 +162,24 @@ class BinController extends Controller
                 'errors' => [],
                 'values' => ['fill_status' => $bin->getFillStatus(), 'remarks' => ''],
             ]);
+        } catch (AuthenticationException|AuthorizationException $error) {
+            $this->handleAccessFailure($error);
+        }
+    }
+
+    public function reactivate(int $id): void
+    {
+        $this->requirePost();
+        try {
+            Csrf::requireValid($_POST['_token'] ?? null);
+            $this->service->reactivateBin($id);
+            Flash::set('success', 'Bin was reactivated.');
+            $this->redirect('bin/show/' . $id);
+        } catch (ValidationException $error) {
+            Flash::set('error', implode(' ', $error->getErrors()));
+            $this->redirect('bin/show/' . $id);
+        } catch (OutOfBoundsException $error) {
+            $this->entityNotFound('Bin');
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);
         }

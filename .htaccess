@@ -3,6 +3,10 @@
 
 RewriteEngine On
 
+# Local project metadata and verification scripts are never web resources.
+RewriteRule (^|/)\. - [F,L]
+RewriteRule ^(nbproject|tests)/ - [F,L]
+
 # Allow real files and folders (css, images, uploads) to be served directly.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

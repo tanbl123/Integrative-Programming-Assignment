@@ -45,18 +45,29 @@ class SchedulingService
             throw new ValidationException(['schedule' => 'Only planned schedules can be modified.']);
         }
         [$date, $timeSlot, $strategyName, $cleaner, $notes] = $this->validateSchedule($data);
-        $schedule->setDetails(Auth::requireLogin()->getKey(), $date, $timeSlot, $strategyName, $notes);
-        $schedule->save();
-        foreach ($schedule->getAssignments() as $assignment) {
-            if ($assignment->getStatus() === 'Assigned') {
-                $assignment->setDetails(
-                    $schedule->getKey(), $cleaner->getKey(), $assignment->getBin()->getKey(),
-                    $assignment->getSourceComplaint()?->getKey(), $assignment->getPriority(), (string) $assignment->getReason()
-                );
-                $assignment->save();
-            }
+        if ($strategyName !== $schedule->getStrategy()) {
+            throw new ValidationException(['strategy' => 'The generation strategy cannot change after creation. Create a new schedule to use another strategy.']);
         }
-        return $schedule;
+        $pdo = Database::getInstance()->pdo();
+        $pdo->beginTransaction();
+        try {
+            $schedule->setDetails(Auth::requireLogin()->getKey(), $date, $timeSlot, $strategyName, $notes);
+            $schedule->save();
+            foreach ($schedule->getAssignments() as $assignment) {
+                if ($assignment->getStatus() === 'Assigned') {
+                    $assignment->setDetails(
+                        $schedule->getKey(), $cleaner->getKey(), $assignment->getBin()->getKey(),
+                        $assignment->getSourceComplaint()?->getKey(), $assignment->getPriority(), (string) $assignment->getReason()
+                    );
+                    $assignment->save();
+                }
+            }
+            $pdo->commit();
+            return $schedule;
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
+            throw $error;
+        }
     }
 
     public function cancel(int $id): CollectionSchedule
@@ -136,7 +147,7 @@ class SchedulingService
     public function findVisible(User $user, int $id): ?CollectionSchedule
     {
         $schedule = CollectionSchedule::find($id);
-        if ($schedule === null) { return null; }
+        if ($schedule === null || $schedule->isDeleted()) { return null; }
         if (UserPermissions::can($user, 'schedule.manage')) { return $schedule; }
         if (UserPermissions::can($user, 'assignment.view_own')) {
             foreach ($schedule->getAssignments() as $assignment) {
@@ -146,8 +157,26 @@ class SchedulingService
         throw new AuthorizationException('You cannot access this schedule.');
     }
 
+    public function delete(int $id): void
+    {
+        UserPermissions::require('schedule.manage');
+        $schedule = $this->requireSchedule($id);
+        if (!in_array($schedule->getStatus(), ['Cancelled', 'Completed'], true)
+            || CollectionAssignment::remainingForSchedule($id) > 0) {
+            throw new ValidationException(['schedule' => 'Cancel or complete the schedule before deleting it.']);
+        }
+        $schedule->delete();
+    }
+
     private function validateSchedule(array $data): array
     {
+        $errors = [];
+        foreach (['schedule_date', 'time_slot', 'strategy', 'cleaner_id', 'notes'] as $field) {
+            if (array_key_exists($field, $data) && !is_scalar($data[$field]) && $data[$field] !== null) {
+                $errors[$field] = 'Enter a single value.';
+            }
+        }
+        if ($errors !== []) { throw new ValidationException($errors); }
         $date = trim((string) ($data['schedule_date'] ?? ''));
         $timeSlot = trim((string) ($data['time_slot'] ?? ''));
         $strategy = trim((string) ($data['strategy'] ?? ''));
@@ -170,7 +199,7 @@ class SchedulingService
     private function requireSchedule(int $id): CollectionSchedule
     {
         $schedule = CollectionSchedule::find($id);
-        if ($schedule === null) { throw new OutOfBoundsException('Schedule not found.'); }
+        if ($schedule === null || $schedule->isDeleted()) { throw new OutOfBoundsException('Schedule not found.'); }
         return $schedule;
     }
 }

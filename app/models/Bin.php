@@ -71,6 +71,24 @@ class Bin extends Model
     public function deactivate(): void
     {
         $this->set('is_active', 0);
+        $this->set('last_updated', ifaTimestamp());
+    }
+
+    public function reactivate(): void
+    {
+        $this->set('is_active', 1);
+        $this->set('last_updated', ifaTimestamp());
+    }
+
+    public function hasOpenWork(): bool
+    {
+        foreach ($this->hasMany(CollectionAssignment::class, 'bin_id') as $assignment) {
+            if ($assignment->getStatus() === 'Assigned') { return true; }
+        }
+        foreach ($this->hasMany(Complaint::class, 'bin_id') as $complaint) {
+            if (!$complaint->isDeleted() && in_array($complaint->getStatus(), ['New', 'Assigned'], true)) { return true; }
+        }
+        return false;
     }
 
     /** Object reference to the Location this bin sits in. */
@@ -94,7 +112,7 @@ class Bin extends Model
     /** Every bin currently marked Full - consumed by the Scheduling module. */
     public static function findFullBins(): array
     {
-        return self::where('fill_status', self::STATUS_FULL);
+        return self::search('', self::STATUS_FULL);
     }
 
     /** Only bins that are still in service, for dropdown lists. */

@@ -94,6 +94,24 @@ class UserController extends Controller
         }
     }
 
+    public function delete(int $id): void
+    {
+        $this->requirePost();
+        try {
+            Csrf::requireValid($_POST['_token'] ?? null);
+            $this->service->deleteByAdministrator($id);
+            Flash::set('success', 'Account deleted. Historical records have been preserved.');
+            $this->redirect('user');
+        } catch (ValidationException $error) {
+            Flash::set('error', implode(' ', $error->getErrors()));
+            $this->redirect('user');
+        } catch (OutOfBoundsException $error) {
+            $this->entityNotFound('User');
+        } catch (AuthenticationException|AuthorizationException $error) {
+            $this->handleAccessFailure($error);
+        }
+    }
+
     public function profile(): void
     {
         try {
@@ -142,6 +160,7 @@ class UserController extends Controller
             'role' => $user?->getRole() ?? User::ROLE_REPORTER,
             'account_status' => $user?->getAccountStatus() ?? 'Active',
         ];
+        $values += $user?->demographics() ?? [];
         $this->view('user/form', [
             'title' => $mode === 'create' ? 'Add User' : 'Edit User',
             'mode' => $mode,

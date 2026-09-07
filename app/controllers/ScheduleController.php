@@ -46,7 +46,7 @@ class ScheduleController extends Controller
     {
         try {
             $schedule = $this->service->findVisible(Auth::requireLogin(), $id);
-            if ($schedule === null) { $this->entityNotFound('Schedule'); return; }
+            if ($schedule === null || $schedule->isDeleted()) { $this->entityNotFound('Schedule'); return; }
             $this->view('schedule/show', [
                 'title' => 'Schedule #' . $id,
                 'schedule' => $schedule,
@@ -61,7 +61,7 @@ class ScheduleController extends Controller
         try {
             UserPermissions::require('schedule.manage');
             $schedule = CollectionSchedule::find($id);
-            if ($schedule === null) { $this->entityNotFound('Schedule'); return; }
+            if ($schedule === null || $schedule->isDeleted()) { $this->entityNotFound('Schedule'); return; }
             $this->renderForm('edit', $schedule, [], []);
         } catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
     }
@@ -76,7 +76,7 @@ class ScheduleController extends Controller
             $this->redirect('schedule/show/' . $schedule->getKey());
         } catch (ValidationException $error) {
             $schedule = CollectionSchedule::find($id);
-            if ($schedule === null) { $this->entityNotFound('Schedule'); return; }
+            if ($schedule === null || $schedule->isDeleted()) { $this->entityNotFound('Schedule'); return; }
             http_response_code(422); $this->renderForm('edit', $schedule, $error->getErrors(), $_POST);
         } catch (OutOfBoundsException $error) { $this->entityNotFound('Schedule'); }
         catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
@@ -92,6 +92,21 @@ class ScheduleController extends Controller
             $this->redirect('schedule/show/' . $id);
         } catch (ValidationException $error) { Flash::set('error', reset($error->getErrors())); $this->redirect('schedule/show/' . $id); }
         catch (OutOfBoundsException $error) { $this->entityNotFound('Schedule'); }
+        catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
+    }
+
+    public function delete(int $id): void
+    {
+        $this->requirePost();
+        try {
+            Csrf::requireValid($_POST['_token'] ?? null);
+            $this->service->delete($id);
+            Flash::set('success', 'Schedule deleted. Collection history has been retained.');
+            $this->redirect('schedule');
+        } catch (ValidationException $error) {
+            Flash::set('error', implode(' ', $error->getErrors()));
+            $this->redirect('schedule/show/' . $id);
+        } catch (OutOfBoundsException $error) { $this->entityNotFound('Schedule'); }
         catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
     }
 

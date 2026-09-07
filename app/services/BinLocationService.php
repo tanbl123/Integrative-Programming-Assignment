@@ -42,6 +42,9 @@ class BinLocationService implements BinLocationServiceInterface
     {
         $bin = $this->requireBin($id);
         $values = $this->validateBin($data, $id);
+        if (!$values[4] && $bin->hasOpenWork()) {
+            throw new ValidationException(['is_active' => 'Resolve open complaints and complete or cancel assignments before deactivating this bin.']);
+        }
         $bin->setDetails(...$values);
         $bin->save();
         return $bin;
@@ -50,8 +53,31 @@ class BinLocationService implements BinLocationServiceInterface
     public function deactivateBin(int $id): void
     {
         $bin = $this->requireBin($id);
+        if ($bin->hasOpenWork()) {
+            throw new ValidationException(['bin' => 'Resolve open complaints and complete or cancel assignments before deactivating this bin.']);
+        }
         $bin->deactivate();
         $bin->save();
+    }
+
+    public function reactivateBin(int $id): Bin
+    {
+        $bin = $this->requireBin($id);
+        if ($bin->getLocation() === null || $bin->getLocation()->isDeleted()) {
+            throw new ValidationException(['location_id' => 'Choose an available location before reactivating this bin.']);
+        }
+        $bin->reactivate();
+        $bin->save();
+        return $bin;
+    }
+
+    public function deleteLocation(int $id): void
+    {
+        $location = $this->requireLocation($id);
+        if ($location->getBins() !== []) {
+            throw new ValidationException(['location' => 'Move all bins to another location before deleting this location.']);
+        }
+        $location->softDelete();
     }
 
     public function updateBinStatus(
@@ -114,7 +140,8 @@ class BinLocationService implements BinLocationServiceInterface
 
     public function findLocation(int $id): ?Location
     {
-        return Location::find($id);
+        $location = Location::find($id);
+        return $location !== null && !$location->isDeleted() ? $location : null;
     }
 
     public function createLocation(array $data): Location
@@ -142,6 +169,7 @@ class BinLocationService implements BinLocationServiceInterface
 
     private function validateBin(array $data, ?int $currentId = null): array
     {
+        $this->requireScalarFields($data, ['bin_code', 'location_id', 'category_id', 'capacity_litre', 'is_active']);
         $code = mb_strtoupper(trim((string) ($data['bin_code'] ?? '')));
         $locationId = filter_var($data['location_id'] ?? null, FILTER_VALIDATE_INT);
         $categoryId = filter_var($data['category_id'] ?? null, FILTER_VALIDATE_INT);
@@ -149,6 +177,10 @@ class BinLocationService implements BinLocationServiceInterface
         $capacity = $capacityRaw === '' ? null : filter_var($capacityRaw, FILTER_VALIDATE_INT);
         $active = (string) ($data['is_active'] ?? '1') === '1';
         $errors = [];
+
+        if (isset($data['is_active']) && !in_array((string) $data['is_active'], ['0', '1'], true)) {
+            $errors['is_active'] = 'Select a valid active status.';
+        }
 
         if (!preg_match('/^[A-Z0-9-]{3,50}$/', $code)) {
             $errors['bin_code'] = 'Use 3-50 uppercase letters, numbers, or hyphens.';
@@ -158,7 +190,7 @@ class BinLocationService implements BinLocationServiceInterface
                 $errors['bin_code'] = 'That bin code is already registered.';
             }
         }
-        if ($locationId === false || Location::find((int) $locationId) === null) {
+        if ($locationId === false || $this->findLocation((int) $locationId) === null) {
             $errors['location_id'] = 'Select a valid location.';
         }
         if ($categoryId === false || WasteCategory::find((int) $categoryId) === null) {
@@ -176,6 +208,7 @@ class BinLocationService implements BinLocationServiceInterface
 
     private function validateLocation(array $data): array
     {
+        $this->requireScalarFields($data, ['location_name', 'building_name', 'floor_no', 'description']);
         $name = trim((string) ($data['location_name'] ?? ''));
         $building = trim((string) ($data['building_name'] ?? ''));
         $floor = trim((string) ($data['floor_no'] ?? ''));
@@ -215,9 +248,20 @@ class BinLocationService implements BinLocationServiceInterface
         return $bin;
     }
 
+    private function requireScalarFields(array $data, array $fields): void
+    {
+        $errors = [];
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $data) && !is_scalar($data[$field]) && $data[$field] !== null) {
+                $errors[$field] = 'Enter a single value.';
+            }
+        }
+        if ($errors !== []) { throw new ValidationException($errors); }
+    }
+
     private function requireLocation(int $id): Location
     {
-        $location = Location::find($id);
+        $location = $this->findLocation($id);
         if ($location === null) {
             throw new OutOfBoundsException('Location not found.');
         }

@@ -3,6 +3,7 @@
  * HomeController - landing page and error pages.
  *
  * Author : Tan Boon Leong (2402865)
+ * Updated: Ong Kar Heng (2408830) - active-record dashboard counts
  * Module : Shared core - EcoCampus Waste Management System
  */
 class HomeController extends Controller
@@ -12,8 +13,8 @@ class HomeController extends Controller
     {
         $this->view('home/index', [
             'title'      => 'EcoCampus Waste Management System',
-            'binCount'   => Bin::count(),
-            'userCount'  => User::count(),
+            'binCount'   => Bin::count('is_active', 1),
+            'userCount'  => User::visibleCount(),
             'fullBins'   => Bin::findFullBins(),
         ]);
     }

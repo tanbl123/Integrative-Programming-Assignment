@@ -10,7 +10,7 @@
  * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management - Web Service Technologies
  */
-class BinApiController extends Controller
+class BinApiController extends ApiController
 {
     private BinLocationServiceInterface $service;
 
@@ -21,6 +21,7 @@ class BinApiController extends Controller
 
     public function index(): void
     {
+        $this->apiAllow(['GET']);
         try {
             $location = filter_var($_GET['location_id'] ?? null, FILTER_VALIDATE_INT);
             $location = $location === false ? null : $location;
@@ -46,6 +47,7 @@ class BinApiController extends Controller
 
     public function show(int $id): void
     {
+        $this->apiAllow(['GET']);
         try {
             $bin = $this->service->findBin($id);
             if ($bin === null) {
@@ -67,7 +69,7 @@ class BinApiController extends Controller
             if (!$this->isPost()) {
                 $this->json(['success' => false, 'data' => null, 'message' => 'POST required.'], 405);
             }
-            $payload = $this->payload();
+            $payload = $this->apiPayload();
             $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($payload['_token'] ?? null);
             Csrf::requireValid(is_string($token) ? $token : null);
             $user = Auth::requireLogin();
@@ -85,6 +87,33 @@ class BinApiController extends Controller
         } catch (Throwable $error) {
             $this->jsonFailure($error);
         }
+    }
+
+    public function resource(?int $id = null): void
+    {
+        try {
+            $this->apiAllow($id === null ? ['GET', 'POST'] : ['GET', 'PUT', 'PATCH', 'DELETE']);
+            if ($this->apiMethod() === 'GET') {
+                $id === null ? $this->index() : $this->show($id);
+                return;
+            }
+            $payload = $this->apiPayload();
+            $this->apiWriteGuard($payload);
+            $this->service->authorizeAdministrator();
+            if ($this->apiMethod() === 'DELETE') {
+                $this->service->deactivateBin($id);
+                $this->apiRespond(['id' => $id, 'active' => false], 200, 'Bin deactivated; history retained.');
+            }
+            if ($id === null) {
+                $bin = $this->service->createBin($payload);
+                header('Location: ' . BASE_URL . '/bin-api/' . $bin->getKey());
+                $this->apiRespond($this->serializeBin($bin), 201, 'Bin created.');
+            }
+            $existing = $this->service->findBin($id);
+            if ($existing === null) { throw new OutOfBoundsException('Bin not found.'); }
+            if ($this->apiMethod() === 'PATCH') { $payload = array_replace($existing->toArray(), $payload); }
+            $this->apiRespond($this->serializeBin($this->service->updateBin($id, $payload)), 200, 'Bin updated.');
+        } catch (Throwable $error) { $this->apiFailure($error); }
     }
 
     private function serializeBin(Bin $bin): array

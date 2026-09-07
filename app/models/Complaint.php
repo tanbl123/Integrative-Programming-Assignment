@@ -10,7 +10,7 @@ class Complaint extends Model
     protected static string $primaryKey = 'complaint_id';
     protected static array $columns = [
         'reporter_id', 'bin_id', 'complaint_type', 'description',
-        'complaint_status', 'created_at', 'updated_at',
+        'complaint_status', 'created_at', 'updated_at', 'deleted_at',
     ];
 
     public const STATUS_NEW = 'New';
@@ -21,6 +21,23 @@ class Complaint extends Model
     public static function statuses(): array
     {
         return [self::STATUS_NEW, self::STATUS_ASSIGNED, self::STATUS_RESOLVED, self::STATUS_REJECTED];
+    }
+
+    public function isDeleted(): bool { return $this->get('deleted_at') !== null; }
+    public function delete(): bool
+    {
+        if ($this->getKey() === null) { return false; }
+        $this->set('deleted_at', ifaTimestamp());
+        $this->save();
+        return true;
+    }
+
+    public function hasOpenAssignments(): bool
+    {
+        foreach (CollectionAssignment::where('source_complaint_id', $this->getKey()) as $assignment) {
+            if ($assignment->getStatus() === 'Assigned') { return true; }
+        }
+        return false;
     }
 
     /**
@@ -77,7 +94,7 @@ class Complaint extends Model
         $sql = 'SELECT DISTINCT c.* FROM complaints c'
              . ' INNER JOIN bins b ON b.bin_id = c.bin_id'
              . ' INNER JOIN locations l ON l.location_id = b.location_id'
-             . ' WHERE 1 = 1';
+             . ' WHERE c.deleted_at IS NULL';
         $params = [];
         if ($reporterId !== null) {
             $sql .= ' AND c.reporter_id = ?';
@@ -103,7 +120,7 @@ class Complaint extends Model
     public static function unresolved(): array
     {
         $rows = Database::getInstance()->selectAll(
-            'SELECT * FROM complaints WHERE complaint_status IN (?, ?) ORDER BY created_at ASC',
+            'SELECT * FROM complaints WHERE deleted_at IS NULL AND complaint_status IN (?, ?) ORDER BY created_at ASC',
             [self::STATUS_NEW, self::STATUS_ASSIGNED]
         );
         return self::hydrateAll($rows);
@@ -113,7 +130,7 @@ class Complaint extends Model
     {
         $row = Database::getInstance()->selectOne(
             'SELECT COUNT(*) AS total FROM complaints'
-            . ' WHERE bin_id = ? AND complaint_status IN (?, ?)',
+            . ' WHERE deleted_at IS NULL AND bin_id = ? AND complaint_status IN (?, ?)',
             [$binId, self::STATUS_NEW, self::STATUS_ASSIGNED]
         );
         return (int) ($row['total'] ?? 0);

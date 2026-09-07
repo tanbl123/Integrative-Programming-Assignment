@@ -26,8 +26,8 @@ class BinLocationServiceProxy implements BinLocationServiceInterface
 
     public function searchBins(string $query, string $status, ?int $locationId, bool $includeInactive): array
     {
-        Auth::requireLogin();
-        return $this->realService->searchBins($query, $status, $locationId, $includeInactive);
+        $user = Auth::requireLogin();
+        return $this->realService->searchBins($query, $status, $locationId, $includeInactive && $user->isAdmin());
     }
 
     public function findBin(int $id): ?Bin
@@ -53,6 +53,18 @@ class BinLocationServiceProxy implements BinLocationServiceInterface
     {
         $this->authorizeAdministrator();
         $this->realService->deactivateBin($id);
+    }
+
+    public function reactivateBin(int $id): Bin
+    {
+        $this->authorizeAdministrator();
+        return $this->realService->reactivateBin($id);
+    }
+
+    public function deleteLocation(int $id): void
+    {
+        $this->authorizeAdministrator();
+        $this->realService->deleteLocation($id);
     }
 
     public function updateBinStatus(int $id, string $status, string $remarks, int $cleanerId): Bin

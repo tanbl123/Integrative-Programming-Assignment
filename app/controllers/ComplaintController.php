@@ -123,6 +123,45 @@ class ComplaintController extends Controller
         }
     }
 
+    public function edit(int $id): void
+    {
+        try {
+            $complaint = $this->service->findVisible(Auth::requireLogin(), $id);
+            if ($complaint === null) { $this->entityNotFound('Complaint'); return; }
+            $this->renderForm([], $complaint->toArray(), $id);
+        } catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
+    }
+
+    public function update(int $id): void
+    {
+        $this->requirePost();
+        try {
+            Csrf::requireValid($_POST['_token'] ?? null);
+            $this->service->update($id, $_POST, Auth::requireLogin());
+            Flash::set('success', 'Complaint details updated.');
+            $this->redirect('complaint/show/' . $id);
+        } catch (ValidationException $error) {
+            http_response_code(422);
+            $this->renderForm($error->getErrors(), $_POST, $id);
+        } catch (OutOfBoundsException $error) { $this->entityNotFound('Complaint'); }
+        catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
+    }
+
+    public function delete(int $id): void
+    {
+        $this->requirePost();
+        try {
+            Csrf::requireValid($_POST['_token'] ?? null);
+            $this->service->delete($id, Auth::requireLogin());
+            Flash::set('success', 'Complaint deleted. Its history has been retained.');
+            $this->redirect('complaint');
+        } catch (ValidationException $error) {
+            Flash::set('error', implode(' ', $error->getErrors()));
+            $this->redirect('complaint/show/' . $id);
+        } catch (OutOfBoundsException $error) { $this->entityNotFound('Complaint'); }
+        catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
+    }
+
     public function attachment(int $id): void
     {
         try {
@@ -154,12 +193,13 @@ class ComplaintController extends Controller
         }
     }
 
-    private function renderForm(array $errors, array $values): void
+    private function renderForm(array $errors, array $values, ?int $editId = null): void
     {
         $this->view('complaint/form', [
-            'title' => 'Report Waste Issue',
+            'title' => $editId === null ? 'Report Waste Issue' : 'Edit Complaint',
             'errors' => $errors,
             'values' => $values,
+            'editId' => $editId,
             'bins' => Bin::findActive(),
             'types' => Complaint::types(),
         ]);

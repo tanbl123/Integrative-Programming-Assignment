@@ -3,6 +3,7 @@
  * App - the router / front controller dispatcher.
  *
  * Author : Tan Boon Leong (2402865)
+ * Updated: Ong Kar Heng (2408830) - safe REST routing
  * Module : Shared core - EcoCampus Waste Management System
  *
  * Turns a URL into a controller call:
@@ -39,11 +40,20 @@ class App
         require_once APP_ROOT . '/app/controllers/' . $this->controller . '.php';
         $instance = new $this->controller();
 
+        // REST collections and numeric item URLs share a verb-aware action.
+        if ($instance instanceof ApiController && method_exists($instance, 'resource')
+            && ($segments === [] || (count($segments) === 1 && ctype_digit($segments[0])))) {
+            $instance->resource($segments === [] ? null : (int) $segments[0]);
+            return;
+        }
+
         // ---- Method ----
         if (!empty($segments[0])) {
             $candidate = lcfirst($this->studly(array_shift($segments)));
 
-            if (!method_exists($instance, $candidate)) {
+            if (!method_exists($instance, $candidate)
+                || !(new ReflectionMethod($instance, $candidate))->isPublic()
+                || str_starts_with($candidate, '__') || $candidate === 'resource') {
                 $this->notFound();
                 return;
             }
@@ -52,6 +62,20 @@ class App
 
         // ---- Parameters ----
         $this->params = array_values($segments);
+
+        $action = new ReflectionMethod($instance, $this->method);
+        if (count($this->params) < $action->getNumberOfRequiredParameters()
+            || count($this->params) > $action->getNumberOfParameters()) {
+            $this->notFound();
+            return;
+        }
+        foreach ($action->getParameters() as $index => $parameter) {
+            if (isset($this->params[$index]) && (string) $parameter->getType() === 'int'
+                && !ctype_digit($this->params[$index])) {
+                $this->notFound();
+                return;
+            }
+        }
 
         call_user_func_array([$instance, $this->method], $this->params);
     }

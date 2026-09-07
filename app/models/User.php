@@ -14,7 +14,9 @@ class User extends Model
     protected static string $primaryKey = 'user_id';
     protected static array  $columns    = [
         'full_name', 'email', 'password_hash', 'phone_no',
-        'role', 'account_status', 'created_at', 'updated_at',
+        'role', 'account_status', 'created_at', 'updated_at', 'deleted_at',
+        'address_line1', 'address_line2', 'ic_no', 'gender', 'birth_date',
+        'city', 'state', 'postcode', 'nationality',
     ];
 
     public const ROLE_REPORTER = 'Reporter';
@@ -33,11 +35,58 @@ class User extends Model
     public function isCleaner(): bool  { return $this->getRole() === self::ROLE_CLEANER; }
     public function isAdmin(): bool    { return $this->getRole() === self::ROLE_ADMIN; }
 
-    public function isActive(): bool { return $this->get('account_status') === 'Active'; }
+    public function isActive(): bool { return !$this->isDeleted() && $this->get('account_status') === 'Active'; }
+
+    public const DEMOGRAPHIC_FIELDS = ['address_line1', 'address_line2', 'ic_no', 'gender', 'birth_date', 'city', 'state', 'postcode', 'nationality'];
+
+    public function isDeleted(): bool { return $this->get('deleted_at') !== null; }
+
+    public function demographics(): array
+    {
+        return array_combine(self::DEMOGRAPHIC_FIELDS, array_map(fn(string $field) => $this->get($field), self::DEMOGRAPHIC_FIELDS));
+    }
+
+    public function setDemographics(array $values): void
+    {
+        foreach (self::DEMOGRAPHIC_FIELDS as $field) {
+            if (array_key_exists($field, $values)) { $this->set($field, $values[$field]); }
+        }
+    }
+
+    /** Preserve foreign-key history while removing account access. */
+    public function delete(): bool
+    {
+        if ($this->getKey() === null || $this->isDeleted()) { return false; }
+        $this->set('deleted_at', ifaTimestamp());
+        $this->setAccess($this->getRole(), 'Inactive');
+        $this->save();
+        return true;
+    }
+
+    public function hasOpenAssignments(): bool
+    {
+        return Database::getInstance()->selectOne(
+            "SELECT assignment_id FROM collection_assignments WHERE cleaner_id = ? AND assignment_status = 'Assigned' LIMIT 1",
+            [$this->getKey()]
+        ) !== null;
+    }
+
+    public function apiData(): array
+    {
+        return ['id' => $this->getKey(), 'full_name' => $this->getFullName(),
+            'email' => $this->getEmail(), 'phone_no' => $this->getPhoneNo(),
+            'role' => $this->getRole(), 'account_status' => $this->getAccountStatus()] + $this->demographics();
+    }
 
     public static function roles(): array
     {
         return [self::ROLE_REPORTER, self::ROLE_CLEANER, self::ROLE_ADMIN];
+    }
+
+    public static function visibleCount(): int
+    {
+        $row = Database::getInstance()->selectOne('SELECT COUNT(*) AS total FROM users WHERE deleted_at IS NULL');
+        return (int) $row['total'];
     }
 
     public function setIdentity(string $name, string $email, ?string $phone): void
@@ -70,7 +119,7 @@ class User extends Model
 
     public static function search(string $query = '', string $role = '', string $status = ''): array
     {
-        $sql = 'SELECT * FROM users WHERE 1 = 1';
+        $sql = 'SELECT * FROM users WHERE deleted_at IS NULL';
         $params = [];
         if ($query !== '') {
             $like = '%' . $query . '%';
@@ -92,7 +141,7 @@ class User extends Model
     public static function findActiveCleaners(): array
     {
         return self::hydrateAll(Database::getInstance()->selectAll(
-            'SELECT * FROM users WHERE role = ? AND account_status = ? ORDER BY full_name',
+            'SELECT * FROM users WHERE role = ? AND account_status = ? AND deleted_at IS NULL ORDER BY full_name',
             [self::ROLE_CLEANER, 'Active']
         ));
     }

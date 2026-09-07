@@ -10,6 +10,7 @@
     <button class="button button-secondary" type="submit">Apply</button>
 </form>
 <div class="table-scroll"><table class="table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>
-<?php foreach ($users as $account): ?><tr><td><?= e($account->getFullName()) ?></td><td><?= e($account->getEmail()) ?></td><td><?= e($account->getRole()) ?></td><td><span class="badge <?= $account->isActive() ? 'badge-status' : 'badge-muted' ?>"><?= e($account->getAccountStatus()) ?></span></td><td><?= e($account->getCreatedAt()) ?></td><td><a href="<?= url('user/edit/' . $account->getKey()) ?>">Edit</a></td></tr><?php endforeach; ?>
+<?php foreach ($users as $account): ?><tr><td><?= e($account->getFullName()) ?></td><td><?= e($account->getEmail()) ?></td><td><?= e($account->getRole()) ?></td><td><span class="badge <?= $account->isActive() ? 'badge-status' : 'badge-muted' ?>"><?= e($account->getAccountStatus()) ?></span></td><td><?= e($account->getCreatedAt()) ?></td><td><a class="button button-secondary" href="<?= url('user/edit/' . $account->getKey()) ?>">Edit</a>
+<?php if ($account->getKey() !== Auth::user()?->getKey()): ?><form method="post" action="<?= url('user/delete/' . $account->getKey()) ?>" data-confirm="Delete this account? Access will be removed; historical records will be preserved."><?= csrfField() ?><button class="button button-danger" type="submit">Delete account</button></form><?php endif; ?></td></tr><?php endforeach; ?>
 <?php if ($users === []): ?><tr><td colspan="6" class="empty">No users match the filters.</td></tr><?php endif; ?>
 </tbody></table></div>

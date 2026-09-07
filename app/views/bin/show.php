@@ -34,9 +34,17 @@
         <?= csrfField() ?>
         <div>
             <strong>Deactivate bin</strong>
-            <p>Use this when a bin is permanently removed from service.</p>
+            <p>Remove this bin from service after resolving its open work. You can reactivate it later.</p>
         </div>
         <button type="submit" class="button button-danger">Deactivate</button>
+    </form>
+<?php endif; ?>
+
+<?php if ($user->isAdmin() && !$bin->isActive()): ?>
+    <form method="post" action="<?= url('bin/reactivate/' . $bin->getKey()) ?>" class="danger-zone">
+        <?= csrfField() ?>
+        <div><strong>Reactivate bin</strong><p>Return this bin to service while keeping its history.</p></div>
+        <button type="submit" class="button">Reactivate</button>
     </form>
 <?php endif; ?>
 

@@ -93,6 +93,24 @@ class LocationController extends Controller
         }
     }
 
+    public function delete(int $id): void
+    {
+        $this->requirePost();
+        try {
+            Csrf::requireValid($_POST['_token'] ?? null);
+            $this->service->deleteLocation($id);
+            Flash::set('success', 'Location was deleted.');
+            $this->redirect('location');
+        } catch (ValidationException $error) {
+            Flash::set('error', implode(' ', $error->getErrors()));
+            $this->redirect('location');
+        } catch (OutOfBoundsException $error) {
+            $this->entityNotFound('Location');
+        } catch (AuthenticationException|AuthorizationException $error) {
+            $this->handleAccessFailure($error);
+        }
+    }
+
     private function renderForm(
         string $mode,
         ?Location $location,

@@ -5,7 +5,7 @@
  * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management - Web Service Technologies
  */
-class LocationApiController extends Controller
+class LocationApiController extends ApiController
 {
     private BinLocationServiceInterface $service;
 
@@ -16,6 +16,7 @@ class LocationApiController extends Controller
 
     public function index(): void
     {
+        $this->apiAllow(['GET']);
         try {
             $locations = $this->service->searchLocations(trim((string) ($_GET['q'] ?? '')));
             $this->json([
@@ -40,6 +41,7 @@ class LocationApiController extends Controller
 
     public function show(int $id): void
     {
+        $this->apiAllow(['GET']);
         try {
             $location = $this->service->findLocation($id);
             if ($location === null) {
@@ -62,5 +64,32 @@ class LocationApiController extends Controller
         } catch (AuthorizationException $error) {
             $this->json(['success' => false, 'data' => null, 'message' => $error->getMessage()], 403);
         }
+    }
+
+    public function resource(?int $id = null): void
+    {
+        try {
+            $this->apiAllow($id === null ? ['GET', 'POST'] : ['GET', 'PUT', 'PATCH', 'DELETE']);
+            if ($this->apiMethod() === 'GET') {
+                $id === null ? $this->index() : $this->show($id);
+                return;
+            }
+            $payload = $this->apiPayload();
+            $this->apiWriteGuard($payload);
+            $this->service->authorizeAdministrator();
+            if ($this->apiMethod() === 'DELETE') {
+                $this->service->deleteLocation($id);
+                $this->apiRespond(['id' => $id, 'deleted' => true], 200, 'Location deleted.');
+            }
+            if ($id === null) {
+                $location = $this->service->createLocation($payload);
+                header('Location: ' . BASE_URL . '/location-api/' . $location->getKey());
+                $this->apiRespond($location->toArray(), 201, 'Location created.');
+            }
+            $existing = $this->service->findLocation($id);
+            if ($existing === null) { throw new OutOfBoundsException('Location not found.'); }
+            if ($this->apiMethod() === 'PATCH') { $payload = array_replace($existing->toArray(), $payload); }
+            $this->apiRespond($this->service->updateLocation($id, $payload)->toArray(), 200, 'Location updated.');
+        } catch (Throwable $error) { $this->apiFailure($error); }
     }
 }

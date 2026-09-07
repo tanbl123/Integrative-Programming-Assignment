@@ -13,6 +13,7 @@ $action = $isEdit ? url('user/update/' . $user->getKey()) : url('user/store');
 <label>Role<select name="role"><?php foreach ($roles as $role): ?><option value="<?= e($role) ?>" <?= ($values['role'] ?? '') === $role ? 'selected' : '' ?>><?= e($role) ?></option><?php endforeach; ?></select><?php if (!empty($errors['role'])): ?><span class="field-error"><?= e($errors['role']) ?></span><?php endif; ?></label>
 <label>Account status<select name="account_status"><option <?= ($values['account_status'] ?? '') === 'Active' ? 'selected' : '' ?>>Active</option><option <?= ($values['account_status'] ?? '') === 'Inactive' ? 'selected' : '' ?>>Inactive</option></select><?php if (!empty($errors['account_status'])): ?><span class="field-error"><?= e($errors['account_status']) ?></span><?php endif; ?></label>
 </div>
+<?php require __DIR__ . '/demographics.php'; ?>
 <?php if (!$isEdit): ?><div class="form-grid"><label>Temporary password<input type="password" name="password" required><?php if (!empty($errors['password'])): ?><span class="field-error"><?= e($errors['password']) ?></span><?php endif; ?></label><label>Confirm password<input type="password" name="password_confirmation" required><?php if (!empty($errors['password_confirmation'])): ?><span class="field-error"><?= e($errors['password_confirmation']) ?></span><?php endif; ?></label></div><?php endif; ?>
 <button class="button" type="submit"><?= $isEdit ? 'Save changes' : 'Add user' ?></button>
 </form>

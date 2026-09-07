@@ -10,6 +10,7 @@ $value = static fn(string $key, mixed $fallback): mixed => array_key_exists($key
 <label>Email<input type="email" name="email" required value="<?= e((string) $value('email', $user->getEmail())) ?>"><?php if (!empty($errors['email'])): ?><span class="field-error"><?= e($errors['email']) ?></span><?php endif; ?></label>
 <label>Phone<input name="phone_no" value="<?= e((string) $value('phone_no', $user->getPhoneNo() ?? '')) ?>"><?php if (!empty($errors['phone_no'])): ?><span class="field-error"><?= e($errors['phone_no']) ?></span><?php endif; ?></label>
 </div>
+<?php $values += $user->demographics(); require __DIR__ . '/demographics.php'; ?>
 <h2>Change password (optional)</h2>
 <div class="form-grid">
 <label>Current password<input type="password" name="current_password"><?php if (!empty($errors['current_password'])): ?><span class="field-error"><?= e($errors['current_password']) ?></span><?php endif; ?></label>
@@ -18,5 +19,5 @@ $value = static fn(string $key, mixed $fallback): mixed => array_key_exists($key
 </div>
 <button class="button" type="submit">Save profile</button>
 </form>
-<aside class="info-card"><h2>Decorator permissions</h2><p>Your role adds these capabilities to the basic signed-in profile:</p><ul><?php foreach ($permissions as $permission): ?><li><?= e($permission) ?></li><?php endforeach; ?></ul></aside>
+<aside class="info-card"><h2>Your account</h2><p>You can update your contact details and personal information here. Contact an administrator if your account role needs changing.</p></aside>
 </div>

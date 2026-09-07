@@ -68,6 +68,13 @@ For an existing database, run the numbered module migrations in order:
 2. `database/04_user_access_module.sql`
 3. `database/05_complaint_module.sql`
 4. `database/06_scheduling_module.sql`
+5. `database/07_user_demographics.sql`
+6. `database/08_module_soft_delete.sql`
+7. `database/09_location_soft_delete.sql`
+
+The last three migrations add optional profile demographics and recoverable
+deletion markers. New installations already receive these columns from
+`01_schema.sql`.
 
 ### Sample accounts
 
@@ -162,6 +169,36 @@ Additional authenticated JSON endpoints:
 
 The schedule generation screen consumes the Bin, Complaint, and User JSON
 services to preview eligible work and active cleaners before submission.
+
+### REST CRUD services
+
+Each module exposes database-backed JSON CRUD through its MVC controller and
+ORM models. Collection URLs accept `GET` and `POST`; item URLs accept `GET`,
+`PUT`, `PATCH`, and `DELETE`:
+
+| Module | Collection URL | Delete behavior |
+|---|---|---|
+| Users | `/EcoCampus/user-api` | Soft-deletes accounts when no open cleaner assignment exists |
+| Bins | `/EcoCampus/bin-api` | Deactivates bins when no open work exists; bins can be reactivated in the web UI |
+| Locations | `/EcoCampus/location-api` | Soft-deletes empty locations |
+| Complaints | `/EcoCampus/complaint-api` | Soft-deletes eligible complaints and retains Observer history |
+| Schedules | `/EcoCampus/schedule-api` | Soft-deletes cancelled/completed schedules and retains assignment history |
+
+Writes require an authenticated session, the correct role permission, JSON
+input, and the session CSRF token in the `X-CSRF-Token` header. The existing
+`/bin-api`, `/complaint-api/unresolved`, and `/user-api/cleaners` calls in the
+schedule form demonstrate service consumption between modules.
+
+To repeat the local MySQL/HTTP regression checks from PowerShell:
+
+```powershell
+.\tests\user-rest.ps1
+.\tests\bin-location-rest.ps1
+.\tests\module-rest.ps1
+```
+
+The scripts create uniquely named test rows, verify permissions and CRUD, and
+remove only those exact test rows when they finish.
 
 ---
 

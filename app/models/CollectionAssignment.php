@@ -41,7 +41,7 @@ class CollectionAssignment extends Model
 
     public static function forCleaner(int $cleanerId, string $status = ''): array
     {
-        $sql = 'SELECT a.* FROM collection_assignments a INNER JOIN collection_schedules s ON s.schedule_id = a.schedule_id WHERE a.cleaner_id = ? AND s.schedule_status <> ?';
+        $sql = 'SELECT a.* FROM collection_assignments a INNER JOIN collection_schedules s ON s.schedule_id = a.schedule_id WHERE a.cleaner_id = ? AND s.schedule_status <> ? AND s.deleted_at IS NULL';
         $params = [$cleanerId, 'Cancelled'];
         if (in_array($status, ['Assigned', 'Completed', 'Skipped'], true)) { $sql .= ' AND a.assignment_status = ?'; $params[] = $status; }
         $sql .= ' ORDER BY s.schedule_date DESC, a.assignment_id DESC';

@@ -6,7 +6,7 @@ class CollectionSchedule extends Model
     protected static string $primaryKey = 'schedule_id';
     protected static array $columns = [
         'admin_id', 'schedule_date', 'time_slot', 'strategy', 'schedule_status',
-        'notes', 'created_at', 'updated_at',
+        'notes', 'created_at', 'updated_at', 'deleted_at',
     ];
 
     public function setDetails(int $adminId, string $date, string $timeSlot, string $strategy, ?string $notes): void
@@ -23,6 +23,14 @@ class CollectionSchedule extends Model
     }
 
     public function setStatus(string $status): void { $this->set('schedule_status', $status); $this->set('updated_at', ifaTimestamp()); }
+    public function isDeleted(): bool { return $this->get('deleted_at') !== null; }
+    public function delete(): bool
+    {
+        if ($this->getKey() === null) { return false; }
+        $this->set('deleted_at', ifaTimestamp());
+        $this->save();
+        return true;
+    }
     public function getDate(): string { return (string) $this->get('schedule_date'); }
     public function getTimeSlot(): string { return (string) $this->get('time_slot'); }
     public function getStrategy(): string { return (string) $this->get('strategy'); }
@@ -33,7 +41,7 @@ class CollectionSchedule extends Model
 
     public static function search(string $date = '', string $status = ''): array
     {
-        $sql = 'SELECT * FROM collection_schedules WHERE 1 = 1';
+        $sql = 'SELECT * FROM collection_schedules WHERE deleted_at IS NULL';
         $params = [];
         if ($date !== '') { $sql .= ' AND schedule_date = ?'; $params[] = $date; }
         if (in_array($status, ['Planned', 'Completed', 'Cancelled'], true)) { $sql .= ' AND schedule_status = ?'; $params[] = $status; }

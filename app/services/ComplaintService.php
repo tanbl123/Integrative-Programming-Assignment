@@ -56,7 +56,7 @@ class ComplaintService
     public function findVisible(User $user, int $id): ?Complaint
     {
         $complaint = Complaint::find($id);
-        if ($complaint === null) {
+        if ($complaint === null || $complaint->isDeleted()) {
             return null;
         }
         if (UserPermissions::can($user, 'complaint.manage')
@@ -70,7 +70,7 @@ class ComplaintService
     {
         UserPermissions::require('complaint.manage');
         $complaint = Complaint::find($id);
-        if ($complaint === null) {
+        if ($complaint === null || $complaint->isDeleted()) {
             throw new OutOfBoundsException('Complaint not found.');
         }
         $old = $complaint->getStatus();
@@ -109,8 +109,39 @@ class ComplaintService
         }
     }
 
+    public function update(int $id, array $data, User $user): Complaint
+    {
+        $complaint = $this->findVisible($user, $id);
+        if ($complaint === null) { throw new OutOfBoundsException('Complaint not found.'); }
+        if ($complaint->getStatus() !== Complaint::STATUS_NEW || $complaint->hasOpenAssignments()) {
+            throw new ValidationException(['complaint' => 'Only new complaints without open assignments can be edited.']);
+        }
+        [$binId, $type, $description] = $this->validateComplaint(array_replace($complaint->toArray(), $data));
+        $complaint->setDetails($complaint->getReporterId(), $binId, $type, $description);
+        $complaint->save();
+        return $complaint;
+    }
+
+    public function delete(int $id, User $user): void
+    {
+        $complaint = $this->findVisible($user, $id);
+        if ($complaint === null) { throw new OutOfBoundsException('Complaint not found.'); }
+        if (!in_array($complaint->getStatus(), [Complaint::STATUS_NEW, Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED], true)
+            || $complaint->hasOpenAssignments()) {
+            throw new ValidationException(['complaint' => 'Only new or final complaints without open assignments can be deleted.']);
+        }
+        $complaint->delete();
+    }
+
     private function validateComplaint(array $data): array
     {
+        $errors = [];
+        foreach (['bin_id', 'complaint_type', 'description'] as $field) {
+            if (array_key_exists($field, $data) && !is_scalar($data[$field]) && $data[$field] !== null) {
+                $errors[$field] = 'Enter a single value.';
+            }
+        }
+        if ($errors !== []) { throw new ValidationException($errors); }
         $binId = filter_var($data['bin_id'] ?? null, FILTER_VALIDATE_INT);
         $type = trim((string) ($data['complaint_type'] ?? ''));
         $description = trim((string) ($data['description'] ?? ''));

@@ -2,6 +2,7 @@
 -- EcoCampus Waste Management System - database schema
 --
 -- Author  : Tan Boon Leong (2402865)
+-- Updated : Ong Kar Heng (2408830) - demographics and soft deletion
 -- Module  : Shared core
 -- Course  : BMIT3173 Integrative Programming, Group D
 -- SDG     : 11 - Sustainable Cities and Communities
@@ -31,12 +32,23 @@ CREATE TABLE users (
     -- Stores a password_hash() result, never a plain password.
     password_hash  VARCHAR(255) NOT NULL,
     phone_no       VARCHAR(20)  NULL,
+    address_line1  VARCHAR(200) NULL,
+    address_line2  VARCHAR(200) NULL,
+    ic_no          VARCHAR(14)  NULL,
+    gender         VARCHAR(30)  NULL,
+    birth_date     DATE         NULL,
+    city           VARCHAR(100) NULL,
+    state          VARCHAR(100) NULL,
+    postcode       VARCHAR(12)  NULL,
+    nationality    VARCHAR(80)  NULL,
     role           ENUM('Reporter', 'Cleaner', 'Administrator') NOT NULL,
     account_status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
     created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                        ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_users_role (role)
+    deleted_at     DATETIME NULL DEFAULT NULL,
+    INDEX idx_users_role (role),
+    INDEX idx_users_deleted (deleted_at)
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
@@ -48,7 +60,9 @@ CREATE TABLE locations (
     location_name VARCHAR(100) NOT NULL,
     building_name VARCHAR(100) NULL,
     floor_no      VARCHAR(20)  NULL,
-    description   VARCHAR(255) NULL
+    description   VARCHAR(255) NULL,
+    deleted_at    DATETIME NULL DEFAULT NULL,
+    INDEX idx_locations_deleted (deleted_at)
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
@@ -127,6 +141,7 @@ CREATE TABLE complaints (
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                          ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at       DATETIME NULL DEFAULT NULL,
     CONSTRAINT fk_complaints_reporter
         FOREIGN KEY (reporter_id) REFERENCES users(user_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
@@ -194,6 +209,7 @@ CREATE TABLE collection_schedules (
     notes         VARCHAR(500) NULL,
     created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at    DATETIME NULL DEFAULT NULL,
     CONSTRAINT fk_schedules_admin FOREIGN KEY (admin_id) REFERENCES users(user_id)
         ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_schedules_date (schedule_date, schedule_status)
