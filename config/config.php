@@ -1,8 +1,6 @@
 <?php
 /**
  * Application configuration.
- *
- * Author : Tan Boon Leong (2402865)
  * Module : Shared core - EcoCampus Waste Management System
  *
  * The values below are the XAMPP defaults and work out of the box.

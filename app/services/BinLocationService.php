@@ -2,7 +2,6 @@
 /**
  * Real subject containing Bin & Location business rules.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 class BinLocationService implements BinLocationServiceInterface
@@ -38,15 +37,20 @@ class BinLocationService implements BinLocationServiceInterface
         return $bin;
     }
 
-    public function updateBin(int $id, array $data): Bin
-    {
+    public function updateBin(int $id, array $data): Bin {
         $bin = $this->requireBin($id);
-        $values = $this->validateBin($data, $id);
-        if (!$values[4] && $bin->hasOpenWork()) {
-            throw new ValidationException(['is_active' => 'Resolve open complaints and complete or cancel assignments before deactivating this bin.']);
+
+        if ($bin->hasOpenWork()) {
+            throw new ValidationException([
+                        'bin' => 'This bin has open complaints or assignments, so it cannot be edited or deactivated.'
+            ]);
         }
+
+        $values = $this->validateBin($data, $id);
+
         $bin->setDetails(...$values);
         $bin->save();
+
         return $bin;
     }
 
@@ -206,34 +210,47 @@ class BinLocationService implements BinLocationServiceInterface
         return [$code, (int) $locationId, (int) $categoryId, $capacity, $active];
     }
 
-    private function validateLocation(array $data): array
-    {
+    private function validateLocation(array $data): array {
         $this->requireScalarFields($data, ['location_name', 'building_name', 'floor_no', 'description']);
+
         $name = trim((string) ($data['location_name'] ?? ''));
         $building = trim((string) ($data['building_name'] ?? ''));
         $floor = trim((string) ($data['floor_no'] ?? ''));
         $description = trim((string) ($data['description'] ?? ''));
+
         $errors = [];
+
+        $validBuildings = [
+            'Block A',
+            'Block B',
+            'Block C',
+            'Block D',
+            'Open Area'
+        ];
 
         if ($name === '' || mb_strlen($name) > 100) {
             $errors['location_name'] = 'Location name is required and cannot exceed 100 characters.';
         }
-        if (mb_strlen($building) > 100) {
-            $errors['building_name'] = 'Building name cannot exceed 100 characters.';
+
+        if ($building === '' || !in_array($building, $validBuildings, true)) {
+            $errors['building_name'] = 'Select a valid campus building.';
         }
+
         if (mb_strlen($floor) > 20) {
             $errors['floor_no'] = 'Floor cannot exceed 20 characters.';
         }
+
         if (mb_strlen($description) > 255) {
             $errors['description'] = 'Description cannot exceed 255 characters.';
         }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
 
         return [
             $name,
-            $building === '' ? null : $building,
+            $building,
             $floor === '' ? null : $floor,
             $description === '' ? null : $description,
         ];

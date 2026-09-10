@@ -2,7 +2,6 @@
 /**
  * One-request messages stored in the session.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : Shared presentation support
  */
 class Flash

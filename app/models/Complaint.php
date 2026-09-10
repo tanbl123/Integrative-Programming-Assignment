@@ -1,7 +1,6 @@
 <?php
 /**
  * Waste issue reported against a campus bin.
- * Author : Ong Kar Heng (2408830)
  * Module : Complaint / Report Management
  */
 class Complaint extends Model

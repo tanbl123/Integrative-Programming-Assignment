@@ -1,4 +1,4 @@
-/* EcoCampus scheduling web-service integration. Author: Ong Kar Heng (2408830). */
+/* EcoCampus scheduling web-service integration. */
 (() => {
     const form = document.getElementById('schedule-form');
     const strategy = document.getElementById('strategy');

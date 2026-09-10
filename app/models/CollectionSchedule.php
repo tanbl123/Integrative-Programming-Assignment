@@ -1,5 +1,5 @@
 <?php
-/** Collection plan created by an administrator. Author: Ong Kar Heng (2408830). */
+/** Collection plan created by an administrator.  */
 class CollectionSchedule extends Model
 {
     protected static string $table = 'collection_schedules';

@@ -1,7 +1,6 @@
 <?php
 /**
  * Observer pattern for complaint state transitions.
- * Author : Ong Kar Heng (2408830)
  * Module : Complaint / Report Management - Observer design pattern
  */
 interface ComplaintObserver

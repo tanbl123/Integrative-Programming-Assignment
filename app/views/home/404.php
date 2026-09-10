@@ -2,7 +2,6 @@
 /**
  * 404 view.
  *
- * Author : Tan Boon Leong (2402865)
  * Module : Shared core - EcoCampus Waste Management System
  */
 ?>

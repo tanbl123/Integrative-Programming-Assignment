@@ -1,7 +1,6 @@
 <?php
 /**
  * Reporter complaint workflow and administrator resolution controller.
- * Author : Ong Kar Heng (2408830)
  * Module : Complaint / Report Management
  */
 class ComplaintController extends Controller

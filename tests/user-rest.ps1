@@ -1,4 +1,4 @@
-# Author: Ong Kar Heng (2408830). User REST integration regression for local XAMPP.
+# User REST integration regression for local XAMPP.
 param(
     [string]$BaseUrl = 'http://localhost/EcoCampus',
     [string]$AdminEmail = 'admin@ecocampus.edu.my',

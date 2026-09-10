@@ -1,5 +1,5 @@
 <?php
-/** Completed waste collection measurement. Author: Ong Kar Heng (2408830). */
+/** Completed waste collection measurement.  */
 class CollectionRecord extends Model
 {
     protected static string $table = 'collection_records';

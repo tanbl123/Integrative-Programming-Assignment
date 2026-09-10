@@ -1,6 +1,5 @@
 -- =====================================================================
 -- EcoCampus - Bin & Location module migration for existing databases
--- Author : Ong Kar Heng (2408830)
 -- Run once after 01_schema.sql and 02_seed.sql on an existing setup.
 -- =====================================================================
 

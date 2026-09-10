@@ -1,4 +1,4 @@
-# Author: Ong Kar Heng (2408830). Complaint/schedule REST regression for local XAMPP.
+# Complaint/schedule REST regression for local XAMPP.
 param(
     [string]$BaseUrl = 'http://localhost/EcoCampus',
     [string]$Mysql = 'C:/xampp/mysql/bin/mysql.exe',

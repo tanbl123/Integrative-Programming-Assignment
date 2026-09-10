@@ -1,7 +1,6 @@
 <?php
 /**
  * Bin details and status audit history.
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 ?>
@@ -14,7 +13,9 @@
         <?php if ($user->isAdmin()): ?>
             <a class="button" href="<?= url('bin/edit/' . $bin->getKey()) ?>">Edit bin</a>
         <?php elseif ($user->isCleaner() && $bin->isActive()): ?>
-            <a class="button" href="<?= url('bin/status/' . $bin->getKey()) ?>">Record status</a>
+            <a class="button" href="<?= url('bin/status/' . $bin->getKey()) ?>">
+                Update status
+            </a>
         <?php endif; ?>
         <a class="button button-secondary" href="<?= url('bin') ?>">Back to bins</a>
     </div>
@@ -25,7 +26,7 @@
     <div><span>Waste category</span><strong><?= e($bin->getCategory()?->getCategoryName() ?? 'Unknown') ?></strong></div>
     <div><span>Capacity</span><strong><?= $bin->getCapacityLitre() === null ? 'Not specified' : $bin->getCapacityLitre() . ' litres' ?></strong></div>
     <div><span>Fill status</span><strong><?= e($bin->getFillStatus()) ?></strong></div>
-    <div><span>Record status</span><strong><?= $bin->isActive() ? 'Active' : 'Inactive' ?></strong></div>
+    <div><span>Update status</span><strong><?= $bin->isActive() ? 'Active' : 'Inactive' ?></strong></div>
     <div><span>Last updated</span><strong><?= e($bin->getLastUpdated()) ?></strong></div>
 </section>
 

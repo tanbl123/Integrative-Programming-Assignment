@@ -1,7 +1,6 @@
 <?php
 /**
  * Administrator location create/edit form.
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 $isEdit = $mode === 'edit';
@@ -25,8 +24,19 @@ $action = $isEdit ? url('location/update/' . $location->getKey()) : url('locatio
         </label>
         <label>
             Building
-            <input name="building_name" value="<?= e((string) ($values['building_name'] ?? '')) ?>" maxlength="100" placeholder="Block A">
-            <?php if (!empty($errors['building_name'])): ?><span class="field-error"><?= e($errors['building_name']) ?></span><?php endif; ?>
+            <select name="building_name" required>
+                <option value="">Select building</option>
+
+                <?php foreach (['Block A', 'Block B', 'Block C', 'Block D', 'Open Area'] as $building): ?>
+                    <option value="<?= e($building) ?>" <?= ($values['building_name'] ?? '') === $building ? 'selected' : '' ?>>
+                        <?= e($building) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+
+            <?php if (!empty($errors['building_name'])): ?>
+                <span class="field-error"><?= e($errors['building_name']) ?></span>
+            <?php endif; ?>
         </label>
         <label>
             Floor

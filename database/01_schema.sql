@@ -1,8 +1,6 @@
 -- =====================================================================
 -- EcoCampus Waste Management System - database schema
 --
--- Author  : Tan Boon Leong (2402865)
--- Updated : Ong Kar Heng (2408830) - demographics and soft deletion
 -- Module  : Shared core
 -- Course  : BMIT3173 Integrative Programming, Group D
 -- SDG     : 11 - Sustainable Cities and Communities

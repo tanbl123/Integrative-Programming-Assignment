@@ -2,8 +2,7 @@
 /**
  * Controller - base class for every controller in the system.
  *
- * Author : Tan Boon Leong (2402865)
- * Updated: Ong Kar Heng (2408830) - secure action/error helpers
+ * Secure action/error helpers
  * Module : Shared core - EcoCampus Waste Management System
  *
  * In MVC the Controller is the middle layer: it receives the request,

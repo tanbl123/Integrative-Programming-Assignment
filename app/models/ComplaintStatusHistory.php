@@ -1,5 +1,5 @@
 <?php
-/** Complaint transition audit entry. Author: Ong Kar Heng (2408830). */
+/** Complaint transition audit entry.  */
 class ComplaintStatusHistory extends Model
 {
     protected static string $table = 'complaint_status_history';

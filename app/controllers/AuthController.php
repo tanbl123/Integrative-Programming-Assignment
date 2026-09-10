@@ -1,16 +1,14 @@
 <?php
+
 /**
- * Minimal secure login/logout required by module role enforcement.
- *
- * Author : Ong Kar Heng (2408830)
+ * Secure login/logout required by module role enforcement.
  * Module : Shared authentication prerequisite
  */
-class AuthController extends Controller
-{
-    public function index(): void
-    {
+class AuthController extends Controller {
+
+    public function index(): void {
         if (Auth::check()) {
-            $this->redirect('bin');
+            $this->redirect('');
         }
 
         $this->view('auth/login', [
@@ -20,11 +18,11 @@ class AuthController extends Controller
         ]);
     }
 
-    public function register(): void
-    {
+    public function register(): void {
         if (Auth::check()) {
-            $this->redirect('profile');
+            $this->redirect('user/profile');
         }
+
         $this->view('auth/register', [
             'title' => 'Create Reporter Account',
             'errors' => [],
@@ -32,17 +30,21 @@ class AuthController extends Controller
         ]);
     }
 
-    public function storeRegistration(): void
-    {
+    public function storeRegistration(): void {
         $this->requirePost();
+
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
+
             $user = (new UserService())->registerReporter($_POST);
-            Auth::attempt($user->getEmail(), (string) $_POST['password']);
+
+            Auth::attempt($user->getEmail(), (string) ($_POST['password'] ?? ''));
+
             Flash::set('success', 'Your Reporter account was created.');
-            $this->redirect('bin');
+            $this->redirect('');
         } catch (ValidationException $error) {
             http_response_code(422);
+
             $this->view('auth/register', [
                 'title' => 'Create Reporter Account',
                 'errors' => $error->getErrors(),
@@ -53,9 +55,9 @@ class AuthController extends Controller
         }
     }
 
-    public function login(): void
-    {
+    public function login(): void {
         $this->requirePost();
+
         $email = mb_strtolower($this->input('email'));
         $password = (string) ($_POST['password'] ?? '');
         $errors = [];
@@ -69,6 +71,7 @@ class AuthController extends Controller
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'Enter a valid email address.';
         }
+
         if ($password === '') {
             $errors['password'] = 'Enter your password.';
         }
@@ -79,21 +82,23 @@ class AuthController extends Controller
 
         if ($errors !== []) {
             http_response_code(422);
+
             $this->view('auth/login', [
                 'title' => 'Sign In',
                 'errors' => $errors,
                 'email' => $email,
             ]);
+
             return;
         }
 
         Flash::set('success', 'Welcome back, ' . Auth::user()->getFullName() . '.');
-        $this->redirect('bin');
+        $this->redirect('');
     }
 
-    public function logout(): void
-    {
+    public function logout(): void {
         $this->requirePost();
+
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
         } catch (AuthorizationException $error) {
@@ -102,6 +107,7 @@ class AuthController extends Controller
         }
 
         Auth::logout();
+
         Flash::set('success', 'You have signed out.');
         $this->redirect('auth');
     }

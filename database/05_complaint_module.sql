@@ -1,6 +1,5 @@
 -- =====================================================================
 -- EcoCampus - Complaint module migration for existing databases
--- Author : Ong Kar Heng (2408830)
 -- =====================================================================
 
 USE ecocampus;

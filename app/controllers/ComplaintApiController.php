@@ -1,5 +1,5 @@
 <?php
-/** JSON service providing unresolved complaints to Scheduling. Author: Ong Kar Heng (2408830). */
+/** JSON service providing unresolved complaints to Scheduling. */
 class ComplaintApiController extends ApiController
 {
     public function resource(?int $id = null): void

@@ -2,7 +2,6 @@
 /**
  * Read-only JSON web service for campus locations.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management - Web Service Technologies
  */
 class LocationApiController extends ApiController

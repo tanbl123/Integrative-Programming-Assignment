@@ -2,7 +2,6 @@
 /**
  * Location entity - where a bin physically sits on campus.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  * Note   : Skeleton provided so the Complaint module can display bin locations.
  */

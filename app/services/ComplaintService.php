@@ -1,5 +1,5 @@
 <?php
-/** Complaint business rules and Observer coordination. Author: Ong Kar Heng (2408830). */
+/** Complaint business rules and Observer coordination.  */
 class ComplaintService
 {
     private ComplaintStatusSubject $subject;

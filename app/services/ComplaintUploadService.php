@@ -1,5 +1,5 @@
 <?php
-/** Secure MIME-verified complaint image storage. Author: Ong Kar Heng (2408830). */
+/** Secure MIME-verified complaint image storage.  */
 class ComplaintUploadService
 {
     private const MAX_BYTES = 5_242_880;

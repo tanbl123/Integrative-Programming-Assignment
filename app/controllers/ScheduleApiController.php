@@ -1,5 +1,5 @@
 <?php
-/** Cleaner assignment JSON service. Author: Ong Kar Heng (2408830). */
+/** Cleaner assignment JSON service.  */
 class ScheduleApiController extends ApiController
 {
     public function resource(?int $id = null): void

@@ -1,9 +1,6 @@
 <?php
 /**
  * Shared page header.
- *
- * Author : Tan Boon Leong (2402865)
- * Updated: Ong Kar Heng (2408830) - authenticated module navigation
  * Module : Shared core - EcoCampus Waste Management System
  */
 $currentUser = Auth::user();

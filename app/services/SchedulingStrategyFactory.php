@@ -1,7 +1,6 @@
 <?php
 /**
  * Interchangeable bin-selection strategies.
- * Author : Ong Kar Heng (2408830)
  * Module : Collection Scheduling & Assignment - Strategy design pattern
  */
 interface BinSelectionStrategy

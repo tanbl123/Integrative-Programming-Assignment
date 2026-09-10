@@ -1,5 +1,5 @@
 <?php
-/** Secure complaint photo metadata. Author: Ong Kar Heng (2408830). */
+/** Secure complaint photo metadata.  */
 class ComplaintAttachment extends Model
 {
     protected static string $table = 'complaint_attachments';

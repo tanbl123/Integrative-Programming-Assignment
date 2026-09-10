@@ -2,7 +2,6 @@
 /**
  * Carries field-level validation messages back to a controller.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : Shared validation support
  */
 class ValidationException extends InvalidArgumentException

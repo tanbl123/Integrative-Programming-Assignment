@@ -6,7 +6,6 @@
  * capabilities without changing the User entity. This is the User & Access
  * module's reportable Decorator design pattern.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : User & Access Management - Decorator design pattern
  */
 interface PermissionProfile

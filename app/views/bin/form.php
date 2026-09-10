@@ -1,7 +1,6 @@
 <?php
 /**
  * Administrator bin create/edit form.
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 $isEdit = $mode === 'edit';
@@ -17,6 +16,13 @@ $action = $isEdit ? url('bin/update/' . $bin->getKey()) : url('bin/store');
 
 <form method="post" action="<?= $action ?>" class="form-card">
     <?= csrfField() ?>
+    
+    <?php if (!empty($errors['bin'])): ?>
+    <div class="alert alert-error">
+        <?= e($errors['bin']) ?>
+    </div>
+    <?php endif; ?>
+    
     <div class="form-grid">
         <label>
             Bin code
