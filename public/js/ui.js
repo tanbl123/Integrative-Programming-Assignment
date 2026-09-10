@@ -131,16 +131,35 @@
     });
     // Search/filter/sort the entire rendered result set before choosing a page.
     // Existing GET filters remain server-side; the toolbar clearly labels this scope.
-    function enhance(container, rows, columns, valueOf, anchor) {
+    //
+    // Sorting is driven by clicking a column header (the familiar spreadsheet
+    // gesture) rather than a separate dropdown. Card grids have no headers, so
+    // they keep a select as the fallback.
+    // Updated: Tan Boon Leong (2402865) - header sorting and numbered pagination.
+    function enhance(container, rows, columns, valueOf, anchor, table) {
         if (!rows.length) return;
         let page = 1;
+        let sortIndex = null;
+        let sortDir = 'asc';
+
         const toolbar = make('div', '', 'list-tools');
         const search = make('input');
         search.type = 'search';
         search.placeholder = 'Search these results';
-        const sort = select([['', 'Original order'], ...columns.flatMap(([index, name]) => [[index + ':asc', name + ' ↑'], [index + ':desc', name + ' ↓']])]);
         const perPage = select([['10', '10'], ['25', '25'], ['50', '50'], ['all', 'All']]);
-        toolbar.append(label('Search results', search), label('Sort by', sort), label('Per page', perPage));
+        toolbar.append(label('Search results', search), label('Per page', perPage));
+
+        // Header sorting when we have a real table; a dropdown otherwise.
+        const headerCells = table && table.tHead ? table.tHead.rows[0].cells : null;
+        let sortSelect = null;
+        if (!headerCells) {
+            sortSelect = select([
+                ['', 'Original order'],
+                ...columns.flatMap(([index, name]) => [[index + ':asc', name + ' ↑'], [index + ':desc', name + ' ↓']]),
+            ]);
+            toolbar.append(label('Sort by', sortSelect));
+        }
+
         const filters = [];
         columns.filter(([, name]) => /status|role|category|building|strategy|cleaner/i.test(name)).forEach(([index, name]) => {
             const values = [...new Set(rows.map(row => valueOf(row, index)).filter(Boolean))].sort();
@@ -149,35 +168,145 @@
             filters.push({index, control});
             toolbar.append(label(name, control));
         });
-        const pager = make('div', '', 'list-pager');
+
+        const pager = make('nav', '', 'list-pager');
+        pager.setAttribute('aria-label', 'Pagination');
         const summary = make('span');
         summary.setAttribute('role', 'status');
-        const previous = button('Previous', () => { page--; render(); });
-        const next = button('Next', () => { page++; render(); });
-        pager.append(summary, previous, next);
+        const numbers = make('div', '', 'pager-pages');
+        const previous = button('‹ Previous', () => { page--; render(); });
+        const next = button('Next ›', () => { page++; render(); });
+        previous.classList.add('button-small');
+        next.classList.add('button-small');
+        pager.append(summary, previous, numbers, next);
+
         const empty = make('p', 'No results match. Clear the filters to see all loaded records.', 'empty');
         empty.hidden = true;
         anchor.before(toolbar);
         anchor.after(empty, pager);
+
+        // Wire each sortable column header: click or Enter/Space cycles
+        // ascending -> descending -> unsorted.
+        if (headerCells) {
+            columns.forEach(([index, name]) => {
+                const cell = headerCells[index];
+                if (!cell) return;
+                cell.classList.add('sortable');
+                cell.tabIndex = 0;
+                cell.setAttribute('role', 'button');
+                cell.title = 'Sort by ' + name;
+                const arrow = make('span', '⇅', 'sort-arrow');
+                arrow.setAttribute('aria-hidden', 'true');
+                cell.append(' ', arrow);
+                const activate = () => {
+                    if (sortIndex === index) {
+                        if (sortDir === 'asc') { sortDir = 'desc'; }
+                        else { sortIndex = null; sortDir = 'asc'; }
+                    } else {
+                        sortIndex = index;
+                        sortDir = 'asc';
+                    }
+                    page = 1;
+                    render();
+                };
+                cell.addEventListener('click', activate);
+                cell.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        activate();
+                    }
+                });
+            });
+        }
+
+        const paintHeaders = () => {
+            if (!headerCells) return;
+            columns.forEach(([index]) => {
+                const cell = headerCells[index];
+                if (!cell) return;
+                const arrow = cell.querySelector('.sort-arrow');
+                const active = sortIndex === index;
+                if (active) {
+                    cell.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
+                } else {
+                    cell.removeAttribute('aria-sort');
+                }
+                if (arrow) { arrow.textContent = active ? (sortDir === 'asc' ? '↑' : '↓') : '⇅'; }
+            });
+        };
+
+        // Numbered pages, collapsing long runs to an ellipsis so the control
+        // stays one line: 1 ... 4 [5] 6 ... 20
+        const paintPages = (current, total) => {
+            numbers.replaceChildren();
+            if (total <= 1) return;
+            const wanted = new Set([1, total, current, current - 1, current + 1]);
+            if (current <= 3) { wanted.add(2).add(3); }
+            if (current >= total - 2) { wanted.add(total - 1).add(total - 2); }
+            const shown = [...wanted].filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+            let previousNumber = 0;
+            shown.forEach(number => {
+                if (number - previousNumber > 1) {
+                    numbers.append(make('span', '…', 'pager-ellipsis'));
+                }
+                const node = make('button', String(number), 'pager-page');
+                node.type = 'button';
+                if (number === current) {
+                    node.setAttribute('aria-current', 'page');
+                } else {
+                    node.setAttribute('aria-label', 'Go to page ' + number);
+                }
+                node.addEventListener('click', () => { page = number; render(); });
+                numbers.append(node);
+                previousNumber = number;
+            });
+        };
+
         const render = () => {
             const term = search.value.trim().toLocaleLowerCase();
-            let matching = rows.filter(row => row.textContent.toLocaleLowerCase().includes(term) && filters.every(filter => !filter.control.value || valueOf(row, filter.index) === filter.control.value));
-            if (sort.value) {
-                const [index, direction] = sort.value.split(':');
-                matching.sort((a, b) => valueOf(a, +index).localeCompare(valueOf(b, +index), undefined, {numeric: true, sensitivity: 'base'}) * (direction === 'asc' ? 1 : -1));
+            let matching = rows.filter(row => row.textContent.toLocaleLowerCase().includes(term)
+                && filters.every(filter => !filter.control.value || valueOf(row, filter.index) === filter.control.value));
+
+            let index = sortIndex;
+            let direction = sortDir;
+            if (sortSelect && sortSelect.value) {
+                const parts = sortSelect.value.split(':');
+                index = +parts[0];
+                direction = parts[1];
             }
+            if (index !== null && index !== undefined) {
+                matching.sort((a, b) => valueOf(a, +index).localeCompare(valueOf(b, +index), undefined, {numeric: true, sensitivity: 'base'})
+                    * (direction === 'asc' ? 1 : -1));
+            }
+
             const size = perPage.value === 'all' ? Math.max(1, matching.length) : +perPage.value;
             const pages = Math.max(1, Math.ceil(matching.length / size));
             page = Math.max(1, Math.min(page, pages));
             rows.forEach(row => { row.hidden = true; });
             matching.slice((page - 1) * size, page * size).forEach(row => { row.hidden = false; container.append(row); });
-            summary.textContent = matching.length ? `${(page - 1) * size + 1}–${Math.min(page * size, matching.length)} of ${matching.length} results · Page ${page} of ${pages}` : '0 results';
+
+            summary.textContent = matching.length
+                ? `${(page - 1) * size + 1}–${Math.min(page * size, matching.length)} of ${matching.length} results`
+                : '0 results';
             previous.disabled = page === 1;
             next.disabled = page === pages;
+            // A single page needs no navigation - only the result summary.
+            previous.hidden = pages === 1;
+            next.hidden = pages === 1;
+            pager.hidden = matching.length === 0;
+            paintPages(page, pages);
+            paintHeaders();
             empty.hidden = matching.length !== 0;
         };
+
         toolbar.append(button('Clear result filters', () => {
-            search.value = ''; sort.value = ''; filters.forEach(filter => { filter.control.value = ''; }); page = 1; render();
+            search.value = '';
+            if (sortSelect) { sortSelect.value = ''; }
+            sortIndex = null;
+            sortDir = 'asc';
+            filters.forEach(filter => { filter.control.value = ''; });
+            page = 1;
+            render();
         }));
         toolbar.addEventListener('input', () => { page = 1; render(); });
         toolbar.addEventListener('change', () => { page = 1; render(); });
@@ -188,7 +317,7 @@
         if (!body || !table.tHead) return;
         const rows = Array.from(body.rows).filter(row => !row.querySelector('td[colspan]'));
         const columns = Array.from(table.tHead.rows[0].cells).map((cell, index) => [index, cell.textContent.trim()]).filter(([, name]) => name && !/^actions?$/i.test(name));
-        enhance(body, rows, columns, (row, index) => row.cells[index]?.textContent.trim() || '', table.closest('.table-scroll') || table);
+        enhance(body, rows, columns, (row, index) => row.cells[index]?.textContent.trim() || '', table.closest('.table-scroll') || table, table);
     });
     document.querySelectorAll('.card-grid').forEach(grid => {
         const rows = Array.from(grid.querySelectorAll(':scope > .location-card'));
