@@ -1,8 +1,4 @@
-/**
- * Author : Phang Jun Hong (2406646)
- * Module : User & Access Management
- */
-<?php /* User administration. */ ?> 
+<?php /** User administration. Author: Phang Jun Hong (2406646). Module: User & Access Management. */ ?>
 
 <div class="page-heading"> 
     <div>

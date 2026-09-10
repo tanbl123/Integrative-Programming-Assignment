@@ -1,8 +1,4 @@
-/**
- * Author : Phang Jun Hong (2406646)
- * Module : User & Access Management
- */
-<?php /** Shared optional demographic fields.  */ ?> 
+<?php /** Shared optional demographic fields. Author: Phang Jun Hong (2406646). Module: User & Access Management. */ ?>
 
 <h2>Personal information</h2> 
 
