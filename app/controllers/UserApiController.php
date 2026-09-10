@@ -1,5 +1,9 @@
 <?php
-/** User REST service with service/decorator access checks.  */
+/**
+ * User REST service with service/decorator access checks.
+ * Author : Phang Jun Hong (2406646)
+ * Module : User & Access Management
+ */
 class UserApiController extends ApiController
 {
     public function resource(?int $id = null): void

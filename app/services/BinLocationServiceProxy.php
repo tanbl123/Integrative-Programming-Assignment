@@ -5,7 +5,8 @@
  * It has the same interface as the real service, but checks the authenticated
  * role before delegating. Controllers cannot bypass these checks accidentally.
  *
- * Module : Bin & Location Management - Proxy design pattern
+ * Author : Ong Kar Heng (2408830)
+ * Module : Bin & Location Management
  */
 class BinLocationServiceProxy implements BinLocationServiceInterface
 {

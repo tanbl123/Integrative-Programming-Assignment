@@ -1,6 +1,10 @@
 <?php
 
-/** Collection scheduling orchestration. */
+/**
+ * Collection scheduling orchestration.
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
+ */
 class SchedulingService {
 
     public function create(User $administrator, array $data): CollectionSchedule {

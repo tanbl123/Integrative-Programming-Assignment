@@ -1,3 +1,7 @@
+/**
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
+ */
 <?php /** Assignment completion form. */ ?>
 
 <div class="page-heading">

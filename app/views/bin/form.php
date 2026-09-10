@@ -1,6 +1,7 @@
 <?php
 /**
  * Administrator bin create/edit form.
+ * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 $isEdit = $mode === 'edit';

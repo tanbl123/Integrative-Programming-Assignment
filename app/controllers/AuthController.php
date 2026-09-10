@@ -2,7 +2,8 @@
 
 /**
  * Secure login/logout required by module role enforcement.
- * Module : Shared authentication prerequisite
+ * Author : Phang Jun Hong (2406646)
+ * Module : User & Access Management
  */
 class AuthController extends Controller {
 

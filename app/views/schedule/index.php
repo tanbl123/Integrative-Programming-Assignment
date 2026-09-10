@@ -1,3 +1,7 @@
+/**
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
+ */
 <?php /** Schedule administration list. */ ?>
 
 <div class="page-heading">

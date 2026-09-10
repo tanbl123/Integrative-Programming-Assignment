@@ -2,6 +2,7 @@
 /**
  * Real subject containing Bin & Location business rules.
  *
+ * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 class BinLocationService implements BinLocationServiceInterface

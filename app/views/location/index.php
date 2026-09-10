@@ -1,7 +1,8 @@
 <?php 
 /** 
  * Searchable campus location register. 
- * Module : Bin & Location Management 
+ * Author : Ong Kar Heng (2408830)
+ * Module : Bin & Location Management
  */ 
 ?> 
 

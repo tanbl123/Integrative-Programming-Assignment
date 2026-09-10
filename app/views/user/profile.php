@@ -1,5 +1,9 @@
 <?php
-/** Personal profile form. */
+/**
+ * Personal profile form.
+ * Author : Phang Jun Hong (2406646)
+ * Module : User & Access Management
+ */
 $value = static fn(string $key, mixed $fallback): mixed =>
         array_key_exists($key, $values) ? $values[$key] : $fallback;
 ?>

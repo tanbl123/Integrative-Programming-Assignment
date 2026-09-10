@@ -1,5 +1,9 @@
 <?php
-/** Schedule create/edit form. */
+/**
+ * Schedule create/edit form.
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
+ */
 
 $isEdit = $mode === 'edit';
 $action = $isEdit ? url('schedule/update/' . $schedule->getKey()) : url('schedule/store');

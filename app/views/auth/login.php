@@ -1,7 +1,8 @@
 <?php
 /**
  * Secure sign-in form.
- * Module : Shared authentication prerequisite
+ * Author : Phang Jun Hong (2406646)
+ * Module : User & Access Management
  */
 ?>
 

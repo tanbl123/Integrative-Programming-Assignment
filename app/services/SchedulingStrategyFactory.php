@@ -1,7 +1,8 @@
 <?php
 /**
  * Interchangeable bin-selection strategies.
- * Module : Collection Scheduling & Assignment - Strategy design pattern
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
  */
 interface BinSelectionStrategy
 {

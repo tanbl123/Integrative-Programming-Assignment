@@ -2,6 +2,7 @@
 
 /**
  * User account registration, administration, and profile rules.
+ * Author : Phang Jun Hong (2406646)
  * Module : User & Access Management
  */
 class UserService {

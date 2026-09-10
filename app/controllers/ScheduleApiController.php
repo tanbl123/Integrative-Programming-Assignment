@@ -1,5 +1,9 @@
 <?php
-/** Cleaner assignment JSON service.  */
+/**
+ * Cleaner assignment JSON service.
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
+ */
 class ScheduleApiController extends ApiController
 {
     public function resource(?int $id = null): void

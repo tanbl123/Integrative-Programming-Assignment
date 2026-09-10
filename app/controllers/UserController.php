@@ -2,6 +2,7 @@
 
 /**
  * User administration and personal profile controller.
+ * Author : Phang Jun Hong (2406646)
  * Module : User & Access Management
  */
 class UserController extends Controller {

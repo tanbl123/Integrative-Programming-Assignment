@@ -1,5 +1,7 @@
 -- =====================================================================
 -- EcoCampus - Collection Scheduling module migration
+-- Author  : Ng Zi Zhang (2406898)
+-- Module  : Collection Scheduling & Assignment
 -- =====================================================================
 USE ecocampus;
 

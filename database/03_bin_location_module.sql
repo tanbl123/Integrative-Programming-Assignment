@@ -1,6 +1,8 @@
 -- =====================================================================
 -- EcoCampus - Bin & Location module migration for existing databases
 -- Run once after 01_schema.sql and 02_seed.sql on an existing setup.
+-- Author  : Ong Kar Heng (2408830)
+-- Module  : Bin & Location Management
 -- =====================================================================
 
 USE ecocampus;

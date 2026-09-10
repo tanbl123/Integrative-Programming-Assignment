@@ -1,5 +1,7 @@
 -- =====================================================================
 -- EcoCampus - User & Access module migration for existing databases
+-- Author  : Phang Jun Hong (2406646)
+-- Module  : User & Access Management
 -- =====================================================================
 
 USE ecocampus;

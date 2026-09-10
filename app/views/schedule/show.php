@@ -1,5 +1,9 @@
 <?php
-/** Schedule details. */
+/**
+ * Schedule details.
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
+ */
 $canManage = UserPermissions::can($user, 'schedule.manage');
 $isCleanerView = $user->isCleaner() && !$canManage;
 $backUrl = $canManage ? url('schedule') : url('schedule/my');

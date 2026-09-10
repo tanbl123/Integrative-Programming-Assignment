@@ -1,5 +1,9 @@
 <?php
-/** Completed waste collection measurement.  */
+/**
+ * Completed waste collection measurement.
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
+ */
 class CollectionRecord extends Model
 {
     protected static string $table = 'collection_records';

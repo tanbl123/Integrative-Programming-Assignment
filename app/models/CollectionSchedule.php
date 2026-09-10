@@ -1,5 +1,9 @@
 <?php
-/** Collection plan created by an administrator.  */
+/**
+ * Collection plan created by an administrator.
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
+ */
 class CollectionSchedule extends Model
 {
     protected static string $table = 'collection_schedules';

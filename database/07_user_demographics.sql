@@ -1,5 +1,7 @@
 -- Apply once to an existing EcoCampus database before using the updated User module.
 -- Nullable demographics preserve existing accounts and make disclosure optional.
+-- Author  : Phang Jun Hong (2406646)
+-- Module  : User & Access Management
 USE ecocampus;
 ALTER TABLE users
     ADD COLUMN IF NOT EXISTS address_line1 VARCHAR(200) NULL,

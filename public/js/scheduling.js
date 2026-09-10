@@ -1,4 +1,8 @@
-/* EcoCampus scheduling web-service integration. */
+/*
+ * EcoCampus scheduling web-service integration.
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
+ */
 (() => {
     const form = document.getElementById('schedule-form');
     const strategy = document.getElementById('strategy');

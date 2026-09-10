@@ -2,6 +2,7 @@
 /**
  * WasteCategory entity - General, Recyclable, Organic and so on.
  *
+ * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 class WasteCategory extends Model

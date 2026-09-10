@@ -1,6 +1,7 @@
 <?php
 /**
  * Bin entity - a waste bin on campus.
+ * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  * Note   : Skeleton provided because the Complaint module depends on it.
  *          A complaint is always raised against a specific bin.

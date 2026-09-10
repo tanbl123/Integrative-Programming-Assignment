@@ -1,6 +1,7 @@
 <?php
 /**
  * Searchable bin register.
+ * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 ?>

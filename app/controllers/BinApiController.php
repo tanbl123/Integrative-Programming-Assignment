@@ -7,7 +7,8 @@
  *   GET  /bin-api/show/{id}
  *   POST /bin-api/update-status/{id}
  *
- * Module : Bin & Location Management - Web Service Technologies
+ * Author : Ong Kar Heng (2408830)
+ * Module : Bin & Location Management
  */
 class BinApiController extends ApiController
 {

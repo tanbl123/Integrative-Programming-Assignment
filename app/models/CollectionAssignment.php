@@ -1,5 +1,9 @@
 <?php
-/** One cleaner/bin task within a schedule.  */
+/**
+ * One cleaner/bin task within a schedule.
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
+ */
 class CollectionAssignment extends Model
 {
     protected static string $table = 'collection_assignments';

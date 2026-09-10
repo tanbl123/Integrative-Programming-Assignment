@@ -1,5 +1,9 @@
 <?php
-/** Reporter self-registration form. */
+/**
+ * Reporter self-registration form.
+ * Author : Phang Jun Hong (2406646)
+ * Module : User & Access Management
+ */
 $fieldValue = static function (string $field, array $values, array $errors): string {
     if (!empty($errors[$field])) {
         return '';

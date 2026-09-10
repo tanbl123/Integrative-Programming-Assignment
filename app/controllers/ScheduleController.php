@@ -2,6 +2,8 @@
 
 /**
  * Collection scheduling and cleaner assignment controller.
+ * Author : Ng Zi Zhang (2406898)
+ * Module : Collection Scheduling & Assignment
  */
 class ScheduleController extends Controller {
 

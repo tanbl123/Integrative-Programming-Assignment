@@ -2,6 +2,7 @@
 /**
  * Browser controller for bin listing, maintenance, and cleaner updates.
  *
+ * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 class BinController extends Controller

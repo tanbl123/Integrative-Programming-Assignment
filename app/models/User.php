@@ -4,7 +4,8 @@
  * User entity. 
  * 
  * Authentication prerequisite getter 
- * Module : User & Access Management 
+ * Author : Phang Jun Hong (2406646)
+ * Module : User & Access Management
  * Note   : Skeleton provided so other modules can reference users. 
  *          The owning member extends this with authentication logic. 
  */
