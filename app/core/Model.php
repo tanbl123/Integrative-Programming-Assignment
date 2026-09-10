@@ -2,7 +2,6 @@
 /**
  * Model - the Object-Relational Mapping (ORM) base class.
  *
- * Author : Tan Boon Leong (2402865)
  * Module : Shared core - EcoCampus Waste Management System
  *
  * WHAT "ORM" MEANS HERE

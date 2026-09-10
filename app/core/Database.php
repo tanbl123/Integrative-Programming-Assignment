@@ -1,15 +1,11 @@
 <?php
 /**
  * Database - single shared PDO connection.
- *
- * Author : Tan Boon Leong (2402865)
  * Module : Shared core - EcoCampus Waste Management System
- *
  * Every query in the system goes through this class, and every query is
  * a PREPARED STATEMENT. Values are sent to MySQL separately from the SQL
  * text, so user input can never be parsed as SQL. This is the system-wide
- * defence against SQL Injection.
- *
+ * defense against SQL Injection.
  * Note: this class uses a single shared instance (Singleton). Per the
  * assignment brief, Singleton does NOT count as your reportable design
  * pattern - it is infrastructure, not the pattern you write about.

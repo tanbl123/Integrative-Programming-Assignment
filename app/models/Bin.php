@@ -1,12 +1,9 @@
 <?php
 /**
  * Bin entity - a waste bin on campus.
- *
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  * Note   : Skeleton provided because the Complaint module depends on it.
  *          A complaint is always raised against a specific bin.
- *
  * Relationships are exposed as OBJECT REFERENCES, per the assignment brief:
  * getLocation() hands back a Location object, not a location_id integer.
  */
@@ -79,15 +76,28 @@ class Bin extends Model
         $this->set('is_active', 1);
         $this->set('last_updated', ifaTimestamp());
     }
-
-    public function hasOpenWork(): bool
-    {
+    
+    public function hasOpenAssignments(): bool {
         foreach ($this->hasMany(CollectionAssignment::class, 'bin_id') as $assignment) {
-            if ($assignment->getStatus() === 'Assigned') { return true; }
+            if ($assignment->getStatus() === 'Assigned') {
+                return true;
+            }
         }
+
+        return false;
+    }
+
+    public function hasOpenWork(): bool {
+        if ($this->hasOpenAssignments()) {
+            return true;
+        }
+
         foreach ($this->hasMany(Complaint::class, 'bin_id') as $complaint) {
-            if (!$complaint->isDeleted() && in_array($complaint->getStatus(), ['New', 'Assigned'], true)) { return true; }
+            if (!$complaint->isDeleted() && in_array($complaint->getStatus(), ['New', 'Assigned'], true)) {
+                return true;
+            }
         }
+
         return false;
     }
 

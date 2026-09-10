@@ -1,7 +1,6 @@
 <?php
 /**
  * Cleaner status update form.
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 ?>
@@ -30,5 +29,5 @@
         <textarea name="remarks" rows="4" maxlength="255" placeholder="Example: Bin emptied and liner replaced."><?= e((string) ($values['remarks'] ?? '')) ?></textarea>
         <?php if (!empty($errors['remarks'])): ?><span class="field-error"><?= e($errors['remarks']) ?></span><?php endif; ?>
     </label>
-    <button type="submit" class="button">Record update</button>
+    <button type="submit" class="button">Update</button>
 </form>

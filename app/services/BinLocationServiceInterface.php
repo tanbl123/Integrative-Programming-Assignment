@@ -2,7 +2,6 @@
 /**
  * Operations exposed by the Bin & Location module.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 interface BinLocationServiceInterface

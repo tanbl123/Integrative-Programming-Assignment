@@ -1,7 +1,6 @@
 <?php
 /**
  * Shared safe error page.
- * Author : Ong Kar Heng (2408830)
  * Module : Shared presentation support
  */
 ?>

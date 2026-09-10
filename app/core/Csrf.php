@@ -2,7 +2,6 @@
 /**
  * CSRF token generation and constant-time verification.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : Shared security support
  */
 class Csrf

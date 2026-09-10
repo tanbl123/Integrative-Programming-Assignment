@@ -1,5 +1,5 @@
 <?php
-/** One cleaner/bin task within a schedule. Author: Ong Kar Heng (2408830). */
+/** One cleaner/bin task within a schedule.  */
 class CollectionAssignment extends Model
 {
     protected static string $table = 'collection_assignments';
@@ -39,12 +39,34 @@ class CollectionAssignment extends Model
     public function getBin(): ?Bin { return $this->belongsTo(Bin::class, 'bin_id'); }
     public function getSourceComplaint(): ?Complaint { return $this->belongsTo(Complaint::class, 'source_complaint_id'); }
 
-    public static function forCleaner(int $cleanerId, string $status = ''): array
-    {
-        $sql = 'SELECT a.* FROM collection_assignments a INNER JOIN collection_schedules s ON s.schedule_id = a.schedule_id WHERE a.cleaner_id = ? AND s.schedule_status <> ? AND s.deleted_at IS NULL';
+ public static function forCleaner(int $cleanerId, string $status = '', string $routeView = ''): array {
+        $sql = "
+        SELECT a.* 
+        FROM collection_assignments a 
+        INNER JOIN collection_schedules s 
+            ON s.schedule_id = a.schedule_id 
+        WHERE a.cleaner_id = ? 
+        AND s.schedule_status <> ? 
+        AND s.deleted_at IS NULL
+    ";
+
         $params = [$cleanerId, 'Cancelled'];
-        if (in_array($status, ['Assigned', 'Completed', 'Skipped'], true)) { $sql .= ' AND a.assignment_status = ?'; $params[] = $status; }
+
+        if (in_array($status, ['Assigned', 'Completed', 'Skipped'], true)) {
+            $sql .= ' AND a.assignment_status = ?';
+            $params[] = $status;
+        }
+
+        if ($routeView === 'today') {
+            $sql .= ' AND s.schedule_date = CURDATE()';
+        }
+
+        if ($routeView === 'week') {
+            $sql .= ' AND YEARWEEK(s.schedule_date, 1) = YEARWEEK(CURDATE(), 1)';
+        }
+
         $sql .= ' ORDER BY s.schedule_date DESC, a.assignment_id DESC';
+
         return self::hydrateAll(Database::getInstance()->selectAll($sql, $params));
     }
 

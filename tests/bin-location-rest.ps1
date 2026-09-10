@@ -1,4 +1,4 @@
-# Author: Ong Kar Heng (2408830). Local XAMPP integration test; fixtures are removed by exact IDs.
+# Local XAMPP integration test; fixtures are removed by exact IDs.
 param([string]$BaseUrl = 'http://localhost/EcoCampus', [string]$Mysql = 'C:\xampp\mysql\bin\mysql.exe')
 $ErrorActionPreference = 'Stop'
 $checks = 0

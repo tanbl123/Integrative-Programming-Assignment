@@ -2,8 +2,7 @@
 /**
  * App - the router / front controller dispatcher.
  *
- * Author : Tan Boon Leong (2402865)
- * Updated: Ong Kar Heng (2408830) - safe REST routing
+ * Add safe REST routing
  * Module : Shared core - EcoCampus Waste Management System
  *
  * Turns a URL into a controller call:

@@ -1,5 +1,5 @@
 <?php
-/** Shared REST request/response security. Author: Ong Kar Heng (2408830). */
+/** Shared REST request/response security.  */
 abstract class ApiController extends Controller
 {
     protected function apiMethod(): string

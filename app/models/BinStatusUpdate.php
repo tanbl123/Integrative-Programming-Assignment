@@ -2,7 +2,6 @@
 /**
  * Immutable audit entry created whenever a cleaner changes bin status.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 class BinStatusUpdate extends Model

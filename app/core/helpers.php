@@ -2,8 +2,7 @@
 /**
  * Shared helper functions.
  *
- * Author : Tan Boon Leong (2402865)
- * Updated: Ong Kar Heng (2408830) - CSRF form helper
+ * CSRF form helper
  * Module : Shared core - EcoCampus Waste Management System
  */
 

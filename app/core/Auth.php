@@ -2,7 +2,6 @@
 /**
  * Session-backed authentication and role checks.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : Shared security support
  */
 class Auth

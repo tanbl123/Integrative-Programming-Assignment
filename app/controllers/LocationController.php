@@ -2,7 +2,6 @@
 /**
  * Browser controller for campus locations.
  *
- * Author : Ong Kar Heng (2408830)
  * Module : Bin & Location Management
  */
 class LocationController extends Controller

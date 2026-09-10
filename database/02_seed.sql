@@ -1,7 +1,5 @@
 -- =====================================================================
 -- EcoCampus Waste Management System - initial data
---
--- Author : Tan Boon Leong (2402865)
 -- Module : Shared core
 --
 -- Run AFTER 01_schema.sql.

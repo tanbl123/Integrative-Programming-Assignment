@@ -2,7 +2,6 @@
 /**
  * Shared page footer.
  *
- * Author : Tan Boon Leong (2402865)
  * Module : Shared core - EcoCampus Waste Management System
  */
 $uiVersion = filemtime(APP_ROOT . '/public/js/ui.js');
