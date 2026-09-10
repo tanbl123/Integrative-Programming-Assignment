@@ -27,12 +27,12 @@ $action = $isEdit ? url('bin/update/' . $bin->getKey()) : url('bin/store');
     <div class="form-grid">
         <label>
             Bin code
-            <input name="bin_code" value="<?= e((string) ($values['bin_code'] ?? '')) ?>" required maxlength="50" placeholder="BIN-A-001">
+            <input name="bin_code" value="<?= e((string) ($values['bin_code'] ?? '')) ?>" required minlength="3" maxlength="50" pattern="[A-Za-z0-9-]{3,50}" title="Use 3-50 uppercase letters, numbers, or hyphens." placeholder="BIN-A-001">
             <?php if (!empty($errors['bin_code'])): ?><span class="field-error"><?= e($errors['bin_code']) ?></span><?php endif; ?>
         </label>
         <label>
             Capacity (litres)
-            <input type="number" name="capacity_litre" value="<?= e((string) ($values['capacity_litre'] ?? '')) ?>" min="1" max="10000">
+            <input type="number" name="capacity_litre" value="<?= e((string) ($values['capacity_litre'] ?? '')) ?>" min="1" max="10000" title="Capacity must be between 1 and 10,000 litres.">
             <?php if (!empty($errors['capacity_litre'])): ?><span class="field-error"><?= e($errors['capacity_litre']) ?></span><?php endif; ?>
         </label>
         <label>

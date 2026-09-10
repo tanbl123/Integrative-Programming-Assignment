@@ -7,6 +7,7 @@
  * Module : Shared core - EcoCampus Waste Management System
  */
 $uiVersion = filemtime(APP_ROOT . '/public/js/ui.js');
+$validateVersion = filemtime(APP_ROOT . '/public/js/validate.js');
 ?>
 </main>
 <footer class="site-footer">
@@ -16,5 +17,8 @@ $uiVersion = filemtime(APP_ROOT . '/public/js/ui.js');
     </div>
 </footer>
 <script src="<?= url('public/js/ui.js') ?>?v=<?= (int) $uiVersion ?>" defer></script>
+<?php /* Client-side validation for every module's forms. Loaded after ui.js so the
+        Clear fields button it appends is already in place. */ ?>
+<script src="<?= url('public/js/validate.js') ?>?v=<?= (int) $validateVersion ?>" defer></script>
 </body>
 </html>

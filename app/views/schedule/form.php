@@ -44,6 +44,7 @@ $action = $isEdit ? url('schedule/update/' . $schedule->getKey()) : url('schedul
                 min="<?= date('Y-m-d') ?>" 
                 value="<?= e((string) $values['schedule_date']) ?>" 
                 required
+                data-message-min="Select today or a future date." 
             >
             <?php if (!empty($errors['schedule_date'])): ?>
                 <span class="field-error"><?= e($errors['schedule_date']) ?></span>

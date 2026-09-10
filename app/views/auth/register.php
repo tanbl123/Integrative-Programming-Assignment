@@ -84,6 +84,10 @@ foreach (array_keys($errors) as $errorField) {
                     name="password" 
                     required 
                     autocomplete="new-password"
+                    minlength="8"
+                    maxlength="72"
+                    pattern="(?=.*[A-Za-z])(?=.*[0-9]).{8,72}"
+                    title="Password must be 8-72 characters and contain letters and numbers."
                     >
 
                 <?php if (!empty($errors['password'])): ?>
@@ -98,6 +102,8 @@ foreach (array_keys($errors) as $errorField) {
                     name="password_confirmation" 
                     required 
                     autocomplete="new-password"
+                    data-match="password"
+                    data-message-match="Password confirmation does not match."
                     >
 
                 <?php if (!empty($errors['password_confirmation'])): ?>

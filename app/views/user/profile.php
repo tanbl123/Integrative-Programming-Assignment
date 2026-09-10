@@ -101,7 +101,14 @@ $value = static fn(string $key, mixed $fallback): mixed =>
 
             <label>
                 New password
-                <input type="password" name="new_password">
+                <input 
+                    type="password" 
+                    name="new_password"
+                    minlength="8"
+                    maxlength="72"
+                    pattern="(?=.*[A-Za-z])(?=.*[0-9]).{8,72}"
+                    title="Password must be 8-72 characters and contain letters and numbers."
+                >
 
                 <?php if (!empty($errors['password'])): ?>
                     <span class="field-error"><?= e($errors['password']) ?></span>
@@ -110,7 +117,12 @@ $value = static fn(string $key, mixed $fallback): mixed =>
 
             <label>
                 Confirm new password
-                <input type="password" name="new_password_confirmation">
+                <input 
+                    type="password" 
+                    name="new_password_confirmation"
+                    data-match="new_password"
+                    data-message-match="Password confirmation does not match."
+                >
 
                 <?php if (!empty($errors['password_confirmation'])): ?>
                     <span class="field-error"><?= e($errors['password_confirmation']) ?></span>
