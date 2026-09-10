@@ -389,21 +389,6 @@ button:focus-visible {
     color: #48514d;
 }
 
-.sort-header {
-    border: 0;
-    background: transparent;
-    padding: 0;
-    color: inherit;
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.sort-header:hover {
-    color: var(--green-dark);
-    text-decoration: underline;
-}
-
 .page-hidden {
     display: none !important;
 }
@@ -1249,20 +1234,26 @@ td.duplicate-reason {
 .pager-summary { margin: 0; font-size: .85rem; color: var(--muted); }
 
 /* Sort direction indicator on clickable table headers. */
+/* The button fills its header cell so the whole cell is the click target,
+   not just the width of the label. The cell gives up its padding to the
+   button, which reproduces it exactly, so nothing shifts visually. */
+.table th.th-sortable { padding: 0; }
 .sort-header {
     font: inherit;
     font-weight: 600;
     color: inherit;
     background: none;
     border: 0;
-    padding: 0;
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    text-align: left;
     cursor: pointer;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: .35rem;
 }
-.sort-header:hover { color: var(--green-dark); text-decoration: underline; }
-.sort-header:focus-visible { outline: 2px solid var(--green-dark); outline-offset: 2px; }
+.sort-header:hover { color: var(--green-dark); background: #e3ebe6; text-decoration: none; }
+.sort-header:focus-visible { outline: 2px solid var(--green-dark); outline-offset: -2px; }
 .sort-header .sort-arrow { font-size: .78em; color: var(--muted); opacity: .55; }
 .table th[aria-sort] { background: #e3ebe6; }
 .table th[aria-sort] .sort-arrow { color: var(--green-dark); opacity: 1; }

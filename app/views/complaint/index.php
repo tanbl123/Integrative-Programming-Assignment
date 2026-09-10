@@ -288,6 +288,13 @@
         const sortButtons = Array.from(complaintsTable.querySelectorAll('.sort-header'));
 
         sortButtons.forEach(button => {
+            // Let the cell hand its padding to the button, so the entire header
+            // cell is clickable rather than only the width of the label.
+            const header = button.closest('th');
+            if (header) {
+                header.classList.add('th-sortable');
+            }
+
             const arrow = document.createElement('span');
             arrow.className = 'sort-arrow';
             arrow.setAttribute('aria-hidden', 'true');
