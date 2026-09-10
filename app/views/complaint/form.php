@@ -63,13 +63,15 @@
     </div>
 
     <label>
-        Description
+        <span id="description-label">Description</span>
         <textarea 
             name="description" 
+            id="complaint-description"
             rows="6" 
             minlength="10" 
             maxlength="2000" 
             required
+            placeholder="Describe what needs attention, and where exactly it is."
         ><?= e((string) ($values['description'] ?? '')) ?></textarea>
 
         <?php if (!empty($errors['description'])): ?>
@@ -153,6 +155,44 @@
     };
 
     select.addEventListener('change', update);
+    update();   // a re-rendered form keeps its selection, so check on load too
+})();
+</script>
+
+<?php /*
+ * Prompt for detail when the issue type is Other.
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ *
+ * Every other issue type names the problem on its own, so an administrator
+ * scanning the list understands it at a glance. "Other" does not, and the
+ * description is the only place the problem is stated. Asking for it plainly,
+ * at the moment Other is chosen, is what keeps that description useful.
+ */ ?>
+<script>
+(() => {
+    'use strict';
+    const type = document.querySelector('select[name="complaint_type"]');
+    const label = document.getElementById('description-label');
+    const field = document.getElementById('complaint-description');
+    if (!type || !label || !field) return;
+
+    const DEFAULT_LABEL = 'Description';
+    const DEFAULT_HINT  = 'Describe what needs attention, and where exactly it is.';
+    const OTHER_LABEL   = 'Describe the issue \u2014 you selected Other, '
+                        + 'so please state clearly what the problem is';
+    const OTHER_HINT    = 'For example: the bin has been moved from its usual spot '
+                        + 'and nobody can find it.';
+
+    const update = () => {
+        const isOther = type.value === 'Other';
+        label.textContent = isOther ? OTHER_LABEL : DEFAULT_LABEL;
+        field.placeholder = isOther ? OTHER_HINT : DEFAULT_HINT;
+        label.classList.toggle('label-emphasis', isOther);
+    };
+
+    type.addEventListener('change', update);
     update();   // a re-rendered form keeps its selection, so check on load too
 })();
 </script>

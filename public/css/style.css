@@ -1257,3 +1257,7 @@ td.duplicate-reason {
 .sort-header .sort-arrow { font-size: .78em; color: var(--muted); opacity: .55; }
 .table th[aria-sort] { background: #e3ebe6; }
 .table th[aria-sort] .sort-arrow { color: var(--green-dark); opacity: 1; }
+
+/* Emphasised field label, used when Other needs the reporter to say more.
+   Author: Tan Boon Leong (2402865) */
+.label-emphasis { color: var(--warn); font-weight: 600; }
