@@ -196,6 +196,28 @@ CREATE TABLE complaint_status_history (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
+-- complaint_notifications - dashboard alerts raised by complaint events
+-- Owner: Tan Boon Leong (Complaint / Report Management)
+--
+-- Written by ComplaintNotificationObserver. Kept separate from
+-- complaint_status_history so the audit trail and the alert inbox remain
+-- independent concerns - the reason the Observer pattern is used here.
+-- ---------------------------------------------------------------------
+CREATE TABLE complaint_notifications (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    complaint_id    INT NOT NULL,
+    recipient_role  ENUM('Reporter', 'Cleaner', 'Administrator') NOT NULL,
+    title           VARCHAR(150) NOT NULL,
+    body            VARCHAR(255) NOT NULL,
+    is_read         TINYINT(1) NOT NULL DEFAULT 0,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notifications_complaint
+        FOREIGN KEY (complaint_id) REFERENCES complaints(complaint_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_notifications_unread (recipient_role, is_read)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
 -- Collection Scheduling & Assignment module
 -- Owner: Ng Zi Zhang (implemented/integrated by Ong Kar Heng)
 -- ---------------------------------------------------------------------
