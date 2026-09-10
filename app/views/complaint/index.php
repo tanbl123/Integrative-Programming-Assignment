@@ -46,7 +46,7 @@
                             <thead>
                                 <tr>
                                     <th>Keep</th><th>Reference</th><th>Reporter</th>
-                                    <th>Reason given</th><th>Status</th><th>Submitted</th><th></th>
+                                    <th>Reason given</th><th>Status</th><th>Submitted</th><th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -139,7 +139,7 @@
                 <th><button type="button" class="sort-header" data-column="2">Issue</button></th>
                 <th><button type="button" class="sort-header" data-column="3">Status</button></th>
                 <th><button type="button" class="sort-header" data-column="4">Submitted</button></th>
-                <th></th>
+                <th>Actions</th>
             </tr>
         </thead>
 
