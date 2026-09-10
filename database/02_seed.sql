@@ -78,3 +78,29 @@ INSERT INTO complaint_status_history (complaint_id, updated_by, old_status, new_
 (2, 1, 'New',      'Assigned', 'Assigned to cleaner Ahmad Zaki.'),
 (4, 1, 'New',      'Assigned', 'Cleaning team notified.'),
 (4, 1, 'Assigned', 'Resolved', 'Area cleaned and bin emptied.');
+
+-- ---------------------------------------------------------------------
+-- Duplicate reports - several people reporting the same bin
+--
+-- Author : Tan Boon Leong (2402865)
+-- Module : Complaint / Report Management
+--
+-- Complaint #1 above is already Siti's Overflow report on BIN-A-003. These
+-- add two more reports of the same issue on the same bin, and a second,
+-- smaller group on BIN-C-001, so the administrator's duplicate grouping has
+-- something to show without anyone having to submit forms by hand.
+--
+-- Note the wording. The BIN-A-003 reports describe one problem three ways.
+-- The second BIN-C-001 report mentions the bin also being unemptied, which is
+-- arguably a different issue - exactly the judgement the "Reason given" column
+-- exists to support, rather than assuming every group is truly duplicated.
+--
+-- One report is left Assigned to show that a group may mix New and Assigned
+-- complaints; both permit a transition to Rejected, so neither is stranded.
+-- ---------------------------------------------------------------------
+INSERT INTO complaints (reporter_id, bin_id, complaint_type, description, complaint_status) VALUES
+-- Group 1: BIN-A-003 (bin_id 3), Overflow - 3 reports in total with #1
+(4, 3, 'Overflow',    'Rubbish is spilling out of the bin next to the drinks stall. It has been like this since breakfast.', 'New'),
+(5, 3, 'Overflow',    'Cafeteria bin is overflowing again. Flies around it and the floor is sticky.',                        'Assigned'),
+-- Group 2: BIN-C-001 (bin_id 8), Damaged Bin - 2 reports in total with #3
+(3, 8, 'Damaged Bin', 'The bin outside LH1 is cracked down one side, and it also has not been emptied for days.',           'New');
