@@ -169,16 +169,23 @@
             toolbar.append(label(name, control));
         });
 
+        // One joined segmented control - Prev | 1 | 2 | Next - with the
+        // position caption underneath, so the pager reads as a single object.
         const pager = make('nav', '', 'list-pager');
         pager.setAttribute('aria-label', 'Pagination');
-        const summary = make('span');
+        const group = make('div', '', 'pager-group');
+        const step = (text, action) => {
+            const node = make('button', text, 'pager-step');
+            node.type = 'button';
+            node.addEventListener('click', action);
+            return node;
+        };
+        const previous = step('Prev', () => { page--; render(); });
+        const next = step('Next', () => { page++; render(); });
+        group.append(previous, next);
+        const summary = make('p', '', 'pager-summary');
         summary.setAttribute('role', 'status');
-        const numbers = make('div', '', 'pager-pages');
-        const previous = button('‹ Previous', () => { page--; render(); });
-        const next = button('Next ›', () => { page++; render(); });
-        previous.classList.add('button-small');
-        next.classList.add('button-small');
-        pager.append(summary, previous, numbers, next);
+        pager.append(group, summary);
 
         const empty = make('p', 'No results match. Clear the filters to see all loaded records.', 'empty');
         empty.hidden = true;
@@ -238,8 +245,7 @@
         // Numbered pages, collapsing long runs to an ellipsis so the control
         // stays one line: 1 ... 4 [5] 6 ... 20
         const paintPages = (current, total) => {
-            numbers.replaceChildren();
-            if (total <= 1) return;
+            group.querySelectorAll('.pager-page, .pager-ellipsis').forEach(node => node.remove());
             const wanted = new Set([1, total, current, current - 1, current + 1]);
             if (current <= 3) { wanted.add(2).add(3); }
             if (current >= total - 2) { wanted.add(total - 1).add(total - 2); }
@@ -247,7 +253,7 @@
             let previousNumber = 0;
             shown.forEach(number => {
                 if (number - previousNumber > 1) {
-                    numbers.append(make('span', '…', 'pager-ellipsis'));
+                    group.insertBefore(make('span', '…', 'pager-ellipsis'), next);
                 }
                 const node = make('button', String(number), 'pager-page');
                 node.type = 'button';
@@ -257,7 +263,7 @@
                     node.setAttribute('aria-label', 'Go to page ' + number);
                 }
                 node.addEventListener('click', () => { page = number; render(); });
-                numbers.append(node);
+                group.insertBefore(node, next);
                 previousNumber = number;
             });
         };
@@ -285,14 +291,9 @@
             rows.forEach(row => { row.hidden = true; });
             matching.slice((page - 1) * size, page * size).forEach(row => { row.hidden = false; container.append(row); });
 
-            summary.textContent = matching.length
-                ? `${(page - 1) * size + 1}–${Math.min(page * size, matching.length)} of ${matching.length} results`
-                : '0 results';
+            summary.textContent = `Page ${page} of ${pages} · ${matching.length} result${matching.length === 1 ? '' : 's'}`;
             previous.disabled = page === 1;
             next.disabled = page === pages;
-            // A single page needs no navigation - only the result summary.
-            previous.hidden = pages === 1;
-            next.hidden = pages === 1;
             pager.hidden = matching.length === 0;
             paintPages(page, pages);
             paintHeaders();
