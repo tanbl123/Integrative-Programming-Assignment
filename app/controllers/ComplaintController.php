@@ -105,6 +105,11 @@ class ComplaintController extends Controller
         $this->requirePost();
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
+            // Reject array-valued fields before they reach input(), which would
+            // otherwise cast them to the string "Array". ComplaintService's
+            // validateComplaint() applies the same guard on the create/update
+            // path, so both write paths behave identically.
+            $this->requireScalar(['complaint_status', 'remarks']);
             $complaint = $this->service->updateStatus(
                 $id,
                 $this->input('complaint_status'),
@@ -203,6 +208,29 @@ class ComplaintController extends Controller
             exit;
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);
+        }
+    }
+
+    /**
+     * Rejects any of the named POST fields that arrived as an array.
+     *
+     * A crafted form can post complaint_status[]=New instead of
+     * complaint_status=New. Casting that to a string yields "Array" and emits a
+     * PHP warning, so it is refused here as a validation error instead.
+     *
+     * @param string[] $fields
+     * @throws ValidationException
+     */
+    private function requireScalar(array $fields): void
+    {
+        $errors = [];
+        foreach ($fields as $field) {
+            if (isset($_POST[$field]) && !is_scalar($_POST[$field])) {
+                $errors[$field] = 'Enter a single value.';
+            }
+        }
+        if ($errors !== []) {
+            throw new ValidationException($errors);
         }
     }
 
