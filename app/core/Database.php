@@ -1,6 +1,8 @@
 <?php
 /**
  * Database - single shared PDO connection.
+ * Author : Group D - Ng Zi Zhang (2406898), Ong Kar Heng (2408830),
+ *          Tan Boon Leong (2402865), Phang Jun Hong (2406646)
  * Module : Shared core - EcoCampus Waste Management System
  * Every query in the system goes through this class, and every query is
  * a PREPARED STATEMENT. Values are sent to MySQL separately from the SQL

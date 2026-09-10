@@ -1,6 +1,8 @@
 <?php
 /**
  * Front controller - the single entry point for every request.
+ * Author : Group D - Ng Zi Zhang (2406898), Ong Kar Heng (2408830),
+ *          Tan Boon Leong (2402865), Phang Jun Hong (2406646)
  * Module : Shared core - EcoCampus Waste Management System
  * .htaccess rewrites every URL to this file, so all requests are bootstrapped
  * the same way: configuration, autoloading, session, then routing.

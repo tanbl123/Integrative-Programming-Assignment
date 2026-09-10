@@ -1,6 +1,8 @@
 -- =====================================================================
 -- EcoCampus Waste Management System - database schema
 --
+-- Author  : Group D - Ng Zi Zhang (2406898), Ong Kar Heng (2408830),
+--           Tan Boon Leong (2402865), Phang Jun Hong (2406646)
 -- Module  : Shared core
 -- Course  : BMIT3173 Integrative Programming, Group D
 -- SDG     : 11 - Sustainable Cities and Communities

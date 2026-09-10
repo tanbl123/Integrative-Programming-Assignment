@@ -1,6 +1,8 @@
 <?php
 /**
  * Application configuration.
+ * Author : Group D - Ng Zi Zhang (2406898), Ong Kar Heng (2408830),
+ *          Tan Boon Leong (2402865), Phang Jun Hong (2406646)
  * Module : Shared core - EcoCampus Waste Management System
  *
  * The values below are the XAMPP defaults and work out of the box.

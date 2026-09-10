@@ -1,5 +1,11 @@
 <?php
-/** Shared REST request/response security.  */
+/**
+ * Shared REST request/response security.
+ *
+ * Author : Group D - Ng Zi Zhang (2406898), Ong Kar Heng (2408830),
+ *          Tan Boon Leong (2402865), Phang Jun Hong (2406646)
+ * Module : Shared core - EcoCampus Waste Management System
+ */
 abstract class ApiController extends Controller
 {
     protected function apiMethod(): string
