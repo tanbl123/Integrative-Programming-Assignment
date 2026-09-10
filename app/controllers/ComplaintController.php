@@ -60,7 +60,7 @@ class ComplaintController extends Controller
                 $_POST,
                 $_FILES['attachment'] ?? null
             );
-            Flash::set('success', 'Complaint #' . $complaint->getKey() . ' was submitted.');
+            Flash::set('success', 'Complaint ' . $complaint->getReference() . ' was submitted.');
             $this->redirect('complaint/show/' . $complaint->getKey());
         } catch (ValidationException $error) {
             http_response_code(422);
@@ -167,10 +167,11 @@ class ComplaintController extends Controller
                 Auth::requireLogin()
             );
 
+            $kept = Complaint::find((int) $keepId);
             Flash::set('success', $rejected . ' duplicate report'
                 . ($rejected === 1 ? '' : 's')
-                . ' rejected. Complaint #' . (int) $keepId . ' remains open, and every '
-                . 'reporter has been notified.');
+                . ' rejected. Complaint ' . ($kept?->getReference() ?? '#' . (int) $keepId)
+                . ' remains open, and every reporter has been notified.');
             $this->redirect('complaint');
         } catch (ValidationException $error) {
             Flash::set('error', implode(' ', $error->getErrors()));
@@ -248,7 +249,7 @@ class ComplaintController extends Controller
             : $binClient->getBinInfo((int) $complaint->getBin()->getKey());
 
         return [
-            'title'               => 'Complaint #' . $complaint->getKey(),
+            'title'               => 'Complaint ' . $complaint->getReference(),
             'complaint'           => $complaint,
             'attachments'         => $complaint->getAttachments(),
             'history'             => $complaint->getHistory(),

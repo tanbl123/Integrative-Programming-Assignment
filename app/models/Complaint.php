@@ -74,6 +74,36 @@ class Complaint extends Model
         $this->set('updated_at', ifaTimestamp());
     }
 
+    /**
+     * Human-readable complaint reference, for example CMP-2026-0007.
+     *
+     * The Bin module pairs an integer primary key with a readable bin_code;
+     * this is the same idea for complaints, except that complaints are created
+     * by the system rather than entered by an administrator, so the code is
+     * derived from the key rather than stored beside it. Deriving it means the
+     * two can never drift apart and no migration is needed.
+     *
+     * The database keeps the integer key, so every foreign key that points at
+     * a complaint - attachments, status history, notifications and the
+     * Scheduling module's source_complaint_id - is untouched.
+     *
+     * Note that this is presentation, not protection. Another reporter cannot
+     * reach a complaint by guessing an id: ComplaintService::findVisible()
+     * refuses it on authorisation, which is what actually prevents
+     * enumeration.
+     */
+    public function getReference(): string
+    {
+        $id = $this->getKey();
+        if ($id === null) {
+            return 'CMP-NEW';
+        }
+        $created = (string) $this->get('created_at');
+        $year = $created !== '' ? substr($created, 0, 4) : date('Y');
+
+        return sprintf('CMP-%s-%04d', $year, $id);
+    }
+
     public function getReporterId(): int { return (int) $this->get('reporter_id'); }
     public function getType(): string { return (string) $this->get('complaint_type'); }
     public function getDescription(): string { return (string) $this->get('description'); }
@@ -102,8 +132,17 @@ class Complaint extends Model
         }
         if ($query !== '') {
             $like = '%' . $query . '%';
-            $sql .= ' AND (c.description LIKE ? OR c.complaint_type LIKE ? OR b.bin_code LIKE ?)';
+            $clause = 'c.description LIKE ? OR c.complaint_type LIKE ? OR b.bin_code LIKE ?';
             array_push($params, $like, $like, $like);
+
+            // A reference such as CMP-2026-0007, or a bare #7, should find the
+            // complaint it names. The code is derived from the key rather than
+            // stored, so the key is recovered from it and matched directly.
+            if (preg_match('/^\s*(?:CMP-\d{4}-|#)?0*(\d+)\s*$/i', $query, $found) === 1) {
+                $clause .= ' OR c.complaint_id = ?';
+                $params[] = (int) $found[1];
+            }
+            $sql .= ' AND (' . $clause . ')';
         }
         if (in_array($status, self::statuses(), true)) {
             $sql .= ' AND c.complaint_status = ?';

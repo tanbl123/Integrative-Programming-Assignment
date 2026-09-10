@@ -45,7 +45,7 @@
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th>Keep</th><th>Reference</th><th>Reporter</th>
+                                    <th>Keep</th><th>Complaint ID</th><th>Reporter</th>
                                     <th>Reason given</th><th>Status</th><th>Submitted</th><th>Actions</th>
                                 </tr>
                             </thead>
@@ -60,7 +60,7 @@
                                             <?= (int) $item->getKey() === $group['keepId'] ? 'checked' : '' ?>
                                             aria-label="Keep complaint #<?= (int) $item->getKey() ?>">
                                     </td>
-                                    <td>#<?= (int) $item->getKey() ?></td>
+                                    <td><?= e($item->getReference()) ?></td>
                                     <td><?= e($item->getReporter()?->getFullName() ?? 'Unknown') ?></td>
                                     <?php /* Each reporter described the issue in their own words. The
                                             administrator needs them side by side to judge which report
@@ -134,7 +134,7 @@
     <table class="table" id="complaintsTable">
         <thead>
             <tr>
-                <th><button type="button" class="sort-header" data-column="0">Reference</button></th>
+                <th><button type="button" class="sort-header" data-column="0">Complaint ID</button></th>
                 <th><button type="button" class="sort-header" data-column="1">Bin</button></th>
                 <th><button type="button" class="sort-header" data-column="2">Issue</button></th>
                 <th><button type="button" class="sort-header" data-column="3">Status</button></th>
@@ -154,7 +154,7 @@
                     class="complaint-row"
                     data-search="<?=
                     e(mb_strtolower(
-                                    '#' . $complaint->getKey() . ' ' .
+                                    $complaint->getReference() . ' ' .
                                     ($bin?->getBinCode() ?? '') . ' ' .
                                     ($location?->getFullLabel() ?? '') . ' ' .
                                     $complaint->getType()
@@ -163,7 +163,7 @@
                     data-status="<?= e($complaint->getStatus()) ?>"
                     data-location="<?= e((string) ($location?->getKey() ?? '')) ?>"
                     >
-                    <td>#<?= $complaint->getKey() ?></td>
+                    <td><?= e($complaint->getReference()) ?></td>
 
                     <td>
     <?= e($bin?->getBinCode() ?? 'Unknown') ?><br>

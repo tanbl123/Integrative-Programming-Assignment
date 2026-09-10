@@ -75,16 +75,16 @@ class ComplaintNotificationObserver implements ComplaintObserver
 
         if ($oldStatus === null) {
             $role  = User::ROLE_ADMIN;
-            $title = 'New complaint #' . $complaint->getKey() . ' - ' . $complaint->getType();
+            $title = 'New complaint ' . $complaint->getReference() . ' - ' . $complaint->getType();
             $body  = 'A new ' . $complaint->getType() . ' issue was reported for ' . $binCode . '.';
         } elseif (in_array($newStatus, [Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED], true)) {
             $role  = User::ROLE_REPORTER;
-            $title = 'Complaint #' . $complaint->getKey() . ' ' . strtolower($newStatus);
+            $title = 'Complaint ' . $complaint->getReference() . ' ' . strtolower($newStatus);
             $body  = 'Your report about ' . $binCode . ' was marked ' . $newStatus . '.'
                    . ($remarks !== null && $remarks !== '' ? ' Remarks: ' . $remarks : '');
         } else {
             $role  = User::ROLE_ADMIN;
-            $title = 'Complaint #' . $complaint->getKey() . ' moved to ' . $newStatus;
+            $title = 'Complaint ' . $complaint->getReference() . ' moved to ' . $newStatus;
             $body  = 'Status changed from ' . (string) $oldStatus . ' to ' . $newStatus . ' for ' . $binCode . '.';
         }
 
