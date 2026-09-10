@@ -135,15 +135,22 @@ class Complaint extends Model
      *
      * @return array<int, list<array{id:int,type:string,status:string,created_at:string}>>
      */
-    public static function openSummaryByBin(): array
+    public static function openSummaryByBin(?int $excludeId = null): array
     {
-        $rows = Database::getInstance()->selectAll(
-            'SELECT complaint_id, bin_id, complaint_type, complaint_status, created_at'
-            . ' FROM complaints'
-            . ' WHERE deleted_at IS NULL AND complaint_status IN (?, ?)'
-            . ' ORDER BY complaint_id ASC',
-            [self::STATUS_NEW, self::STATUS_ASSIGNED]
-        );
+        // When a reporter edits their own complaint it must not be listed back
+        // to them as an existing report of the same issue.
+        $sql = 'SELECT complaint_id, bin_id, complaint_type, complaint_status, created_at'
+             . ' FROM complaints'
+             . ' WHERE deleted_at IS NULL AND complaint_status IN (?, ?)';
+        $params = [self::STATUS_NEW, self::STATUS_ASSIGNED];
+
+        if ($excludeId !== null) {
+            $sql .= ' AND complaint_id <> ?';
+            $params[] = $excludeId;
+        }
+        $sql .= ' ORDER BY complaint_id ASC';
+
+        $rows = Database::getInstance()->selectAll($sql, $params);
 
         $byBin = [];
         foreach ($rows as $row) {

@@ -296,7 +296,7 @@ class ComplaintController extends Controller
             'bins' => Bin::findActive(),
             'types' => Complaint::types(),
             // Lets the form warn about issues already open for the chosen bin.
-            'openByBin' => Complaint::openSummaryByBin(),
+            'openByBin' => Complaint::openSummaryByBin($editId),
         ]);
     }
 }

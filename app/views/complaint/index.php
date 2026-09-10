@@ -46,7 +46,7 @@
                             <thead>
                                 <tr>
                                     <th>Keep</th><th>Reference</th><th>Reporter</th>
-                                    <th>Status</th><th>Submitted</th><th></th>
+                                    <th>Reason given</th><th>Status</th><th>Submitted</th><th></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -62,6 +62,10 @@
                                     </td>
                                     <td>#<?= (int) $item->getKey() ?></td>
                                     <td><?= e($item->getReporter()?->getFullName() ?? 'Unknown') ?></td>
+                                    <?php /* Each reporter described the issue in their own words. The
+                                            administrator needs them side by side to judge which report
+                                            to keep, and whether they really are the same issue. */ ?>
+                                    <td class="duplicate-reason"><?= e($item->getDescription()) ?></td>
                                     <td><span class="badge badge-status"><?= e($item->getStatus()) ?></span></td>
                                     <td><?= e($item->getCreatedAt()) ?></td>
                                     <td><a href="<?= url('complaint/show/' . $item->getKey()) ?>">View</a></td>

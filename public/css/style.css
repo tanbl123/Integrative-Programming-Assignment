@@ -1189,3 +1189,10 @@ textarea::placeholder {
 .duplicate-group form { padding: .9rem; }
 .duplicate-group .table { margin-bottom: .8rem; }
 .duplicate-group input[type="radio"] { width: 1.05rem; height: 1.05rem; }
+td.duplicate-reason {
+    color: var(--muted);
+    font-size: .88rem;
+    white-space: pre-wrap;
+    min-width: 16rem;
+    max-width: 28rem;
+}
