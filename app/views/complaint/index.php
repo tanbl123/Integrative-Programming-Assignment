@@ -268,6 +268,7 @@
                 tbody.appendChild(noResults);
             }
 
+            paintSortIndicators();
             filterComplaints();
         }
 
@@ -282,12 +283,48 @@
             filterComplaints();
         });
 
-        (complaintsTable ? complaintsTable.querySelectorAll('.sort-header') : []).forEach(button => {
+        // Each sortable header carries an arrow so the current sort column and
+        // direction are visible: neutral until sorted, then up or down.
+        const sortButtons = Array.from(complaintsTable.querySelectorAll('.sort-header'));
+
+        sortButtons.forEach(button => {
+            const arrow = document.createElement('span');
+            arrow.className = 'sort-arrow';
+            arrow.setAttribute('aria-hidden', 'true');
+            arrow.textContent = '\u21c5';
+            button.append(' ', arrow);
+
             button.addEventListener('click', function () {
                 sortComplaints(parseInt(button.dataset.column, 10));
             });
         });
 
+        // aria-sort belongs on the column header itself, so a screen reader
+        // announces the sort state when it reads the column.
+        function paintSortIndicators() {
+            sortButtons.forEach(button => {
+                const column = parseInt(button.dataset.column, 10);
+                const header = button.closest('th');
+                const arrow = button.querySelector('.sort-arrow');
+                const active = column === currentColumn;
+
+                if (header) {
+                    if (active) {
+                        header.setAttribute('aria-sort',
+                            currentDirection === 'asc' ? 'ascending' : 'descending');
+                    } else {
+                        header.removeAttribute('aria-sort');
+                    }
+                }
+                if (arrow) {
+                    arrow.textContent = active
+                        ? (currentDirection === 'asc' ? '\u2191' : '\u2193')
+                        : '\u21c5';
+                }
+            });
+        }
+
+        paintSortIndicators();
         filterComplaints();
     });
 </script>

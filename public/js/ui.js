@@ -202,6 +202,72 @@
     });
 
     /*
+     * A pager rendered as one joined control - Prev | 1 | 2 | Next - with the
+     * position caption beneath it, so it reads as a single object rather than
+     * two buttons drifting to opposite ends of the row. Long runs of pages
+     * collapse to an ellipsis: 1 ... 4 [5] 6 ... 20.
+     *
+     * Author : Tan Boon Leong (2402865)
+     */
+    const buildPager = (onChange) => {
+        const node = make('nav', '', 'list-pager');
+        node.setAttribute('aria-label', 'Pagination');
+
+        const group = make('div', '', 'pager-group');
+        let current = 1;
+        let total = 1;
+
+        const step = (text, resolve) => {
+            const control = make('button', text, 'pager-step');
+            control.type = 'button';
+            control.addEventListener('click', () => onChange(resolve()));
+            return control;
+        };
+        const previous = step('Prev', () => Math.max(1, current - 1));
+        const next = step('Next', () => Math.min(total, current + 1));
+        group.append(previous, next);
+
+        const summary = make('p', '', 'pager-summary');
+        summary.setAttribute('role', 'status');
+        node.append(group, summary);
+
+        const update = (page, totalPages, totalItems) => {
+            current = page;
+            total = totalPages;
+
+            group.querySelectorAll('.pager-page, .pager-ellipsis').forEach(old => old.remove());
+
+            const wanted = new Set([1, totalPages, page, page - 1, page + 1]);
+            if (page <= 3) { wanted.add(2).add(3); }
+            if (page >= totalPages - 2) { wanted.add(totalPages - 1).add(totalPages - 2); }
+
+            let previousNumber = 0;
+            [...wanted].filter(n => n >= 1 && n <= totalPages).sort((a, b) => a - b).forEach(number => {
+                if (number - previousNumber > 1) {
+                    group.insertBefore(make('span', '\u2026', 'pager-ellipsis'), next);
+                }
+                const control = make('button', String(number), 'pager-page');
+                control.type = 'button';
+                if (number === page) {
+                    control.setAttribute('aria-current', 'page');
+                } else {
+                    control.setAttribute('aria-label', 'Go to page ' + number);
+                }
+                control.addEventListener('click', () => onChange(number));
+                group.insertBefore(control, next);
+                previousNumber = number;
+            });
+
+            previous.disabled = page === 1;
+            next.disabled = page === totalPages;
+            summary.textContent = 'Page ' + page + ' of ' + totalPages + ' \u00b7 '
+                                + totalItems + ' result' + (totalItems === 1 ? '' : 's');
+        };
+
+        return { node, update };
+    };
+
+    /*
      * Simple pagination for tables.
      */
     document.querySelectorAll('table.table').forEach(table => {
@@ -223,23 +289,13 @@
 
         let page = 1;
 
-        const pager = make('div', '', 'list-pager');
-        const summary = make('span');
-
-        const previous = button('Previous', () => {
-            page--;
+        const pager = buildPager(target => {
+            page = target;
             render();
         });
-
-        const next = button('Next', () => {
-            page++;
-            render();
-        });
-
-        pager.append(summary, previous, next);
 
         const tableWrapper = table.closest('.table-scroll') || table;
-        tableWrapper.after(pager);
+        tableWrapper.after(pager.node);
 
         function getCurrentRows() {
             return Array.from(body.rows).filter(row => {
@@ -264,13 +320,7 @@
                         row.classList.remove('page-hidden');
                     });
 
-            const start = visibleRows.length === 0 ? 0 : (page - 1) * pageSize + 1;
-            const end = Math.min(page * pageSize, visibleRows.length);
-
-            summary.textContent = `${start}–${end} of ${visibleRows.length} results · Page ${page} of ${totalPages}`;
-
-            previous.disabled = page === 1;
-            next.disabled = page === totalPages;
+            pager.update(page, totalPages, visibleRows.length);
         }
 
         allRows.forEach(row => {
@@ -306,21 +356,12 @@
 
         let page = 1;
 
-        const pager = make('div', '', 'list-pager');
-        const summary = make('span');
-
-        const previous = button('Previous', () => {
-            page--;
+        const pager = buildPager(target => {
+            page = target;
             render();
         });
 
-        const next = button('Next', () => {
-            page++;
-            render();
-        });
-
-        pager.append(summary, previous, next);
-        grid.after(pager);
+        grid.after(pager.node);
 
         function render() {
             const visibleCards = cards.filter(card => !card.hidden);
@@ -338,13 +379,7 @@
                         card.classList.remove('page-hidden');
                     });
 
-            const start = visibleCards.length === 0 ? 0 : (page - 1) * pageSize + 1;
-            const end = Math.min(page * pageSize, visibleCards.length);
-
-            summary.textContent = `${start}–${end} of ${visibleCards.length} results · Page ${page} of ${totalPages}`;
-
-            previous.disabled = page === 1;
-            next.disabled = page === totalPages;
+            pager.update(page, totalPages, visibleCards.length);
         }
 
         cards.forEach(card => {

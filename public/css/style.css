@@ -1196,3 +1196,73 @@ td.duplicate-reason {
     min-width: 16rem;
     max-width: 28rem;
 }
+
+
+/* ---------------------------------------------------------------------
+   Pagination: one joined control, centred, with a caption beneath.
+   Author: Tan Boon Leong (2402865)
+   --------------------------------------------------------------------- */
+
+.list-pager {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .5rem;
+    margin: 1.25rem 0 1.75rem;
+}
+.pager-group {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--control-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+}
+.pager-step,
+.pager-page,
+.pager-ellipsis {
+    font: inherit;
+    font-size: .88rem;
+    line-height: 1;
+    padding: .55rem .8rem;
+    background: #fff;
+    color: var(--green-dark);
+    border: 0;
+    border-right: 1px solid var(--line);
+    cursor: pointer;
+}
+.pager-group > *:last-child { border-right: 0; }
+.pager-step { background: #f1f4f2; font-weight: 500; }
+.pager-page { min-width: 2.4rem; text-align: center; }
+.pager-step:hover:not(:disabled),
+.pager-page:hover:not([aria-current]) { background: #e8eeeb; }
+.pager-step:focus-visible,
+.pager-page:focus-visible { outline: 2px solid var(--green-dark); outline-offset: -2px; }
+.pager-step:disabled { color: var(--muted); cursor: default; opacity: .65; }
+.pager-page[aria-current="page"] {
+    background: var(--green);
+    color: #fff;
+    font-weight: 600;
+    cursor: default;
+}
+.pager-ellipsis { cursor: default; color: var(--muted); }
+.pager-summary { margin: 0; font-size: .85rem; color: var(--muted); }
+
+/* Sort direction indicator on clickable table headers. */
+.sort-header {
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+}
+.sort-header:hover { color: var(--green-dark); text-decoration: underline; }
+.sort-header:focus-visible { outline: 2px solid var(--green-dark); outline-offset: 2px; }
+.sort-header .sort-arrow { font-size: .78em; color: var(--muted); opacity: .55; }
+.table th[aria-sort] { background: #e3ebe6; }
+.table th[aria-sort] .sort-arrow { color: var(--green-dark); opacity: 1; }
