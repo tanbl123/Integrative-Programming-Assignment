@@ -5,13 +5,14 @@ $canEditComplaint =
     $complaint->getStatus() === Complaint::STATUS_NEW &&
     !$complaint->hasOpenAssignments();
 
-$canDeleteComplaint =
-    in_array($complaint->getStatus(), [
-        Complaint::STATUS_NEW,
-        Complaint::STATUS_RESOLVED,
-        Complaint::STATUS_REJECTED
-    ], true) &&
-    !$complaint->hasOpenAssignments();
+// Decided by ComplaintService::canDelete() so the button and the service
+// agree: a Reporter may withdraw only an untouched complaint, an
+// Administrator may delete only from New or a final state.
+$canDeleteComplaint = $canDelete;
+$removeLabel = $isAdmin ? 'Delete complaint' : 'Withdraw complaint';
+$removeConfirm = $isAdmin
+    ? 'Delete this complaint? Its history is retained.'
+    : 'Withdraw this complaint? You can submit a new one later if needed.';
 ?>
 
 <div class="page-heading">
@@ -36,11 +37,11 @@ $canDeleteComplaint =
             <form 
                 method="post" 
                 action="<?= url('complaint/delete/' . $complaint->getKey()) ?>" 
-                data-confirm="Are you sure you want to delete this complaint?"
+                data-confirm="<?= e($removeConfirm) ?>"
             >
                 <?= csrfField() ?>
                 <button class="button button-danger" type="submit">
-                    Delete complaint
+                    <?= e($removeLabel) ?>
                 </button>
             </form>
         <?php endif; ?>

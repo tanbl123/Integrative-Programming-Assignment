@@ -271,6 +271,19 @@ button:focus-visible {
     color: #245e38;
 }
 
+.alert-warning {
+    background: #fdf3e6;
+    border-color: #e8cb9f;
+    color: #7a4a12;
+}
+.alert-warning ul {
+    margin: .4rem 0 .4rem 1.1rem;
+    padding: 0;
+}
+.alert-warning p {
+    margin: .4rem 0 0;
+    font-size: .9rem;
+}
 .alert-error {
     background: #fff0ed;
     border-color: #efc2b8;
@@ -1150,3 +1163,29 @@ textarea::placeholder {
         align-items: flex-start;
     }
 }
+
+/* ---------------------------------------------------------------------
+   Duplicate reports panel (Complaint / Report Management)
+   Author: Tan Boon Leong (2402865)
+   --------------------------------------------------------------------- */
+
+.duplicate-group {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin: .6rem 0;
+    background: #fff;
+}
+.duplicate-group > summary {
+    cursor: pointer;
+    padding: .7rem .9rem;
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    flex-wrap: wrap;
+}
+.duplicate-group > summary:hover { background: #f1f4f2; }
+.duplicate-group > summary small { color: var(--muted); }
+.duplicate-group[open] > summary { border-bottom: 1px solid var(--line); }
+.duplicate-group form { padding: .9rem; }
+.duplicate-group .table { margin-bottom: .8rem; }
+.duplicate-group input[type="radio"] { width: 1.05rem; height: 1.05rem; }

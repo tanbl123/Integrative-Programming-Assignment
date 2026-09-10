@@ -29,6 +29,11 @@ class ComplaintController extends Controller
                 'locations' => Location::allAlphabetical(),
                 'filters' => compact('query', 'status', 'location'),
                 'user' => $user,
+                // Administrators also see reports collapsed by bin and issue,
+                // so five people reporting one bin read as one problem.
+                'duplicateGroups' => UserPermissions::can($user, 'complaint.manage')
+                    ? Complaint::duplicateGroups()
+                    : [],
             ]);
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);
@@ -74,27 +79,7 @@ class ComplaintController extends Controller
                 $this->entityNotFound('Complaint');
                 return;
             }
-            // WEB SERVICE CONSUMPTION
-            // Authoritative bin details are requested from the Bin & Location
-            // module's REST service rather than read from its tables. If that
-            // service is unavailable the page still renders from local data.
-            $binClient = new BinServiceClient();
-            $binInfo = $complaint->getBin() === null
-                ? null
-                : $binClient->getBinInfo((int) $complaint->getBin()->getKey());
-
-            $this->view('complaint/show', [
-                'title' => 'Complaint #' . $id,
-                'complaint' => $complaint,
-                'attachments' => $complaint->getAttachments(),
-                'history' => $complaint->getHistory(),
-                'statuses' => Complaint::allowedNextStatuses($complaint->getStatus()),
-                'errors' => [],
-                'user' => $user,
-                'binInfo' => $binInfo,
-                'binServiceError' => $binClient->getLastError(),
-                'binServiceRequestId' => $binClient->getLastRequestId(),
-            ]);
+            $this->view('complaint/show', $this->showData($complaint, $user));
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);
         }
@@ -125,15 +110,8 @@ class ComplaintController extends Controller
                 return;
             }
             http_response_code(422);
-            $this->view('complaint/show', [
-                'title' => 'Complaint #' . $id,
-                'complaint' => $complaint,
-                'attachments' => $complaint->getAttachments(),
-                'history' => $complaint->getHistory(),
-                'statuses' => Complaint::allowedNextStatuses($complaint->getStatus()),
-                'errors' => $error->getErrors(),
-                'user' => Auth::requireLogin(),
-            ]);
+            $this->view('complaint/show', $this->showData(
+                $complaint, Auth::requireLogin(), $error->getErrors()));
         } catch (OutOfBoundsException $error) {
             $this->entityNotFound('Complaint');
         } catch (AuthenticationException|AuthorizationException $error) {
@@ -163,6 +141,43 @@ class ComplaintController extends Controller
             $this->renderForm($error->getErrors(), $_POST, $id);
         } catch (OutOfBoundsException $error) { $this->entityNotFound('Complaint'); }
         catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
+    }
+
+    /**
+     * Closes a group of duplicate reports, keeping the one the administrator
+     * chose. Each rejected complaint notifies its own reporter.
+     */
+    public function rejectDuplicates(): void
+    {
+        $this->requirePost();
+        try {
+            Csrf::requireValid($_POST['_token'] ?? null);
+            $this->requireScalar(['bin_id', 'complaint_type', 'keep_id']);
+
+            $binId  = filter_var($_POST['bin_id'] ?? null, FILTER_VALIDATE_INT);
+            $keepId = filter_var($_POST['keep_id'] ?? null, FILTER_VALIDATE_INT);
+            if ($binId === false || $keepId === false) {
+                throw new ValidationException(['complaint' => 'Choose a valid group of reports.']);
+            }
+
+            $rejected = $this->service->rejectDuplicates(
+                (int) $binId,
+                $this->input('complaint_type'),
+                (int) $keepId,
+                Auth::requireLogin()
+            );
+
+            Flash::set('success', $rejected . ' duplicate report'
+                . ($rejected === 1 ? '' : 's')
+                . ' rejected. Complaint #' . (int) $keepId . ' remains open, and every '
+                . 'reporter has been notified.');
+            $this->redirect('complaint');
+        } catch (ValidationException $error) {
+            Flash::set('error', implode(' ', $error->getErrors()));
+            $this->redirect('complaint');
+        } catch (AuthenticationException|AuthorizationException $error) {
+            $this->handleAccessFailure($error);
+        }
     }
 
     public function delete(int $id): void
@@ -212,6 +227,43 @@ class ComplaintController extends Controller
     }
 
     /**
+     * Everything the complaint detail view needs.
+     *
+     * Shared by show() and by the status-update error path, so that a failed
+     * update re-renders exactly the same page. Previously the error path
+     * omitted the web service fields and the view could not render.
+     *
+     * @param array<string,string> $errors
+     * @return array<string,mixed>
+     */
+    private function showData(Complaint $complaint, User $user, array $errors = []): array
+    {
+        // WEB SERVICE CONSUMPTION
+        // Authoritative bin details are requested from the Bin & Location
+        // module's REST service rather than read from its tables. If that
+        // service is unavailable the page still renders from local data.
+        $binClient = new BinServiceClient();
+        $binInfo = $complaint->getBin() === null
+            ? null
+            : $binClient->getBinInfo((int) $complaint->getBin()->getKey());
+
+        return [
+            'title'               => 'Complaint #' . $complaint->getKey(),
+            'complaint'           => $complaint,
+            'attachments'         => $complaint->getAttachments(),
+            'history'             => $complaint->getHistory(),
+            'statuses'            => Complaint::allowedNextStatuses($complaint->getStatus()),
+            'errors'              => $errors,
+            'user'                => $user,
+            'canDelete'           => $this->service->canDelete($complaint, $user),
+            'isAdmin'             => UserPermissions::can($user, 'complaint.manage'),
+            'binInfo'             => $binInfo,
+            'binServiceError'     => $binClient->getLastError(),
+            'binServiceRequestId' => $binClient->getLastRequestId(),
+        ];
+    }
+
+    /**
      * Rejects any of the named POST fields that arrived as an array.
      *
      * A crafted form can post complaint_status[]=New instead of
@@ -243,6 +295,8 @@ class ComplaintController extends Controller
             'editId' => $editId,
             'bins' => Bin::findActive(),
             'types' => Complaint::types(),
+            // Lets the form warn about issues already open for the chosen bin.
+            'openByBin' => Complaint::openSummaryByBin(),
         ]);
     }
 }

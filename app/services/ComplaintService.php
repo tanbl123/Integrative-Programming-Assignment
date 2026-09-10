@@ -123,6 +123,56 @@ class ComplaintService
         }
     }
 
+    /**
+     * Closes a set of duplicate reports, keeping one as the live complaint.
+     *
+     * Every other open complaint of the same issue type on the same bin is
+     * rejected with a remark naming the one that was kept. Each rejection goes
+     * through updateStatus(), so the observers run once per complaint: every
+     * reporter is notified individually and every complaint keeps its own
+     * history. One administrator action, one outcome per person.
+     *
+     * New and Assigned both permit a transition to Rejected, so no complaint
+     * in the group can be left stranded.
+     *
+     * Each rejection commits on its own - updateStatus() opens its own
+     * transaction and PDO will not nest them - so a failure part way through
+     * leaves the earlier rejections recorded rather than rolling them back.
+     *
+     * @return int how many duplicates were rejected
+     */
+    public function rejectDuplicates(int $binId, string $type, int $keepId, User $administrator): int
+    {
+        UserPermissions::require('complaint.manage');
+
+        $group = Complaint::openForBinAndType($binId, $type);
+        if (count($group) < 2) {
+            throw new ValidationException([
+                'complaint' => 'There are no longer multiple open reports for this bin.']);
+        }
+
+        $ids = array_map(static fn(Complaint $c): int => (int) $c->getKey(), $group);
+        if (!in_array($keepId, $ids, true)) {
+            throw new ValidationException([
+                'complaint' => 'Choose which report to keep from this group.']);
+        }
+
+        $rejected = 0;
+        foreach ($group as $complaint) {
+            if ((int) $complaint->getKey() === $keepId) {
+                continue;
+            }
+            $this->updateStatus(
+                (int) $complaint->getKey(),
+                Complaint::STATUS_REJECTED,
+                'Duplicate of complaint #' . $keepId . '.',
+                $administrator
+            );
+            $rejected++;
+        }
+        return $rejected;
+    }
+
     public function update(int $id, array $data, User $user): Complaint
     {
         $complaint = $this->findVisible($user, $id);
@@ -136,13 +186,54 @@ class ComplaintService
         return $complaint;
     }
 
+    /**
+     * Statuses from which each role may remove a complaint.
+     *
+     * A Reporter may withdraw only a complaint nobody has acted on yet. Once
+     * an Administrator has taken it up, the record belongs to the audit trail
+     * as much as to the reporter, and removing it would erase the account of
+     * how it was handled.
+     *
+     * Nobody may delete from Assigned. Deletion writes no history and notifies
+     * nobody, so ending a live complaint that way would leave its story
+     * unfinished and its reporter uninformed. An Administrator resolves or
+     * rejects it first - which records a reason and notifies the reporter
+     * through the observers - and may then delete it.
+     */
+    private const DELETABLE_BY_ADMIN = [
+        Complaint::STATUS_NEW, Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED,
+    ];
+    private const WITHDRAWABLE_BY_REPORTER = [Complaint::STATUS_NEW];
+
+    /** True when this user may remove this complaint right now. */
+    public function canDelete(Complaint $complaint, User $user): bool
+    {
+        if ($complaint->hasOpenAssignments()) {
+            return false;
+        }
+        $allowed = UserPermissions::can($user, 'complaint.manage')
+            ? self::DELETABLE_BY_ADMIN
+            : self::WITHDRAWABLE_BY_REPORTER;
+
+        return in_array($complaint->getStatus(), $allowed, true);
+    }
+
     public function delete(int $id, User $user): void
     {
         $complaint = $this->findVisible($user, $id);
         if ($complaint === null) { throw new OutOfBoundsException('Complaint not found.'); }
-        if (!in_array($complaint->getStatus(), [Complaint::STATUS_NEW, Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED], true)
-            || $complaint->hasOpenAssignments()) {
-            throw new ValidationException(['complaint' => 'Only new or final complaints without open assignments can be deleted.']);
+
+        if ($complaint->hasOpenAssignments()) {
+            throw new ValidationException([
+                'complaint' => 'A cleaner is still assigned to this complaint. '
+                             . 'Complete or cancel the assignment first.']);
+        }
+        if (!$this->canDelete($complaint, $user)) {
+            throw new ValidationException([
+                'complaint' => UserPermissions::can($user, 'complaint.manage')
+                    ? 'Resolve or reject this complaint before deleting it, so the '
+                    . 'outcome is recorded and the reporter is notified.'
+                    : 'You can only withdraw a complaint that has not been acted on yet.']);
         }
         $complaint->delete();
     }

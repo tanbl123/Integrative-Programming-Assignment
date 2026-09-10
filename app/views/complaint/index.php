@@ -11,6 +11,78 @@
     <?php endif; ?>
 </div>
 
+<?php /*
+ * Duplicate reports panel - administrators only.
+ *
+ * Several people reporting one overflowing bin is one problem, not several.
+ * Each group is shown as a single row that expands to the individual reports,
+ * and can be closed in one action: the oldest report stays open and the rest
+ * are rejected as duplicates, each notifying its own reporter.
+ */ ?>
+<?php if ($duplicateGroups !== []): ?>
+    <section class="content-card duplicate-groups">
+        <h2>Duplicate reports</h2>
+        <p class="lead">
+            These bins have more than one open report of the same issue.
+            Keep one and reject the rest; every reporter is told the outcome.
+        </p>
+
+        <?php foreach ($duplicateGroups as $group): ?>
+            <details class="duplicate-group">
+                <summary>
+                    <strong><?= e($group['bin']?->getBinCode() ?? 'Unknown bin') ?></strong>
+                    &middot; <?= e($group['type']) ?>
+                    <span class="badge badge-status"><?= count($group['complaints']) ?> reports</span>
+                    <small><?= e($group['bin']?->getLocation()?->getFullLabel() ?? '') ?></small>
+                </summary>
+
+                <form method="post" action="<?= url('complaint/reject-duplicates') ?>">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="bin_id" value="<?= (int) ($group['bin']?->getKey() ?? 0) ?>">
+                    <input type="hidden" name="complaint_type" value="<?= e($group['type']) ?>">
+
+                    <div class="table-scroll">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Keep</th><th>Reference</th><th>Reporter</th>
+                                    <th>Status</th><th>Submitted</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ($group['complaints'] as $item): ?>
+                                <tr>
+                                    <td>
+                                        <input
+                                            type="radio"
+                                            name="keep_id"
+                                            value="<?= (int) $item->getKey() ?>"
+                                            <?= (int) $item->getKey() === $group['keepId'] ? 'checked' : '' ?>
+                                            aria-label="Keep complaint #<?= (int) $item->getKey() ?>">
+                                    </td>
+                                    <td>#<?= (int) $item->getKey() ?></td>
+                                    <td><?= e($item->getReporter()?->getFullName() ?? 'Unknown') ?></td>
+                                    <td><span class="badge badge-status"><?= e($item->getStatus()) ?></span></td>
+                                    <td><?= e($item->getCreatedAt()) ?></td>
+                                    <td><a href="<?= url('complaint/show/' . $item->getKey()) ?>">View</a></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <button
+                        class="button button-danger"
+                        type="submit"
+                        data-confirm="Reject the other <?= count($group['complaints']) - 1 ?> report(s) as duplicates? Each reporter will be notified.">
+                        Keep selected &middot; reject the other <?= count($group['complaints']) - 1 ?>
+                    </button>
+                </form>
+            </details>
+        <?php endforeach; ?>
+    </section>
+<?php endif; ?>
+
 <form method="get" action="<?= url('complaint') ?>" class="filter-panel user-filter-panel" id="complaintFilterForm">
     <div class="filter-field filter-search">
         <label>Search</label>

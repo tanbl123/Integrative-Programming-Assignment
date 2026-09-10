@@ -126,6 +126,91 @@ class Complaint extends Model
         return self::hydrateAll($rows);
     }
 
+    /**
+     * Open complaints for every bin, keyed by bin id.
+     *
+     * Used by the submission form to warn a reporter that an issue has
+     * already been raised for the bin they picked, which is the cheapest
+     * point at which to stop a duplicate being created at all.
+     *
+     * @return array<int, list<array{id:int,type:string,status:string,created_at:string}>>
+     */
+    public static function openSummaryByBin(): array
+    {
+        $rows = Database::getInstance()->selectAll(
+            'SELECT complaint_id, bin_id, complaint_type, complaint_status, created_at'
+            . ' FROM complaints'
+            . ' WHERE deleted_at IS NULL AND complaint_status IN (?, ?)'
+            . ' ORDER BY complaint_id ASC',
+            [self::STATUS_NEW, self::STATUS_ASSIGNED]
+        );
+
+        $byBin = [];
+        foreach ($rows as $row) {
+            $byBin[(int) $row['bin_id']][] = [
+                'id'         => (int) $row['complaint_id'],
+                'type'       => (string) $row['complaint_type'],
+                'status'     => (string) $row['complaint_status'],
+                'created_at' => (string) $row['created_at'],
+            ];
+        }
+        return $byBin;
+    }
+
+    /**
+     * Sets of open complaints that report the same issue on the same bin.
+     *
+     * When several people report one overflowing bin, the administrator is
+     * looking at one real problem, not five. Grouping by bin and issue type
+     * lets the list show it that way, and lets the duplicates be closed in a
+     * single action while each reporter still receives their own outcome.
+     *
+     * Only groups of two or more are returned; a lone complaint is not a
+     * duplicate of anything.
+     *
+     * @return list<array{bin:?Bin,type:string,keepId:int,complaints:list<Complaint>}>
+     */
+    public static function duplicateGroups(): array
+    {
+        $rows = Database::getInstance()->selectAll(
+            'SELECT bin_id, complaint_type, COUNT(*) AS total, MIN(complaint_id) AS keep_id'
+            . ' FROM complaints'
+            . ' WHERE deleted_at IS NULL AND complaint_status IN (?, ?)'
+            . ' GROUP BY bin_id, complaint_type'
+            . ' HAVING COUNT(*) > 1'
+            . ' ORDER BY total DESC, bin_id ASC',
+            [self::STATUS_NEW, self::STATUS_ASSIGNED]
+        );
+
+        $groups = [];
+        foreach ($rows as $row) {
+            $groups[] = [
+                'bin'        => Bin::find((int) $row['bin_id']),
+                'type'       => (string) $row['complaint_type'],
+                'keepId'     => (int) $row['keep_id'],
+                'complaints' => self::openForBinAndType((int) $row['bin_id'], (string) $row['complaint_type']),
+            ];
+        }
+        return $groups;
+    }
+
+    /**
+     * Every open complaint of one issue type against one bin, oldest first.
+     *
+     * @return list<Complaint>
+     */
+    public static function openForBinAndType(int $binId, string $type): array
+    {
+        $rows = Database::getInstance()->selectAll(
+            'SELECT * FROM complaints'
+            . ' WHERE deleted_at IS NULL AND bin_id = ? AND complaint_type = ?'
+            . ' AND complaint_status IN (?, ?)'
+            . ' ORDER BY complaint_id ASC',
+            [$binId, $type, self::STATUS_NEW, self::STATUS_ASSIGNED]
+        );
+        return self::hydrateAll($rows);
+    }
+
     public static function countUnresolvedForBin(int $binId): int
     {
         $row = Database::getInstance()->selectOne(
