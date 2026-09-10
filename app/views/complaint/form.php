@@ -14,6 +14,7 @@
     action="<?= url($editId !== null ? 'complaint/update/' . $editId : 'complaint/store') ?>" 
     enctype="multipart/form-data" 
     class="form-card"
+    id="complaint-form"
 >
     <?= csrfField() ?>
 
@@ -194,5 +195,172 @@
 
     type.addEventListener('change', update);
     update();   // a re-rendered form keeps its selection, so check on load too
+})();
+</script>
+
+<?php /*
+ * Client-side validation.
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ *
+ * The second of three gates. The HTML attributes above (required, minlength,
+ * maxlength, accept) are the first and keep working with JavaScript disabled;
+ * ComplaintService::validateComplaint() and ComplaintUploadService are the
+ * third and are the only authority - nothing here is trusted, because a
+ * client-side check is advice to an honest user, not a control. What this
+ * script adds is the message: the browser's own bubble names one field at a
+ * time, disappears on the next click, and cannot be read by a screen reader
+ * on some platforms, so it is switched off and every failing field is marked
+ * at once with the same .field-error line the server renders after a rejected
+ * submission. A reporter therefore sees identical wording whichever gate
+ * stopped them.
+ *
+ * The rules below deliberately restate ComplaintService::validateComplaint().
+ * If a rule changes there it must change here too, and the server remains
+ * correct either way.
+ */ ?>
+<script>
+(() => {
+    'use strict';
+    const form = document.getElementById('complaint-form');
+    if (!form) return;
+
+    const MIN_DESCRIPTION = 10;
+    const MAX_DESCRIPTION = 2000;
+    const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+    const ALLOWED_UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+    // One rule per field, returning the message to show or '' when valid.
+    const rules = {
+        // Only active bins are rendered as options, so any chosen option
+        // satisfies the server's "select an active campus bin" rule.
+        bin_id: field => field.value === '' ? 'Select an active campus bin.' : '',
+
+        complaint_type: field => field.value === '' ? 'Select a valid issue type.' : '',
+
+        description: field => {
+            const length = field.value.trim().length;
+            if (length === 0) {
+                return 'Describe the issue so it can be acted on.';
+            }
+            if (length < MIN_DESCRIPTION || length > MAX_DESCRIPTION) {
+                return 'Description must contain 10-2,000 characters. '
+                     + 'You have entered ' + length.toLocaleString() + '.';
+            }
+            return '';
+        },
+
+        // Optional. Checked here only to save the reporter an upload that the
+        // server would reject; the server re-reads the file's own bytes with
+        // finfo, because file.type is supplied by the browser.
+        attachment: field => {
+            const file = field.files && field.files[0];
+            if (!file) {
+                return '';
+            }
+            if (!ALLOWED_UPLOAD_TYPES.includes(file.type)) {
+                return 'Only JPEG, PNG, or WebP images are allowed.';
+            }
+            if (file.size > MAX_UPLOAD_BYTES) {
+                return 'Photo must be no larger than 5 MB.';
+            }
+            return '';
+        },
+    };
+
+    const fields = Object.keys(rules)
+        .map(name => form.querySelector('[name="' + name + '"]'))
+        .filter(Boolean);
+    if (!fields.length) return;
+
+    /*
+     * The <span class="field-error"> for a field, reusing the one the server
+     * already rendered so a message is never shown twice. A new span is placed
+     * after the help text where there is one, matching the server's order of
+     * control, help, error.
+     */
+    const messageFor = field => {
+        const holder = field.closest('label') || field.parentElement;
+        let span = holder.querySelector(':scope > .field-error');
+        if (!span) {
+            span = document.createElement('span');
+            span.className = 'field-error';
+            span.hidden = true;
+            const anchor = holder.querySelector(':scope > .field-help') || field;
+            anchor.insertAdjacentElement('afterend', span);
+        }
+        span.id = span.id || 'error-' + field.name;
+        return span;
+    };
+
+    const show = (field, message) => {
+        const span = messageFor(field);
+        span.textContent = message;
+        span.hidden = message === '';
+        field.setAttribute('aria-invalid', message === '' ? 'false' : 'true');
+        if (message === '') {
+            field.removeAttribute('aria-describedby');
+        } else {
+            field.setAttribute('aria-describedby', span.id);
+        }
+    };
+
+    const check = field => {
+        const message = rules[field.name](field);
+        show(field, message);
+        return message === '';
+    };
+
+    /*
+     * Fields are only marked after the reporter has tried to submit, or has
+     * left a field they have filled in. Complaining about an empty field
+     * before it has been touched is noise, not help.
+     */
+    const checkIfTouched = field => {
+        if (field.dataset.touched === '1') {
+            check(field);
+        }
+    };
+
+    fields.forEach(field => {
+        field.addEventListener('input', () => checkIfTouched(field));
+        field.addEventListener('change', () => checkIfTouched(field));
+        field.addEventListener('blur', () => {
+            if (field.value !== '') {
+                field.dataset.touched = '1';
+                check(field);
+            }
+        });
+    });
+
+    // Replaces the browser's own bubble. Set from JavaScript, so that with
+    // scripting off the attribute validation in the markup still applies.
+    form.noValidate = true;
+
+    form.addEventListener('submit', event => {
+        let firstInvalid = null;
+        fields.forEach(field => {
+            field.dataset.touched = '1';
+            if (!check(field) && firstInvalid === null) {
+                firstInvalid = field;
+            }
+        });
+        if (firstInvalid !== null) {
+            event.preventDefault();
+            firstInvalid.focus();
+            firstInvalid.scrollIntoView({block: 'center', behavior: 'smooth'});
+        }
+    });
+
+    // ui.js appends a Clear fields button to every form. Emptying the form
+    // should take the messages with it rather than turn it red.
+    form.addEventListener('click', event => {
+        if (event.target.closest('.clear-fields') === null) return;
+        fields.forEach(field => {
+            delete field.dataset.touched;
+            show(field, '');
+        });
+    });
 })();
 </script>

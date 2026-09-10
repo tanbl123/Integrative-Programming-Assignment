@@ -532,6 +532,11 @@ textarea::placeholder {
     font-weight: 500;
 }
 
+/* display:block above would otherwise defeat [hidden] on a cleared message. */
+.field-error[hidden] {
+    display: none;
+}
+
 .field-help {
     display: block;
     margin-top: 0.25rem;
