@@ -60,7 +60,7 @@ class ComplaintController extends Controller
                 $_POST,
                 $_FILES['attachment'] ?? null
             );
-            Flash::set('success', 'Complaint ' . $complaint->getReference() . ' was submitted.');
+            Flash::set('success', 'Complaint ' . $complaint->getNumber() . ' was submitted.');
             $this->redirect('complaint/show/' . $complaint->getKey());
         } catch (ValidationException $error) {
             http_response_code(422);
@@ -170,7 +170,7 @@ class ComplaintController extends Controller
             $kept = Complaint::find((int) $keepId);
             Flash::set('success', $rejected . ' duplicate report'
                 . ($rejected === 1 ? '' : 's')
-                . ' rejected. Complaint ' . ($kept?->getReference() ?? '#' . (int) $keepId)
+                . ' rejected. Complaint ' . ($kept?->getNumber() ?? '#' . (int) $keepId)
                 . ' remains open, and every reporter has been notified.');
             $this->redirect('complaint');
         } catch (ValidationException $error) {
@@ -249,7 +249,7 @@ class ComplaintController extends Controller
             : $binClient->getBinInfo((int) $complaint->getBin()->getKey());
 
         return [
-            'title'               => 'Complaint ' . $complaint->getReference(),
+            'title'               => 'Complaint ' . $complaint->getNumber(),
             'complaint'           => $complaint,
             'attachments'         => $complaint->getAttachments(),
             'history'             => $complaint->getHistory(),

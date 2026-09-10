@@ -157,10 +157,10 @@ class ComplaintService
                 'complaint' => 'Choose which report to keep from this group.']);
         }
 
-        $keptReference = '#' . $keepId;
+        $keptNumber = '#' . $keepId;
         foreach ($group as $complaint) {
             if ((int) $complaint->getKey() === $keepId) {
-                $keptReference = $complaint->getReference();
+                $keptNumber = $complaint->getNumber();
             }
         }
 
@@ -172,7 +172,7 @@ class ComplaintService
             $this->updateStatus(
                 (int) $complaint->getKey(),
                 Complaint::STATUS_REJECTED,
-                'Duplicate of complaint ' . $keptReference . '.',
+                'Duplicate of complaint ' . $keptNumber . '.',
                 $administrator
             );
             $rejected++;
