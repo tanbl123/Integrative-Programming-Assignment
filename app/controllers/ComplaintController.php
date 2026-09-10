@@ -1,7 +1,8 @@
 <?php
 /**
  * Reporter complaint workflow and administrator resolution controller.
- * Author : Ong Kar Heng (2408830)
+ *
+ * Author : Tan Boon Leong (2402865)
  * Module : Complaint / Report Management
  */
 class ComplaintController extends Controller
@@ -73,6 +74,15 @@ class ComplaintController extends Controller
                 $this->entityNotFound('Complaint');
                 return;
             }
+            // WEB SERVICE CONSUMPTION
+            // Authoritative bin details are requested from the Bin & Location
+            // module's REST service rather than read from its tables. If that
+            // service is unavailable the page still renders from local data.
+            $binClient = new BinServiceClient();
+            $binInfo = $complaint->getBin() === null
+                ? null
+                : $binClient->getBinInfo((int) $complaint->getBin()->getKey());
+
             $this->view('complaint/show', [
                 'title' => 'Complaint #' . $id,
                 'complaint' => $complaint,
@@ -81,6 +91,9 @@ class ComplaintController extends Controller
                 'statuses' => Complaint::allowedNextStatuses($complaint->getStatus()),
                 'errors' => [],
                 'user' => $user,
+                'binInfo' => $binInfo,
+                'binServiceError' => $binClient->getLastError(),
+                'binServiceRequestId' => $binClient->getLastRequestId(),
             ]);
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);

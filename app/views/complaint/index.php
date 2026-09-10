@@ -1,4 +1,4 @@
-<?php /** Complaint listing. Author: Ong Kar Heng (2408830). */ ?>
+<?php /** Complaint listing. Author: Tan Boon Leong (2402865). */ ?>
 <div class="page-heading"><div><h1><?= $user->isAdmin() ? 'All complaints' : 'My complaints' ?></h1><p class="lead">Track reported waste issues from submission to resolution.</p></div><?php if (UserPermissions::can($user, 'complaint.create')): ?><a class="button" href="<?= url('complaint/create') ?>">Report issue</a><?php endif; ?></div>
 <form method="get" action="<?= url('complaint') ?>" class="filter-panel">
 <label>Search<input type="search" name="q" value="<?= e($filters['query']) ?>" placeholder="Issue, description, or bin"></label>

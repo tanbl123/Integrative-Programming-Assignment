@@ -1,5 +1,14 @@
 <?php
-/** Complaint business rules and Observer coordination. Author: Ong Kar Heng (2408830). */
+/**
+ * Complaint business rules and Observer coordination.
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ *
+ * This service is the only place complaint state changes. It raises a single
+ * event through ComplaintStatusSubject; the attached observers decide what
+ * that event means for the audit trail, the admin inbox and the bin record.
+ */
 class ComplaintService
 {
     private ComplaintStatusSubject $subject;
@@ -7,7 +16,12 @@ class ComplaintService
     public function __construct()
     {
         $this->subject = new ComplaintStatusSubject();
+
+        // Three independent reactions to one complaint event. The service
+        // knows only that it must notify - not what any observer does.
         $this->subject->attach(new ComplaintHistoryObserver());
+        $this->subject->attach(new ComplaintNotificationObserver());
+        $this->subject->attach(new ComplaintBinFlagObserver());
     }
 
     public function create(User $reporter, array $data, ?array $upload): Complaint

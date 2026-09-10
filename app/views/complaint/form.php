@@ -1,4 +1,4 @@
-<?php /** Complaint submission form. Author: Ong Kar Heng (2408830). */ ?>
+<?php /** Complaint submission form. Author: Tan Boon Leong (2402865). */ ?>
 <div class="page-heading"><div><h1><?= $editId !== null ? 'Edit complaint' : 'Report a waste issue' ?></h1><p class="lead">Select the affected bin and describe what needs attention.</p></div><a class="button button-secondary" href="<?= url('complaint') ?>">Cancel</a></div>
 <form method="post" action="<?= url($editId !== null ? 'complaint/update/' . $editId : 'complaint/store') ?>" enctype="multipart/form-data" class="form-card">
 <?= csrfField() ?>
