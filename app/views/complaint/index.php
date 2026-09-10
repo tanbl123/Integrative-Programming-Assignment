@@ -131,7 +131,7 @@
 </form>
 
 <div class="table-scroll">
-    <table class="table">
+    <table class="table" id="complaintsTable">
         <thead>
             <tr>
                 <th><button type="button" class="sort-header" data-column="0">Reference</button></th>
@@ -200,9 +200,18 @@
         const status = document.getElementById('complaintStatusFilter');
         const location = document.getElementById('complaintLocationFilter');
         const clear = document.getElementById('clearComplaintFilters');
-        const tbody = document.querySelector('.table tbody');
+        // Must be scoped to the complaints table by id. The duplicate reports
+        // panel above also renders .table elements, so a bare '.table tbody'
+        // selector matches the first duplicate group instead, and sorting then
+        // moves every complaint row into that group's collapsed table.
+        const complaintsTable = document.getElementById('complaintsTable');
+        const tbody = complaintsTable ? complaintsTable.tBodies[0] : null;
         const rows = Array.from(document.querySelectorAll('.complaint-row'));
         const noResults = document.getElementById('noComplaintResults');
+
+        if (!form || !tbody) {
+            return;
+        }
 
         let currentColumn = null;
         let currentDirection = 'asc';
@@ -273,7 +282,7 @@
             filterComplaints();
         });
 
-        document.querySelectorAll('.sort-header').forEach(button => {
+        (complaintsTable ? complaintsTable.querySelectorAll('.sort-header') : []).forEach(button => {
             button.addEventListener('click', function () {
                 sortComplaints(parseInt(button.dataset.column, 10));
             });
