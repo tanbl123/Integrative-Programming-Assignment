@@ -126,8 +126,8 @@ class ComplaintService
                 // Named separately from "not a valid next status", because the
                 // step is valid and the reason it is refused is fixable.
                 $status === Complaint::STATUS_ASSIGNED
-                    => 'No cleaner is booked to visit this bin, so this complaint cannot be '
-                     . 'marked Assigned. Generate a collection schedule for the bin first; '
+                    => 'No cleaner is booked to visit this bin, so this ' . $complaint->getType()
+                     . ' report cannot be marked Assigned. Book one on this page; '
                      . 'that moves the complaint here on its own.',
                 default => 'Select a valid next status in the complaint lifecycle.',
             };
@@ -192,15 +192,42 @@ class ComplaintService
     }
 
     /**
+     * Whether this complaint must have a cleaner booked before it may be
+     * marked Assigned.
+     *
+     * Assigned means a cleaner is coming, and an Administrator who sets it
+     * having scheduled nothing leaves a complaint that reads as being dealt
+     * with while nobody has been sent - and a reporter who has been told so.
+     * That is worth forbidding where a cleaner is what the report needs.
+     *
+     * It is not worth forbidding everywhere. A Damaged Bin is a job for
+     * maintenance, and requiring a cleaning visit before it can be marked
+     * Assigned leaves an Administrator with three bad choices: book a cleaner
+     * who has nothing to clean, reject a genuine report, or leave it sitting
+     * at New. The issue type is what separates the two cases, so the issue
+     * type decides.
+     *
+     * marks_bin_full is the flag it reads. That column's own question is "does
+     * this report mean the bin is full?", and the overlap with "does this need
+     * a cleaner?" is close but not exact - Dirty Area needs a cleaner and is
+     * not a full bin. Which is why this is a floor and not a ceiling: where
+     * the flag is off the booking form is still offered on the complaint page,
+     * an Administrator still books from there in one step, and all that
+     * changes is that nothing stops them recording the assignment by hand when
+     * the work is going to somebody other than a cleaner.
+     */
+    public function requiresCollectionForAssigned(Complaint $complaint): bool
+    {
+        return ComplaintType::marksBinFullByName($complaint->getType());
+    }
+
+    /**
      * The statuses this complaint may actually be moved to right now.
      *
-     * The lifecycle says which steps exist; this says which of them are open,
-     * and Assigned has a condition attached. Assigned means a cleaner is
-     * coming, so it is refused until one is: an Administrator who sets it
-     * without scheduling anything leaves a complaint that reads as being
-     * dealt with while nobody has been sent, and a reporter who has been told
-     * so. The Scheduling module saves the assignment before asking for this
-     * move, so its own call passes.
+     * The lifecycle says which steps exist; this says which of them are open.
+     * Assigned has the condition above attached. The Scheduling module saves
+     * the assignment before asking for this move, so its own call passes
+     * whatever the type.
      *
      * Both the form and updateStatus() read this, so what an Administrator is
      * offered and what the service accepts cannot drift apart.
@@ -211,7 +238,8 @@ class ComplaintService
     {
         $allowed = Complaint::allowedNextStatuses($complaint->getStatus());
 
-        if ($complaint->binHasOpenCollection()) {
+        if (!$this->requiresCollectionForAssigned($complaint)
+            || $complaint->binHasOpenCollection()) {
             return $allowed;
         }
 

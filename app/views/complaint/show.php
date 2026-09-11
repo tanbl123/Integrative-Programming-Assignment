@@ -264,10 +264,17 @@ $assignments = $complaint->assignmentCounts();
  * module that owns collections, and this page only asks for the three things
  * it needs. Offered only while the complaint has no collection: once one
  * exists the status form takes over.
+ *
+ * The test is the bin's own collections, NOT whether Assigned happens to be
+ * missing from the dropdown. Those two used to be the same thing and are not
+ * any more: a type that does not mark the bin full is offered Assigned
+ * without a booking, and keying off the dropdown would have taken the
+ * booking form away from exactly the reports that most need it offered here
+ * rather than on the Schedules tab.
  */ ?>
 <?php if (UserPermissions::can($user, 'complaint.manage')
           && $complaint->getStatus() === Complaint::STATUS_NEW
-          && !in_array(Complaint::STATUS_ASSIGNED, $statuses, true)): ?>
+          && !$complaint->binHasOpenCollection()): ?>
     <form
         method="post"
         action="<?= url('complaint/assign/' . $complaint->getKey()) ?>"
@@ -414,18 +421,20 @@ $assignments = $complaint->assignmentCounts();
 
         <?= csrfField() ?>
 
-        <?php /* Assigned is not in this list until a cleaner is booked to visit
-                 the bin - ComplaintService::nextStatusesFor() removes it, and
-                 the service refuses it as well, so the form and the rule
-                 cannot drift apart. The booking itself is offered below rather
-                 than linked to: sending an administrator to another module to
-                 do it is exactly where the step used to be forgotten. */ ?>
+        <?php /* Assigned is withheld only for the issue types that mean the bin
+                 needs emptying - ComplaintService::nextStatusesFor() removes
+                 it, and the service refuses it as well, so the form and the
+                 rule cannot drift apart. The booking itself is offered above
+                 rather than linked to: sending an administrator to another
+                 module to do it is exactly where the step used to be
+                 forgotten, and it is offered for every type, gated or not. */ ?>
         <?php if ($complaint->getStatus() === Complaint::STATUS_NEW
                   && !in_array(Complaint::STATUS_ASSIGNED, $statuses, true)): ?>
             <p class="field-help">
-                <strong>Assigned</strong> is not available yet. It means a cleaner is on the
-                way, so it can only be set once one is booked to visit this bin.
-                Book one below and this complaint moves to Assigned on its own.
+                <strong>Assigned</strong> is not available yet. A <?= e($complaint->getType()) ?>
+                report means this bin needs emptying, so it can only be marked Assigned once a
+                cleaner is booked to visit it. Book one above and this complaint moves to
+                Assigned on its own.
             </p>
         <?php endif; ?>
 

@@ -67,12 +67,19 @@ try {
     $null = Api $cleaner PATCH "complaint-api/$cid" @{description='Unauthorized mutation is forbidden.'} 403
     $null = Api $cleaner DELETE "complaint-api/$cid" $null 403
     $null = Api $reporter PATCH "complaint-api/$cid" @{complaint_status='Assigned'} 403
-    # Assigned now means a cleaner is booked to visit the bin, so it is refused
-    # until one is. Booked here with direct SQL rather than through the
-    # scheduling API because the strategies pick their own bins and this
-    # fixture needs this one; the schedule id joins $scheduleIds so the finally
-    # block removes it with the rest.
-    $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Assigned'} 422
+    # Assigned means a cleaner is booked to visit the bin, and whether that is
+    # REQUIRED before the step is allowed depends on the issue type: the gate
+    # applies to types whose marks_bin_full flag is set, because those are the
+    # reports a cleaner is the answer to. This fixture files 'Other', which
+    # carries no such flag deliberately - it keeps the run from flipping a real
+    # bin to Full as a side effect - so the step is accepted straight away.
+    $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Assigned'}
+    Check ([int](Sql "SELECT COUNT(*) FROM complaints WHERE complaint_id=$cid AND complaint_status='Assigned';") -eq 1) 'Assigned is accepted for an issue type that needs no collection'
+    # A collection is still booked for the bin, because the rest of this run
+    # needs one: booked with direct SQL rather than through the scheduling API
+    # because the strategies pick their own bins and this fixture needs this
+    # one; the schedule id joins $scheduleIds so the finally block removes it
+    # with the rest.
     $gateCleanerId = [int](Sql "SELECT user_id FROM users WHERE role='Cleaner' AND deleted_at IS NULL ORDER BY user_id LIMIT 1;")
     $gateAdminId = [int](Sql "SELECT user_id FROM users WHERE role='Administrator' AND deleted_at IS NULL ORDER BY user_id LIMIT 1;")
     Sql ("INSERT INTO collection_schedules (admin_id, schedule_date, time_slot, strategy, notes) " +
@@ -82,8 +89,7 @@ try {
     $gateScheduleId = [int](Sql "SELECT schedule_id FROM collection_schedules WHERE notes='Synthetic REST regression booking' ORDER BY schedule_id DESC LIMIT 1;")
     $scheduleIds.Add($gateScheduleId)
     Check ($gateScheduleId -gt 0) 'Collection booked against the complaint bin'
-    $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Assigned'}
-    Check ([int](Sql "SELECT COUNT(*) FROM complaints WHERE complaint_id=$cid AND complaint_status='Assigned';") -eq 1) 'Assigned is accepted once a cleaner is booked'
+    Check ([int](Sql "SELECT COUNT(*) FROM complaints WHERE complaint_id=$cid AND complaint_status='Assigned';") -eq 1) 'Complaint stays Assigned once a collection covers its bin'
     $null = Api $reporter DELETE "complaint-api/$cid" $null 422
     $null = Api $reporter PATCH "complaint-api/$cid" @{description='Assigned complaint should not change.'} 422
     $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Rejected'} 422
