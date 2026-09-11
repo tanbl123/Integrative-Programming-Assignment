@@ -52,6 +52,15 @@ interface ComplaintObserver
      *        What the complaint said before an EVENT_DETAILS edit. Only the
      *        service holds this, because by the time an observer runs the
      *        complaint has already been saved.
+     * @param string|null $forReporter
+     *        Something an administrator typed FOR the reporter to read, as
+     *        opposed to $remarks, which is written for the record. They are
+     *        separate parameters because they are separate pieces of writing
+     *        with separate readers: "Collection scheduled (schedule #3)." is
+     *        what the history needs and is meaningless to the person waiting
+     *        to hear, and "we are short-staffed today, it will be after
+     *        lunch" is the opposite. Overloading one field with both would
+     *        force every caller to choose which reader to fail.
      */
     public function changed(
         Complaint $complaint,
@@ -60,7 +69,8 @@ interface ComplaintObserver
         ?User $actor,
         ?string $remarks,
         string $event = self::EVENT_STATUS,
-        ?array $previous = null
+        ?array $previous = null,
+        ?string $forReporter = null
     ): void;
 }
 
@@ -77,7 +87,8 @@ class ComplaintHistoryObserver implements ComplaintObserver
         ?User $actor,
         ?string $remarks,
         string $event = self::EVENT_STATUS,
-        ?array $previous = null
+        ?array $previous = null,
+        ?string $forReporter = null
     ): void {
         // All three kinds of event are recorded. An edit and a withdrawal both
         // carry the same status on each side, and change_type is what tells
@@ -104,7 +115,8 @@ class ComplaintNotificationObserver implements ComplaintObserver
         ?User $actor,
         ?string $remarks,
         string $event = self::EVENT_STATUS,
-        ?array $previous = null
+        ?array $previous = null,
+        ?string $forReporter = null
     ): void {
         $binCode = $complaint->getBin()?->getBinCode() ?? 'an unknown bin';
 
@@ -116,6 +128,14 @@ class ComplaintNotificationObserver implements ComplaintObserver
         // bodies below already say what happened in full. Resolved and
         // Rejected keep theirs, because there the reason IS the message, and
         // a rejection cannot be saved without one.
+        //
+        // Leaving the schedule number out, though, left the middle steps with
+        // no way for a person to say anything at all: the booking form asked
+        // for notes for the cleaner and nothing for the reporter, so the one
+        // party actually waiting for an answer got the same fixed sentence
+        // every time. $forReporter is that missing half - written by the
+        // administrator, addressed to the reporter, and kept apart from the
+        // remark so that neither has to be phrased for both audiences.
         if ($event === self::EVENT_WITHDRAWN) {
             // Administrators are told, because a report they may already have
             // read and planned around has just left their list. The reporter
@@ -186,6 +206,15 @@ class ComplaintNotificationObserver implements ComplaintObserver
             $body  = 'Status changed from ' . (string) $oldStatus . ' to ' . $newStatus . ' for ' . $binCode . '.';
         }
 
+        // Only ever added to something the reporter reads. An administrator
+        // writing to the reporter has no business appearing in an alert
+        // addressed to administrators, and the two branches above that raise
+        // one would put their own words in front of them.
+        $message = $forReporter === null ? '' : trim($forReporter);
+        if ($role === User::ROLE_REPORTER && $message !== '') {
+            $body .= ' The administrator says: ' . $message;
+        }
+
         $notification = new ComplaintNotification();
         $notification->setDetails($complaint->getKey(), $role, $title, $body);
         $notification->save();
@@ -254,7 +283,8 @@ class ComplaintBinFlagObserver implements ComplaintObserver
         ?User $actor,
         ?string $remarks,
         string $event = self::EVENT_STATUS,
-        ?array $previous = null
+        ?array $previous = null,
+        ?string $forReporter = null
     ): void {
         // Rewording a report says nothing about how full the bin is. A
         // withdrawal does: the claim that marked the bin Full has been taken
@@ -335,7 +365,8 @@ class ComplaintRevisionObserver implements ComplaintObserver
         ?User $actor,
         ?string $remarks,
         string $event = self::EVENT_STATUS,
-        ?array $previous = null
+        ?array $previous = null,
+        ?string $forReporter = null
     ): void {
         // Only an edit replaces anything. A status change leaves the
         // complaint's own words exactly as they were.
@@ -384,11 +415,13 @@ class ComplaintStatusSubject
         ?User $actor,
         ?string $remarks,
         string $event = ComplaintObserver::EVENT_STATUS,
-        ?array $previous = null
+        ?array $previous = null,
+        ?string $forReporter = null
     ): void {
         foreach ($this->observers as $observer) {
             $observer->changed(
-                $complaint, $oldStatus, $newStatus, $actor, $remarks, $event, $previous);
+                $complaint, $oldStatus, $newStatus, $actor, $remarks,
+                $event, $previous, $forReporter);
         }
     }
 }

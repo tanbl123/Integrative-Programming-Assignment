@@ -117,7 +117,7 @@ class SchedulingService {
 
         $data['time_slot'] = $this->composeTimeSlot($data);
 
-        [$date, $timeSlot, , $cleaner, $notes] = $this->validateSchedule(
+        [$date, $timeSlot, , $cleaner, $notes, $reporterMessage] = $this->validateSchedule(
                 $data + ['strategy' => 'Complaint Priority']
         );
 
@@ -150,7 +150,8 @@ class SchedulingService {
                     new ComplaintService(),
                     (int) $bin->getKey(),
                     (int) $schedule->getKey(),
-                    $administrator
+                    $administrator,
+                    $reporterMessage
             );
 
             $pdo->commit();
@@ -528,18 +529,25 @@ class SchedulingService {
             ComplaintService $complaints,
             int $binId,
             int $scheduleId,
-            User $administrator
+            User $administrator,
+            ?string $reporterMessage = null
     ): void {
         foreach (Complaint::openForBin($binId) as $complaint) {
             if ($complaint->getStatus() !== Complaint::STATUS_NEW) {
                 continue;
             }
 
+            // The remark names the schedule, for the history; the message is
+            // whatever the administrator wrote for the person who reported
+            // this. Where several reports name the one bin they all receive
+            // it, which is the point: one answer, given to everybody who
+            // asked, rather than to whoever happened to report first.
             $complaints->updateStatus(
                     (int) $complaint->getKey(),
                     Complaint::STATUS_ASSIGNED,
                     'Collection scheduled (schedule #' . $scheduleId . ').',
-                    $administrator
+                    $administrator,
+                    $reporterMessage
             );
         }
     }
@@ -547,7 +555,8 @@ class SchedulingService {
     private function validateSchedule(array $data): array {
         $errors = [];
 
-        foreach (['schedule_date', 'time_slot', 'strategy', 'cleaner_id', 'notes'] as $field) {
+        foreach (['schedule_date', 'time_slot', 'strategy', 'cleaner_id', 'notes',
+                    'reporter_message'] as $field) {
             if (array_key_exists($field, $data) && !is_scalar($data[$field]) && $data[$field] !== null) {
                 $errors[$field] = 'Enter a single value.';
             }
@@ -562,6 +571,12 @@ class SchedulingService {
         $strategy = trim((string) ($data['strategy'] ?? ''));
         $cleanerId = filter_var($data['cleaner_id'] ?? null, FILTER_VALIDATE_INT);
         $notes = trim((string) ($data['notes'] ?? ''));
+
+        // Notes are for the cleaner and this is for the reporter. Both are
+        // optional and neither stands in for the other: a round is planned in
+        // the first and somebody is answered in the second.
+        // Author of this field : Tan Boon Leong (2402865)
+        $reporterMessage = trim((string) ($data['reporter_message'] ?? ''));
 
         $cleaner = $cleanerId === false ? null : User::find((int) $cleanerId);
 
@@ -589,6 +604,11 @@ class SchedulingService {
             $errors['notes'] = 'Notes cannot exceed 500 characters.';
         }
 
+        if (mb_strlen($reporterMessage) > ComplaintService::REPORTER_MESSAGE_MAX) {
+            $errors['reporter_message'] = 'The message to the reporter cannot exceed '
+                    . ComplaintService::REPORTER_MESSAGE_MAX . ' characters.';
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -598,7 +618,8 @@ class SchedulingService {
             $timeSlot,
             $strategy,
             $cleaner,
-            $notes === '' ? null : $notes
+            $notes === '' ? null : $notes,
+            $reporterMessage === '' ? null : $reporterMessage
         ];
     }
 

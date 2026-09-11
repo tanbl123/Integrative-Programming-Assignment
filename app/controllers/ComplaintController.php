@@ -138,7 +138,8 @@ class ComplaintController extends Controller
             $user = Auth::requireLogin();
             UserPermissions::require('complaint.manage');
             Csrf::requireValid($_POST['_token'] ?? null);
-            $this->requireScalar(['schedule_date', 'time_from', 'time_to', 'cleaner_id', 'notes', 'from']);
+            $this->requireScalar(['schedule_date', 'time_from', 'time_to', 'cleaner_id',
+                'notes', 'reporter_message', 'from']);
 
             $complaint = $this->service->findVisible($user, $id);
             if ($complaint === null) {

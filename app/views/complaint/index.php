@@ -140,6 +140,23 @@
                             Notes for the cleaner
                             <textarea name="notes" rows="2" maxlength="500"
                                       placeholder="e.g. Bin is behind the drinks stall."></textarea>
+                            <span class="field-help">Only the cleaner sees this.</span>
+                        </label>
+
+                        <?php /* Same field as the complaint page's booking
+                                 form, and it matters more here: this books one
+                                 visit for several people who each reported the
+                                 bin separately, and every one of them receives
+                                 what is written. */ ?>
+                        <label>
+                            Message to the reporters
+                            <textarea name="reporter_message" rows="2"
+                                      maxlength="<?= (int) ComplaintService::REPORTER_MESSAGE_MAX ?>"
+                                      placeholder="e.g. Thanks for reporting - a cleaner will be there this afternoon."></textarea>
+                            <span class="field-help">
+                                Optional. Sent to all <?= count($group['complaints']) ?> reporters
+                                with the news that work is being arranged.
+                            </span>
                         </label>
 
                         <button class="button" type="submit" <?= $cleaners === [] ? 'disabled' : '' ?>>

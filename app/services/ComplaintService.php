@@ -11,6 +11,16 @@
  */
 class ComplaintService
 {
+    /**
+     * How long a message to the reporter may be.
+     *
+     * The notification body is 255 characters and already holds a sentence
+     * naming the bin, so this is what is left over with room to spare. The
+     * booking forms carry the same number in maxlength, so the browser stops
+     * at the same place the service does.
+     */
+    public const REPORTER_MESSAGE_MAX = 120;
+
     private ComplaintStatusSubject $subject;
 
     public function __construct()
@@ -86,8 +96,22 @@ class ComplaintService
         throw new AuthorizationException('You cannot access another reporter’s complaint.');
     }
 
-    public function updateStatus(int $id, string $status, string $remarks, User $administrator): Complaint
-    {
+    /**
+     * Moves a complaint through the lifecycle.
+     *
+     * $remarks is written for the record and $forReporter is written for the
+     * reporter; see ComplaintObserver::changed() for why those are two things
+     * rather than one. $forReporter is optional everywhere - most transitions
+     * have nothing to add - and is simply carried to the observers, which
+     * decide whether anybody reads it.
+     */
+    public function updateStatus(
+        int $id,
+        string $status,
+        string $remarks,
+        User $administrator,
+        ?string $forReporter = null
+    ): Complaint {
         UserPermissions::require('complaint.manage');
         $complaint = Complaint::find($id);
         if ($complaint === null || $complaint->isDeleted()) {
@@ -110,6 +134,14 @@ class ComplaintService
         }
         if (mb_strlen($remarks) > 255) {
             $errors['remarks'] = 'Remarks cannot exceed 255 characters.';
+        }
+        // Shorter than the remark, because this one is appended to a sentence
+        // that already names the bin, inside a notification body of 255
+        // characters. A limit the writer is told about beats a message that
+        // saves in full and then arrives cut in half.
+        if ($forReporter !== null && mb_strlen($forReporter) > self::REPORTER_MESSAGE_MAX) {
+            $errors['reporter_message'] = 'The message to the reporter cannot exceed '
+                                        . self::REPORTER_MESSAGE_MAX . ' characters.';
         }
         // Required for a rejection and optional everywhere else. Resolved and
         // Assigned are good news and say what happened on their own; Rejected
@@ -142,7 +174,10 @@ class ComplaintService
                 $old,
                 $status,
                 $administrator,
-                $remarks === '' ? null : $remarks
+                $remarks === '' ? null : $remarks,
+                ComplaintObserver::EVENT_STATUS,
+                null,
+                $forReporter === null || trim($forReporter) === '' ? null : trim($forReporter)
             );
             if ($ownsTransaction) {
                 $pdo->commit();

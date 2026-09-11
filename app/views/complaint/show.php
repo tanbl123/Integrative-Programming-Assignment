@@ -363,8 +363,33 @@ $assignments = $complaint->assignmentCounts();
             Notes for the cleaner
             <textarea name="notes" rows="2" maxlength="500"
                       placeholder="e.g. Bin is behind the drinks stall."><?= e((string) ($_POST['notes'] ?? '')) ?></textarea>
+            <span class="field-help">Only the cleaner sees this.</span>
             <?php if (!empty($errors['notes'])): ?>
                 <span class="field-error"><?= e($errors['notes']) ?></span>
+            <?php endif; ?>
+        </label>
+
+        <?php /* The other half of the same decision.
+                 Author : Tan Boon Leong (2402865)
+
+                 Booking a cleaner used to speak to the cleaner only. The
+                 reporter got a fixed sentence - their report was accepted,
+                 work is being arranged - and an administrator who wanted to
+                 tell them anything else, that it will be after lunch or that
+                 the area around the bin will be cleared too, had nowhere to
+                 type it. Notes and this field go to different people and are
+                 kept apart for that reason; neither is required. */ ?>
+        <label>
+            Message to the reporter
+            <textarea name="reporter_message" rows="2"
+                      maxlength="<?= (int) ComplaintService::REPORTER_MESSAGE_MAX ?>"
+                      placeholder="e.g. Sorry for the delay - a cleaner will be there this afternoon."><?= e((string) ($_POST['reporter_message'] ?? '')) ?></textarea>
+            <span class="field-help">
+                Optional. Added to the notification every reporter of this bin receives,
+                after "your report has been accepted and work is being arranged".
+            </span>
+            <?php if (!empty($errors['reporter_message'])): ?>
+                <span class="field-error"><?= e($errors['reporter_message']) ?></span>
             <?php endif; ?>
         </label>
 
