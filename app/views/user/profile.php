@@ -11,7 +11,7 @@ $value = static fn(string $key, mixed $fallback): mixed =>
 <div class="page-heading">
     <div>
         <h1>My profile</h1>
-        <p class="lead"><?= e($user->getRole()) ?> account</p>
+        <p class="lead"><?= e($user->getRole()) ?> account &mdash; <?= e($user->describe()) ?></p>
     </div>
 </div>
 

@@ -58,15 +58,18 @@ class ComplaintService
         }
     }
 
+    /**
+     * The complaints this user may see.
+     *
+     * Which complaints those are is the user's own business, so the question is
+     * put to them: a Reporter answers with theirs, an Administrator with all of
+     * them, a Cleaner by refusing. This method used to test the permissions and
+     * branch on the answer, which meant every role's rule lived here rather
+     * than with the role.
+     */
     public function searchVisible(User $user, string $query, string $status, ?int $locationId): array
     {
-        if (UserPermissions::can($user, 'complaint.manage')) {
-            return Complaint::search(null, trim($query), $status, $locationId);
-        }
-        if (UserPermissions::can($user, 'complaint.view_own')) {
-            return Complaint::search($user->getKey(), trim($query), $status, $locationId);
-        }
-        throw new AuthorizationException('Your role does not have complaint access.');
+        return $user->visibleComplaints($query, $status, $locationId);
     }
 
     public function findVisible(User $user, int $id): ?Complaint
@@ -75,8 +78,7 @@ class ComplaintService
         if ($complaint === null || $complaint->isDeleted()) {
             return null;
         }
-        if (UserPermissions::can($user, 'complaint.manage')
-            || (UserPermissions::can($user, 'complaint.view_own') && $complaint->getReporterId() === $user->getKey())) {
+        if ($user->maySee($complaint)) {
             return $complaint;
         }
         throw new AuthorizationException('You cannot access another reporter’s complaint.');

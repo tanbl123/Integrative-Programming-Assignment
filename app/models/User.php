@@ -8,6 +8,20 @@
  * Module : User & Access Management
  * Note   : Skeleton provided so other modules can reference users. 
  *          The owning member extends this with authentication logic. 
+ *
+ * Role subclasses
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ *
+ * Reporter, Cleaner and Administrator extend this class. All three share the
+ * users table and every column in it - one table, three classes, told apart by
+ * the role column - so nothing about the schema changes. What differs is
+ * behaviour, and hydrate() below is what makes sure a row loaded from the
+ * database arrives as the right one of the three.
+ *
+ * Behaviour common to everyone who signs in stays here. Anything that is true
+ * of one role and not another belongs in the subclass, so that asking a user
+ * what they can see replaces asking what they are and branching on the answer.
  */
 class User extends Model {
 
@@ -23,6 +37,70 @@ class User extends Model {
     public const ROLE_REPORTER = 'Reporter';
     public const ROLE_CLEANER = 'Cleaner';
     public const ROLE_ADMIN = 'Administrator';
+
+    /**
+     * Builds the right class for this row.
+     *
+     * Every read in the ORM comes through here - find(), where(), search() and
+     * the rest - so a user is a Reporter, a Cleaner or an Administrator from
+     * the moment it leaves the database, and no caller has to construct one.
+     *
+     * The role is checked against the class being called so that a subclass
+     * used directly, Reporter::find() for instance, can never be handed an
+     * Administrator.
+     */
+    public static function hydrate(array $row): static {
+        $class = match ($row['role'] ?? '') {
+            self::ROLE_REPORTER => Reporter::class,
+            self::ROLE_CLEANER => Cleaner::class,
+            self::ROLE_ADMIN => Administrator::class,
+            default => static::class,
+        };
+        if (!is_a($class, static::class, true)) {
+            $class = static::class;
+        }
+
+        $model = new $class();
+        $model->attributes = $row;
+
+        return $model;
+    }
+
+    /**
+     * A user of the right class for a role, for an account being created.
+     *
+     * new User() cannot know which role it will be given, so the two places
+     * that create accounts ask for one by role instead.
+     */
+    public static function forRole(string $role): User {
+        return match ($role) {
+            self::ROLE_REPORTER => new Reporter(),
+            self::ROLE_CLEANER => new Cleaner(),
+            self::ROLE_ADMIN => new Administrator(),
+            default => new Reporter(),
+        };
+    }
+
+    /** What this role does, in the first person, for their own profile page. */
+    public function describe(): string {
+        return 'You are signed in to EcoCampus.';
+    }
+
+    /**
+     * The complaints this user may see, and the search applied to them.
+     *
+     * Overridden by each subclass: their own for a Reporter, all of them for
+     * an Administrator, none for a Cleaner. The base class refuses, because a
+     * user of no known role has no business reading complaints.
+     */
+    public function visibleComplaints(string $query, string $status, ?int $locationId): array {
+        throw new AuthorizationException('Your role does not have complaint access.');
+    }
+
+    /** Whether this user may open one particular complaint. */
+    public function maySee(Complaint $complaint): bool {
+        return false;
+    }
 
     public function getFullName(): string {
         return (string) $this->get('full_name');
