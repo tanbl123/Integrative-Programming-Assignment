@@ -437,14 +437,29 @@ class ComplaintService
      * as much as to the reporter, and removing it would erase the account of
      * how it was handled.
      *
-     * Nobody may delete from Assigned. Deletion writes no history and notifies
-     * nobody, so ending a live complaint that way would leave its story
-     * unfinished and its reporter uninformed. An Administrator resolves or
-     * rejects it first - which records a reason and notifies the reporter
-     * through the observers - and may then delete it.
+     * An Administrator may only delete a complaint that has already been
+     * answered. Deleting is not an outcome and nobody is told it happened -
+     * the withdrawal event alerts the other administrators, and that is all -
+     * so it must never be the thing that ENDS a complaint. It removes one
+     * that is already over.
+     *
+     * New used to be in this list, and that was the hole. A report waiting to
+     * be looked at could be deleted outright: it vanished from the reporter's
+     * list with no outcome, no reason and no notification, and from the
+     * administrator's own list too, so nobody could see it had ever existed.
+     * The reporter was left believing their report was still being
+     * considered. The comment here described the rule correctly and the
+     * constant did not implement it, and canDelete()'s own refusal message
+     * has always said what it should be: resolve or reject it first, so the
+     * outcome is recorded and the reporter is told. A rejection cannot even
+     * be saved without a reason. Deleting afterwards then removes nothing the
+     * reporter has not already heard about.
+     *
+     * Assigned is refused to everybody, and separately hasOpenAssignments()
+     * refuses any complaint a cleaner is still on their way to.
      */
     private const DELETABLE_BY_ADMIN = [
-        Complaint::STATUS_NEW, Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED,
+        Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED,
     ];
     private const WITHDRAWABLE_BY_REPORTER = [Complaint::STATUS_NEW];
 
