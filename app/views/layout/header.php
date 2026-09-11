@@ -6,6 +6,9 @@
  * Module : Shared core - EcoCampus Waste Management System
  */
 $currentUser = Auth::user();
+// Asked of the user, so a Cleaner - who has no complaint notices - gets 0
+// without this layout needing to know which roles do.
+$unreadNotifications = $currentUser?->unreadNotificationCount() ?? 0;
 $successMessage = Flash::get('success');
 $errorMessage = Flash::get('error');
 $styleVersion = filemtime(APP_ROOT . '/public/css/style.css');
@@ -45,6 +48,16 @@ $styleVersion = filemtime(APP_ROOT . '/public/css/style.css');
         </nav>
         <div class="account-nav">
             <?php if ($currentUser !== null): ?>
+                <?php /* Shown only to roles that can receive complaint notices, so a
+                         Cleaner is not given a link that is always empty. */ ?>
+                <?php if ($currentUser->isReporter() || $currentUser->isAdmin()): ?>
+                    <a class="button nav-button notification-link" href="<?= url('complaint-notification') ?>">
+                        Notifications
+                        <?php if ($unreadNotifications > 0): ?>
+                            <span class="notification-count"><?= (int) $unreadNotifications ?></span>
+                        <?php endif; ?>
+                    </a>
+                <?php endif; ?>
                 <a class="button nav-button" href="<?= url('user/profile') ?>"><?= e($currentUser->getFullName()) ?> · <?= e($currentUser->getRole()) ?></a>
                 <form method="post" action="<?= url('auth/logout') ?>">
                     <?= csrfField() ?>

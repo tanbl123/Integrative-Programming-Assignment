@@ -41,4 +41,25 @@ class Reporter extends User
         return UserPermissions::can($this, 'complaint.view_own')
             && $complaint->getReporterId() === $this->getKey();
     }
+
+    /**
+     * Only notices about complaints this reporter wrote.
+     *
+     * recipient_role says 'Reporter', which is everyone; the complaint behind
+     * each notice is what makes it this person's.
+     */
+    public function visibleNotifications(bool $unreadOnly = false): array
+    {
+        return ComplaintNotification::forReporter((int) $this->getKey(), $unreadOnly);
+    }
+
+    public function maySeeNotification(ComplaintNotification $notification): bool
+    {
+        if ($notification->getRole() !== self::ROLE_REPORTER) {
+            return false;
+        }
+        $complaint = $notification->getComplaint();
+
+        return $complaint !== null && $complaint->getReporterId() === $this->getKey();
+    }
 }

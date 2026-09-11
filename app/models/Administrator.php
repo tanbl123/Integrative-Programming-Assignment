@@ -33,4 +33,21 @@ class Administrator extends User
     {
         return UserPermissions::can($this, 'complaint.manage');
     }
+
+    /**
+     * The administrators' shared queue of complaint notices.
+     *
+     * Shared on purpose: a new complaint needs picking up once, not once per
+     * administrator, so marking one read clears it for all of them.
+     */
+    public function visibleNotifications(bool $unreadOnly = false): array
+    {
+        return ComplaintNotification::forAdministrators($unreadOnly);
+    }
+
+    public function maySeeNotification(ComplaintNotification $notification): bool
+    {
+        return $notification->getRole() === self::ROLE_ADMIN
+            && UserPermissions::can($this, 'complaint.manage');
+    }
 }

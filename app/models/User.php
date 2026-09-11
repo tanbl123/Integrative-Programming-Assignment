@@ -102,6 +102,29 @@ class User extends Model {
         return false;
     }
 
+    /**
+     * The complaint notifications this user may read, newest first.
+     *
+     * Asked of the user for the same reason visibleComplaints() is: which
+     * notices are yours is a fact about your role. The base answer is none,
+     * and a Cleaner inherits it unchanged - complaints are not their work.
+     *
+     * @return list<ComplaintNotification>
+     */
+    public function visibleNotifications(bool $unreadOnly = false): array {
+        return [];
+    }
+
+    /** Whether this notification is one of this user's own. */
+    public function maySeeNotification(ComplaintNotification $notification): bool {
+        return false;
+    }
+
+    /** How many are unread, for the count beside the header link. */
+    public function unreadNotificationCount(): int {
+        return count($this->visibleNotifications(true));
+    }
+
     public function getFullName(): string {
         return (string) $this->get('full_name');
     }

@@ -1517,3 +1517,87 @@ td.duplicate-reason {
 #attachment-thumb:hover {
     border-color: var(--green);
 }
+
+/* ---------- Complaint notifications ----------
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ */
+.notification-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.notification-count {
+    display: inline-block;
+    min-width: 1.35rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--warn);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.35rem;
+    text-align: center;
+}
+
+.notification-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.notification {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1.1rem;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+}
+
+/* An unread notice is marked down its edge rather than by a different
+   background, so that the list still reads as one list. */
+.notification-unread {
+    border-left-color: var(--warn);
+}
+
+.notification-body {
+    min-width: 0;
+}
+
+.notification-title {
+    margin: 0 0 0.2rem;
+    font-weight: 600;
+}
+
+.notification-title .badge {
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+.notification-text {
+    margin: 0 0 0.35rem;
+}
+
+.notification-meta {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.notification-gone {
+    font-style: italic;
+}
+
+@media (max-width: 640px) {
+    .notification {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
