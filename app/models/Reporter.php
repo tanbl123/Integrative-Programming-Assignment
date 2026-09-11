@@ -2,8 +2,8 @@
 /**
  * A user who reports waste issues.
  *
- * Author : Tan Boon Leong (2402865)
- * Module : Complaint / Report Management
+ * Author : Phang Jun Hong (2406646)
+ * Module : User & Access Management
  *
  * One of three subclasses of User, chosen by User::hydrate() from the role
  * stored on the row. They share the users table and every column in it; what

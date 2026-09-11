@@ -1,5 +1,9 @@
 <?php
-/** Complaint transition audit entry. Author: Tan Boon Leong (2402865). */
+/**
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ */
 class ComplaintStatusHistory extends Model
 {
     protected static string $table = 'complaint_status_history';
