@@ -253,11 +253,17 @@ class Complaint extends Model
      */
     public static function duplicateGroups(): array
     {
-        // Which one to keep by default. An Assigned report is one a cleaner
-        // has already been sent out on, so it is the one the work is attached
-        // to; rejecting it and keeping an untouched New report would leave the
-        // group's live complaint with nobody on it. Where none is assigned the
-        // oldest wins, as the first person to report it.
+        // Which one to keep by default. Assigned means an Administrator has
+        // triaged this report and moved it on - it carries their remarks and
+        // its history, and it is the one any collection assignment raised from
+        // the group was raised against. Rejecting it in favour of an untouched
+        // New report throws that away. Where none is assigned the oldest wins,
+        // as the first person to report it.
+        //
+        // Note that the status is a lifecycle step, not proof that a cleaner
+        // holds a task: collection_assignments is the Scheduling module's
+        // record and is set independently. canEdit() checks both separately
+        // for that reason.
         //
         // It is only the default. The administrator chooses from the group.
         $rows = Database::getInstance()->selectAll(
