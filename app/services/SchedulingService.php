@@ -182,6 +182,54 @@ class SchedulingService {
      * A caller that already has a composed slot - anything posting time_slot
      * directly rather than the pair - keeps working unchanged.
      */
+    /**
+     * Puts complaints back to New when the visit they were waiting on is off.
+     *
+     * Author : Tan Boon Leong (2402865)
+     * Module : Complaint / Report Management - cross-module integration
+     *
+     * Assigned means a cleaner is booked, and cancelling the schedule that
+     * booked them makes that false. The complaint module refuses to let an
+     * administrator set Assigned without a booking; leaving one reading
+     * Assigned after the booking is gone would be the same wrong state
+     * arriving by a different door.
+     *
+     * Only where the bin has nothing else outstanding. Another schedule may
+     * cover the same bin, and then somebody is still coming and the status is
+     * still true.
+     *
+     * Resolved and Rejected are left alone. Those are told outcomes, and the
+     * lifecycle refuses to reopen them.
+     *
+     * @param list<int> $binIds
+     */
+    private function releaseComplaints(
+            ComplaintService $complaints,
+            array $binIds,
+            int $scheduleId,
+            User $administrator
+    ): void {
+        foreach ($binIds as $binId) {
+            if ($binId === 0) {
+                continue;
+            }
+
+            foreach (Complaint::openForBin($binId) as $complaint) {
+                if ($complaint->getStatus() !== Complaint::STATUS_ASSIGNED
+                        || $complaint->binHasOpenCollection()) {
+                    continue;
+                }
+
+                $complaints->updateStatus(
+                        (int) $complaint->getKey(),
+                        Complaint::STATUS_NEW,
+                        'Collection cancelled (schedule #' . $scheduleId . ').',
+                        $administrator
+                );
+            }
+        }
+    }
+
     private function composeTimeSlot(array $data): string {
         $existing = trim((string) ($data['time_slot'] ?? ''));
 
@@ -291,12 +339,22 @@ class SchedulingService {
             $schedule->setStatus('Cancelled');
             $schedule->save();
 
+            $bins = [];
+
             foreach ($schedule->getAssignments() as $assignment) {
                 if ($assignment->getStatus() === 'Assigned') {
                     $assignment->skip('Schedule cancelled by administrator.');
                     $assignment->save();
+                    $bins[(int) $assignment->getBin()?->getKey()] = true;
                 }
             }
+
+            $this->releaseComplaints(
+                    new ComplaintService(),
+                    array_keys($bins),
+                    (int) $schedule->getKey(),
+                    Auth::requireLogin()
+            );
 
             $pdo->commit();
 

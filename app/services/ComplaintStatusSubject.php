@@ -150,6 +150,15 @@ class ComplaintNotificationObserver implements ComplaintObserver
             $role  = User::ROLE_ADMIN;
             $title = 'New complaint ' . $complaint->getNumber() . ' - ' . $complaint->getType();
             $body  = 'A new ' . $complaint->getType() . ' issue was reported for ' . $binCode . '.';
+        } elseif ($newStatus === Complaint::STATUS_NEW) {
+            // Told they were being dealt with, and now they are not. Leaving
+            // this one out would make the earlier message the last thing they
+            // ever heard, and it would no longer be true.
+            $role  = User::ROLE_REPORTER;
+            $title = 'Complaint ' . $complaint->getNumber() . ' is waiting again';
+            $body  = 'The collection arranged for ' . $binCode . ' is no longer going ahead, '
+                   . 'so your report is waiting to be dealt with again.'
+                   . ($remarks !== null && $remarks !== '' ? ' ' . $remarks : '');
         } elseif ($newStatus === Complaint::STATUS_ASSIGNED) {
             // The reporter, not the administrators. Whoever moved it here
             // knows they did; the person waiting to hear does not, and this

@@ -96,12 +96,27 @@ class Complaint extends Model
     /**
      * Return only the valid next steps in the agreed complaint lifecycle.
      * Resolved and Rejected are final states.
+     *
+     * Assigned may go back to New, and that step is not a loosening of the
+     * lifecycle but a consequence of what Assigned now means. It says a
+     * cleaner is booked to visit the bin. Cancel the schedule and that stops
+     * being true, so a report left reading Assigned would be claiming
+     * something the system has just made false - which is exactly the state
+     * the Assigned gate exists to prevent. Going back to New says the honest
+     * thing: nobody is coming yet, and this is waiting to be dealt with
+     * again.
+     *
+     * Resolved and Rejected stay final. Those are outcomes the reporter has
+     * been told about, and reopening one would make a message already sent a
+     * lie.
      */
     public static function allowedNextStatuses(string $current): array
     {
         return match ($current) {
             self::STATUS_NEW => [self::STATUS_ASSIGNED, self::STATUS_REJECTED],
-            self::STATUS_ASSIGNED => [self::STATUS_RESOLVED, self::STATUS_REJECTED],
+            self::STATUS_ASSIGNED => [
+                self::STATUS_NEW, self::STATUS_RESOLVED, self::STATUS_REJECTED,
+            ],
             default => [],
         };
     }
