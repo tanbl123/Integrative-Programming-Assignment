@@ -183,19 +183,20 @@ class ComplaintService
     }
 
     /**
-     * Edits a complaint, optionally replacing or removing its photograph.
+     * Edits a complaint, optionally replacing its photograph.
      *
      * A reporter who attached the wrong photo could previously only withdraw
      * the complaint and start again, because the evidence was fixed at
      * submission. Editing is permitted only while a complaint is New and
-     * unassigned, which is exactly the window in which nobody has acted on the
-     * photograph yet, so replacing it destroys no evidence anyone relied on.
+     * unassigned, so nobody has yet acted on what is being changed.
      *
-     * The replacement is verified and written to disk before anything changes,
-     * so a rejected file leaves the complaint exactly as it was. The file it
-     * replaces is removed only once the transaction has committed: unlinking
-     * earlier would destroy the old photograph and then roll back to a row
-     * that still names it.
+     * The replacement is verified and written to disk before anything else
+     * changes, so a rejected file leaves the complaint exactly as it was. The
+     * photograph it replaces is marked superseded rather than deleted: the
+     * revision written by ComplaintRevisionObserver points at it, so swapping a
+     * damning photo for an innocuous one stays as visible as rewriting the
+     * words. Nothing on this path removes a file; the only unlink is in the
+     * rollback below, where a stored file has no row to belong to.
      */
     public function update(
         int $id,
