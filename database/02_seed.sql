@@ -17,8 +17,8 @@ USE ecocampus;
 -- Users - one of each role, plus extra reporters and cleaners
 -- ---------------------------------------------------------------------
 INSERT INTO users (full_name, email, password_hash, phone_no, role) VALUES
-('Tan Boon Leong',  'admin@ecocampus.edu.my',    '$2y$12$S2ADOnIbQkqYaQ0Z2unGO.0IygbU3ytlX/sFN0KdkAuWgpmngM4g6', '012-3456789', 'Administrator'),
-('Ng Zi Zhang',     'zizhang@ecocampus.edu.my',  '$2y$12$S2ADOnIbQkqYaQ0Z2unGO.0IygbU3ytlX/sFN0KdkAuWgpmngM4g6', '012-3456790', 'Administrator'),
+('Admin',  'admin@ecocampus.my',    '$2y$12$S2ADOnIbQkqYaQ0Z2unGO.0IygbU3ytlX/sFN0KdkAuWgpmngM4g6', '012-3456789', 'Administrator'),
+('Ng Zi Zhang',     'zizhang@ecocampus.my',  '$2y$12$S2ADOnIbQkqYaQ0Z2unGO.0IygbU3ytlX/sFN0KdkAuWgpmngM4g6', '012-3456790', 'Administrator'),
 ('Siti Nurhaliza',  'siti@student.ecocampus.my', '$2y$12$S2ADOnIbQkqYaQ0Z2unGO.0IygbU3ytlX/sFN0KdkAuWgpmngM4g6', '013-2223344', 'Reporter'),
 ('Lim Wei Jie',     'weijie@student.ecocampus.my','$2y$12$S2ADOnIbQkqYaQ0Z2unGO.0IygbU3ytlX/sFN0KdkAuWgpmngM4g6', '013-2223355', 'Reporter'),
 ('Raj Kumar',       'raj@staff.ecocampus.my',    '$2y$12$S2ADOnIbQkqYaQ0Z2unGO.0IygbU3ytlX/sFN0KdkAuWgpmngM4g6', '014-5556677', 'Reporter'),
