@@ -3,6 +3,7 @@
 --
 -- Exported by : Tan Boon Leong (2402865)
 -- Module      : Whole system
+-- Exported on : 11 September 2026, 15:13
 --
 -- WHAT THIS IS
 -- A phpMyAdmin dump of the whole database: every table, and the rows in
@@ -17,26 +18,16 @@
 -- stops at the first table with "Table already exists". To start again,
 -- drop the ecocampus database first and import this on its own.
 --
--- DO NOT ALSO RUN 01 to 13. Everything they build is already here,
--- including change_type, complaint_revisions and superseded_at, which
--- were added by migrations 11, 12 and 13.
+-- DO NOT ALSO RUN 01 TO 17. Everything those files build is already
+-- here: change_type (11), complaint_revisions (12), superseded_at (13),
+-- complaint_types (15), the dropped description column (16) and
+-- marks_bin_full (17). The file keeps the number 14 it was first given,
+-- because that is the name the team knows it by; it is not a step in the
+-- sequence and nothing after it needs running.
 --
 -- The numbered files are still the record of how the schema was designed
 -- and who owns each table; this file is the quickest way to a working
 -- copy for a demonstration.
---
--- ONE EXCEPTION, and it matters. This dump was taken before
--- 15_complaint_types.sql existed, so it has no complaint_types table and
--- its complaints.complaint_type is still an ENUM. The application reads
--- the issue types from that table, so a database built from this file
--- alone cannot open the complaint form.
---
---   After importing this file, run 15_complaint_types.sql.
---
--- It is written to be safe on top of an existing database: the table is
--- created only if absent, the six types are inserted only if absent, and
--- the ENUM is converted in place. Any migration numbered above this file
--- should be applied the same way.
 --
 -- The CREATE DATABASE and USE lines below are not part of the phpMyAdmin
 -- export. They were added so the file can be imported without a database
@@ -54,7 +45,7 @@ USE `ecocampus`;
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 11, 2026 at 12:01 PM
+-- Generation Time: Sep 11, 2026 at 03:13 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -186,7 +177,7 @@ CREATE TABLE `complaints` (
   `complaint_id` int(11) NOT NULL,
   `reporter_id` int(11) NOT NULL,
   `bin_id` int(11) NOT NULL,
-  `complaint_type` enum('Full Bin','Overflow','Damaged Bin','Dirty Area','Wrong Waste Disposal','Other') NOT NULL,
+  `complaint_type` varchar(50) NOT NULL,
   `description` text NOT NULL,
   `complaint_status` enum('New','Assigned','Resolved','Rejected') NOT NULL DEFAULT 'New',
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
@@ -308,6 +299,33 @@ INSERT INTO `complaint_status_history` (`history_id`, `complaint_id`, `updated_b
 (3, 4, 1, 'Assigned', 'Resolved', 'Status', 'Area cleaned and bin emptied.', '2026-09-10 20:12:31'),
 (4, 9, 3, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-11 15:39:30'),
 (5, 9, 3, 'New', 'New', 'Details', 'Edited: photo.', '2026-09-11 17:55:21');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `complaint_types`
+--
+
+CREATE TABLE `complaint_types` (
+  `type_id` int(11) NOT NULL,
+  `type_name` varchar(50) NOT NULL,
+  `marks_bin_full` tinyint(1) NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `complaint_types`
+--
+
+INSERT INTO `complaint_types` (`type_id`, `type_name`, `marks_bin_full`, `is_active`, `sort_order`, `created_at`) VALUES
+(1, 'Full Bin', 1, 1, 10, '2026-09-11 18:25:10'),
+(2, 'Overflow', 1, 1, 20, '2026-09-11 18:25:10'),
+(3, 'Damaged Bin', 0, 1, 30, '2026-09-11 18:25:10'),
+(4, 'Dirty Area', 0, 1, 40, '2026-09-11 18:25:10'),
+(5, 'Wrong Waste Disposal', 0, 1, 50, '2026-09-11 18:25:10'),
+(6, 'Other', 0, 1, 60, '2026-09-11 18:25:10');
 
 -- --------------------------------------------------------
 
@@ -457,7 +475,8 @@ ALTER TABLE `complaints`
   ADD PRIMARY KEY (`complaint_id`),
   ADD KEY `fk_complaints_bin` (`bin_id`),
   ADD KEY `idx_complaints_status` (`complaint_status`),
-  ADD KEY `idx_complaints_reporter` (`reporter_id`);
+  ADD KEY `idx_complaints_reporter` (`reporter_id`),
+  ADD KEY `fk_complaints_type` (`complaint_type`);
 
 --
 -- Indexes for table `complaint_attachments`
@@ -491,6 +510,13 @@ ALTER TABLE `complaint_status_history`
   ADD PRIMARY KEY (`history_id`),
   ADD KEY `fk_history_complaint` (`complaint_id`),
   ADD KEY `fk_history_user` (`updated_by`);
+
+--
+-- Indexes for table `complaint_types`
+--
+ALTER TABLE `complaint_types`
+  ADD PRIMARY KEY (`type_id`),
+  ADD UNIQUE KEY `type_name` (`type_name`);
 
 --
 -- Indexes for table `locations`
@@ -579,6 +605,12 @@ ALTER TABLE `complaint_status_history`
   MODIFY `history_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
+-- AUTO_INCREMENT for table `complaint_types`
+--
+ALTER TABLE `complaint_types`
+  MODIFY `type_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
 -- AUTO_INCREMENT for table `locations`
 --
 ALTER TABLE `locations`
@@ -643,7 +675,8 @@ ALTER TABLE `collection_schedules`
 --
 ALTER TABLE `complaints`
   ADD CONSTRAINT `fk_complaints_bin` FOREIGN KEY (`bin_id`) REFERENCES `bins` (`bin_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_complaints_reporter` FOREIGN KEY (`reporter_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_complaints_reporter` FOREIGN KEY (`reporter_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_complaints_type` FOREIGN KEY (`complaint_type`) REFERENCES `complaint_types` (`type_name`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `complaint_attachments`
