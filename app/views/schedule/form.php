@@ -59,7 +59,7 @@ $action = $isEdit ? url('schedule/update/' . $schedule->getKey()) : url('schedul
                 maxlength="50" 
                 pattern="^([01][0-9]|2[0-3]):[0-5][0-9][–-]([01][0-9]|2[0-3]):[0-5][0-9]$"
                 title="Use format like 09:00-12:00"
-                placeholder="09:00-12:00"
+                placeholder="e.g. 09:00-12:00"
                 value="<?= e((string) $values['time_slot']) ?>"
                 >
                 <?php if (!empty($errors['time_slot'])): ?>

@@ -20,7 +20,7 @@ $action = $isEdit ? url('location/update/' . $location->getKey()) : url('locatio
     <div class="form-grid">
         <label>
             Location name
-            <input name="location_name" value="<?= e((string) ($values['location_name'] ?? '')) ?>" maxlength="100" required placeholder="Main Lobby">
+            <input name="location_name" value="<?= e((string) ($values['location_name'] ?? '')) ?>" maxlength="100" required placeholder="e.g. Main Lobby">
             <?php if (!empty($errors['location_name'])): ?><span class="field-error"><?= e($errors['location_name']) ?></span><?php endif; ?>
         </label>
         <label>
@@ -41,13 +41,13 @@ $action = $isEdit ? url('location/update/' . $location->getKey()) : url('locatio
         </label>
         <label>
             Floor
-            <input name="floor_no" value="<?= e((string) ($values['floor_no'] ?? '')) ?>" maxlength="20" placeholder="Level 1">
+            <input name="floor_no" value="<?= e((string) ($values['floor_no'] ?? '')) ?>" maxlength="20" placeholder="e.g. Level 1">
             <?php if (!empty($errors['floor_no'])): ?><span class="field-error"><?= e($errors['floor_no']) ?></span><?php endif; ?>
         </label>
     </div>
     <label>
         Area description
-        <textarea name="description" rows="4" maxlength="255" placeholder="Beside the main entrance"><?= e((string) ($values['description'] ?? '')) ?></textarea>
+        <textarea name="description" rows="4" maxlength="255" placeholder="e.g. Beside the main entrance"><?= e((string) ($values['description'] ?? '')) ?></textarea>
         <?php if (!empty($errors['description'])): ?><span class="field-error"><?= e($errors['description']) ?></span><?php endif; ?>
     </label>
     <button type="submit" class="button"><?= $isEdit ? 'Save changes' : 'Add location' ?></button>
