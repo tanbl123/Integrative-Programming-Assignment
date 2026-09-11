@@ -70,8 +70,12 @@ $assignments = $complaint->assignmentCounts();
         <strong><?= e($complaint->getStatus()) ?></strong>
         <?php if ($assignments['open'] > 0): ?>
             <span class="detail-note">A cleaner has been scheduled for this bin.</span>
-        <?php elseif ($assignments['total'] > 0): ?>
+        <?php elseif ($assignments['completed'] > 0): ?>
             <span class="detail-note">The scheduled collection has been completed.</span>
+        <?php elseif ($assignments['total'] > 0): ?>
+            <span class="detail-note detail-note-alert">
+                The scheduled collection was cancelled.
+            </span>
         <?php elseif ($complaint->getStatus() === Complaint::STATUS_ASSIGNED): ?>
             <span class="detail-note detail-note-alert">
                 No collection has been scheduled for this bin.
@@ -214,20 +218,19 @@ $assignments = $complaint->assignmentCounts();
 
         <?= csrfField() ?>
 
-        <?php /* Assigned is offered here, but generating the collection is the
-                 route that actually sends somebody. Saying so at the point of
-                 the decision is what stops the status being moved instead of
-                 the work being arranged. Only shown while it is still the
-                 pending choice - once a collection exists, or the complaint
-                 has moved on, the note has nothing left to warn about. */ ?>
-        <?php if (in_array(Complaint::STATUS_ASSIGNED, $statuses, true) && $assignments['total'] === 0): ?>
+        <?php /* Assigned is not in this list until a cleaner is booked to visit
+                 the bin - ComplaintService::nextStatusesFor() removes it, and
+                 the service refuses it as well, so the form and the rule
+                 cannot drift apart. Saying why it is missing matters more than
+                 saying it is missing: an option that is simply absent reads as
+                 a fault. */ ?>
+        <?php if ($complaint->getStatus() === Complaint::STATUS_NEW
+                  && !in_array(Complaint::STATUS_ASSIGNED, $statuses, true)): ?>
             <p class="field-help">
-                Marking this <strong>Assigned</strong> records your decision, but it does not
-                send anybody. To have a cleaner collect this bin, generate a
-                <strong>Complaint Priority</strong> schedule instead &mdash; that raises the task
-                and moves this complaint to Assigned on its own.
-                <a href="<?= url('schedule/create') ?>">Generate a collection schedule</a>.
-                Set it here only when the collection has been arranged some other way.
+                <strong>Assigned</strong> is not available yet. It means a cleaner is on the
+                way, so it can only be set once one is booked to visit this bin.
+                <a href="<?= url('schedule/create') ?>">Generate a collection schedule</a>
+                &mdash; that raises the task and moves this complaint to Assigned on its own.
             </p>
         <?php endif; ?>
 

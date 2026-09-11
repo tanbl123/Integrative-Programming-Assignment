@@ -95,10 +95,18 @@ class ComplaintService
         }
         $old = $complaint->getStatus();
         $errors = [];
-        if (!in_array($status, Complaint::allowedNextStatuses($old), true)) {
-            $errors['complaint_status'] = Complaint::allowedNextStatuses($old) === []
-                ? 'This complaint is already in a final state.'
-                : 'Select a valid next status in the complaint lifecycle.';
+        if (!in_array($status, $this->nextStatusesFor($complaint), true)) {
+            $errors['complaint_status'] = match (true) {
+                Complaint::allowedNextStatuses($old) === []
+                    => 'This complaint is already in a final state.',
+                // Named separately from "not a valid next status", because the
+                // step is valid and the reason it is refused is fixable.
+                $status === Complaint::STATUS_ASSIGNED
+                    => 'No cleaner is booked to visit this bin, so this complaint cannot be '
+                     . 'marked Assigned. Generate a collection schedule for the bin first; '
+                     . 'that moves the complaint here on its own.',
+                default => 'Select a valid next status in the complaint lifecycle.',
+            };
         }
         if (mb_strlen($remarks) > 255) {
             $errors['remarks'] = 'Remarks cannot exceed 255 characters.';
@@ -137,6 +145,36 @@ class ComplaintService
             }
             throw $error;
         }
+    }
+
+    /**
+     * The statuses this complaint may actually be moved to right now.
+     *
+     * The lifecycle says which steps exist; this says which of them are open,
+     * and Assigned has a condition attached. Assigned means a cleaner is
+     * coming, so it is refused until one is: an Administrator who sets it
+     * without scheduling anything leaves a complaint that reads as being
+     * dealt with while nobody has been sent, and a reporter who has been told
+     * so. The Scheduling module saves the assignment before asking for this
+     * move, so its own call passes.
+     *
+     * Both the form and updateStatus() read this, so what an Administrator is
+     * offered and what the service accepts cannot drift apart.
+     *
+     * @return list<string>
+     */
+    public function nextStatusesFor(Complaint $complaint): array
+    {
+        $allowed = Complaint::allowedNextStatuses($complaint->getStatus());
+
+        if ($complaint->binHasOpenCollection()) {
+            return $allowed;
+        }
+
+        return array_values(array_filter(
+            $allowed,
+            static fn(string $status): bool => $status !== Complaint::STATUS_ASSIGNED
+        ));
     }
 
     /**

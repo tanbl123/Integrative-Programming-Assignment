@@ -270,7 +270,7 @@ class ComplaintController extends Controller
             'attachments'         => $complaint->getAttachments(),
             'history'             => $complaint->getHistory(),
             'revisions'           => $complaint->getRevisions(),
-            'statuses'            => Complaint::allowedNextStatuses($complaint->getStatus()),
+            'statuses'            => $this->service->nextStatusesFor($complaint),
             'errors'              => $errors,
             'user'                => $user,
             'canEdit'             => $this->service->canEdit($complaint, $user),

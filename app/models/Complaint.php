@@ -48,21 +48,49 @@ class Complaint extends Model
      * cleaner has been and the complaint is waiting to be resolved. Only the
      * open count tells you work is still pending.
      *
-     * @return array{open:int,total:int}
+     * Completed and skipped are counted apart because they are opposite
+     * outcomes: a cleaner went, or the round was called off. Collapsing both
+     * into "not open" would report a cancelled schedule as a finished one.
+     *
+     * @return array{open:int,completed:int,total:int}
      */
     public function assignmentCounts(): array
     {
         $open = 0;
+        $completed = 0;
         $total = 0;
 
         foreach (CollectionAssignment::where('source_complaint_id', $this->getKey()) as $assignment) {
             $total++;
-            if ($assignment->getStatus() === 'Assigned') {
-                $open++;
-            }
+            match ($assignment->getStatus()) {
+                'Assigned'  => $open++,
+                'Completed' => $completed++,
+                default     => null,
+            };
         }
 
-        return ['open' => $open, 'total' => $total];
+        return ['open' => $open, 'completed' => $completed, 'total' => $total];
+    }
+
+    /**
+     * True when a cleaner is currently booked to visit this complaint's bin.
+     *
+     * Asked of the BIN rather than of this complaint, and that is deliberate.
+     * ComplaintPrioritySelectionStrategy raises one task per bin, so where two
+     * people report the same bin only the first carries a source_complaint_id
+     * - a per-complaint test would leave the second permanently unable to
+     * reach Assigned. A routine or full-bin round carries no complaint at all
+     * and still sends somebody to that bin. What matters for the status is
+     * that a visit is booked, not which report is written on the docket.
+     */
+    public function binHasOpenCollection(): bool
+    {
+        foreach (CollectionAssignment::where('bin_id', $this->getBinId()) as $assignment) {
+            if ($assignment->getStatus() === 'Assigned') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
