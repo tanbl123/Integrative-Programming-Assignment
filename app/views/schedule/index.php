@@ -42,12 +42,22 @@
     <table class="table">
         <thead>
             <tr>
-                <th><button type="button" class="sort-header" data-column="0">Schedule</button></th>
-                <th><button type="button" class="sort-header" data-column="1">Date/time</button></th>
-                <th><button type="button" class="sort-header" data-column="2">Strategy</button></th>
-                <th><button type="button" class="sort-header" data-column="3">Tasks</button></th>
-                <th><button type="button" class="sort-header" data-column="4">Status</button></th>
-                <th></th>
+                <th>
+                    <button type="button" class="sort-header" data-column="0">Schedule</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="1">Date/time</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="2">Strategy</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="3">Tasks</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="4">Status</button>
+                </th>
+                <th>Actions</th>
             </tr>
         </thead>
 

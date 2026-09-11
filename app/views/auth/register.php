@@ -67,6 +67,7 @@ foreach (array_keys($errors) as $errorField) {
             Phone number
             <input 
                 name="phone_no" 
+                required
                 maxlength="20" 
                 value="<?= e($fieldValue('phone_no', $values, $errors)) ?>"
                 >

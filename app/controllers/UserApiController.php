@@ -45,18 +45,45 @@ class UserApiController extends ApiController
         }
     }
 
-    public function cleaners(): void
-    {
+    public function cleaners(): void {
         try {
             $this->apiAllow(['GET']);
             Auth::requireLogin();
+
+            $requestId = trim((string) ($_GET['requestID'] ?? ''));
+            $requestTimeStamp = trim((string) ($_GET['timeStamp'] ?? ''));
+
+            if ($requestId === '' || $requestTimeStamp === '') {
+                $this->json([
+                    'status' => 'F',
+                    'success' => false,
+                    'data' => [],
+                    'meta' => [
+                        'count' => 0
+                    ],
+                    'message' => 'requestID and timeStamp are required.',
+                    'requestID' => $requestId,
+                    'timeStamp' => ifaTimestamp()
+                ]);
+                return;
+            }
+
             $cleaners = User::findActiveCleaners();
+
             $this->json([
+                'status' => 'S',
                 'success' => true,
                 'data' => array_map(static fn(User $user): array => [
-                    'id' => $user->getKey(), 'name' => $user->getFullName(), 'email' => $user->getEmail(),
-                ], $cleaners),
-                'meta' => ['count' => count($cleaners)], 'message' => null,
+                    'id' => $user->getKey(),
+                    'name' => $user->getFullName(),
+                    'email' => $user->getEmail(),
+                        ], $cleaners),
+                'meta' => [
+                    'count' => count($cleaners)
+                ],
+                'message' => 'Active cleaners retrieved successfully.',
+                'requestID' => $requestId,
+                'timeStamp' => ifaTimestamp()
             ]);
         } catch (Throwable $error) {
             $this->apiFailure($error);

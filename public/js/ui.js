@@ -202,6 +202,107 @@
     });
 
     /*
+     * Shared table sorting for User, Bin, Schedule and other simple tables.
+     * Complaint table is skipped because complaint/index.php already has its own sorter.
+     */
+    document.querySelectorAll('table.table').forEach(table => {
+        if (table.id === 'complaintsTable') {
+            return;
+        }
+
+        const tbody = table.tBodies[0];
+        const sortButtons = Array.from(table.querySelectorAll('.sort-header[data-column]'));
+
+        if (!tbody || sortButtons.length === 0) {
+            return;
+        }
+
+        let currentColumn = null;
+        let currentDirection = 'asc';
+
+        const rows = Array.from(tbody.rows).filter(row => {
+            return !row.querySelector('td[colspan]');
+        });
+
+        sortButtons.forEach(button => {
+            const header = button.closest('th');
+
+            if (header) {
+                header.classList.add('th-sortable');
+            }
+
+            if (!button.querySelector('.sort-arrow')) {
+                const arrow = document.createElement('span');
+                arrow.className = 'sort-arrow';
+                arrow.setAttribute('aria-hidden', 'true');
+                arrow.textContent = '\u21c5';
+                button.append(' ', arrow);
+            }
+
+            button.addEventListener('click', function () {
+                const column = parseInt(button.dataset.column, 10);
+
+                if (Number.isNaN(column)) {
+                    return;
+                }
+
+                sortTable(column);
+            });
+        });
+
+        function sortTable(column) {
+            if (currentColumn === column) {
+                currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentColumn = column;
+                currentDirection = 'asc';
+            }
+
+            rows.sort((a, b) => {
+                const valueA = a.cells[column]?.textContent.trim() ?? '';
+                const valueB = b.cells[column]?.textContent.trim() ?? '';
+
+                return valueA.localeCompare(valueB, undefined, {
+                    numeric: true,
+                    sensitivity: 'base'
+                }) * (currentDirection === 'asc' ? 1 : -1);
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+
+            paintSortIndicators();
+        }
+
+        function paintSortIndicators() {
+            sortButtons.forEach(button => {
+                const column = parseInt(button.dataset.column, 10);
+                const header = button.closest('th');
+                const arrow = button.querySelector('.sort-arrow');
+                const active = column === currentColumn;
+
+                if (header) {
+                    if (active) {
+                        header.setAttribute(
+                                'aria-sort',
+                                currentDirection === 'asc' ? 'ascending' : 'descending'
+                                );
+                    } else {
+                        header.removeAttribute('aria-sort');
+                    }
+                }
+
+                if (arrow) {
+                    arrow.textContent = active
+                            ? (currentDirection === 'asc' ? '\u2191' : '\u2193')
+                            : '\u21c5';
+                }
+            });
+        }
+
+        paintSortIndicators();
+    });
+
+    /*
      * A pager rendered as one joined control - Prev | 1 | 2 | Next - with the
      * position caption beneath it, so it reads as a single object rather than
      * two buttons drifting to opposite ends of the row. Long runs of pages
@@ -223,12 +324,15 @@
             control.addEventListener('click', () => onChange(resolve()));
             return control;
         };
+
         const previous = step('Prev', () => Math.max(1, current - 1));
         const next = step('Next', () => Math.min(total, current + 1));
+
         group.append(previous, next);
 
         const summary = make('p', '', 'pager-summary');
         summary.setAttribute('role', 'status');
+
         node.append(group, summary);
 
         const update = (page, totalPages, totalItems) => {
@@ -238,33 +342,47 @@
             group.querySelectorAll('.pager-page, .pager-ellipsis').forEach(old => old.remove());
 
             const wanted = new Set([1, totalPages, page, page - 1, page + 1]);
-            if (page <= 3) { wanted.add(2).add(3); }
-            if (page >= totalPages - 2) { wanted.add(totalPages - 1).add(totalPages - 2); }
+
+            if (page <= 3) {
+                wanted.add(2).add(3);
+            }
+
+            if (page >= totalPages - 2) {
+                wanted.add(totalPages - 1).add(totalPages - 2);
+            }
 
             let previousNumber = 0;
-            [...wanted].filter(n => n >= 1 && n <= totalPages).sort((a, b) => a - b).forEach(number => {
-                if (number - previousNumber > 1) {
-                    group.insertBefore(make('span', '\u2026', 'pager-ellipsis'), next);
-                }
-                const control = make('button', String(number), 'pager-page');
-                control.type = 'button';
-                if (number === page) {
-                    control.setAttribute('aria-current', 'page');
-                } else {
-                    control.setAttribute('aria-label', 'Go to page ' + number);
-                }
-                control.addEventListener('click', () => onChange(number));
-                group.insertBefore(control, next);
-                previousNumber = number;
-            });
+
+            [...wanted]
+                    .filter(n => n >= 1 && n <= totalPages)
+                    .sort((a, b) => a - b)
+                    .forEach(number => {
+                        if (number - previousNumber > 1) {
+                            group.insertBefore(make('span', '\u2026', 'pager-ellipsis'), next);
+                        }
+
+                        const control = make('button', String(number), 'pager-page');
+                        control.type = 'button';
+
+                        if (number === page) {
+                            control.setAttribute('aria-current', 'page');
+                        } else {
+                            control.setAttribute('aria-label', 'Go to page ' + number);
+                        }
+
+                        control.addEventListener('click', () => onChange(number));
+                        group.insertBefore(control, next);
+                        previousNumber = number;
+                    });
 
             previous.disabled = page === 1;
             next.disabled = page === totalPages;
+
             summary.textContent = 'Page ' + page + ' of ' + totalPages + ' \u00b7 '
-                                + totalItems + ' result' + (totalItems === 1 ? '' : 's');
+                    + totalItems + ' result' + (totalItems === 1 ? '' : 's');
         };
 
-        return { node, update };
+        return {node, update};
     };
 
     /*

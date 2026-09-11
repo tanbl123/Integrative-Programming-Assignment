@@ -59,7 +59,7 @@
 
     <div class="demo-accounts">
         <strong>Development accounts</strong>
-        <p>Administrator: admin@ecocampus.edu.my</p>
+        <p>Administrator: admin@ecocampus.my</p>
         <p>Cleaner: zaki@cleaner.ecocampus.my</p>
         <p>Password: password123</p>
     </div>

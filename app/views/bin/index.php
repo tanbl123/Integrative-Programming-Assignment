@@ -75,11 +75,21 @@
     <table class="table">
         <thead>
             <tr>
-                <th><button type="button" class="sort-header" data-column="0">Bin</button></th>
-                <th><button type="button" class="sort-header" data-column="1">Location</button></th>
-                <th><button type="button" class="sort-header" data-column="2">Category</button></th>
-                <th><button type="button" class="sort-header" data-column="3">Capacity</button></th>
-                <th><button type="button" class="sort-header" data-column="4">Status</button></th>
+                <th>
+                    <button type="button" class="sort-header" data-column="0">Bin</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="1">Location</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="2">Category</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="3">Capacity</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="4">Status</button>
+                </th>
                 <th>Actions</th>
             </tr>
         </thead>

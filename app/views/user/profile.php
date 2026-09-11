@@ -77,10 +77,6 @@ $value = static fn(string $key, mixed $fallback): mixed =>
             <button class="button" type="submit">
                 Save profile
             </button>
-
-            <button class="button button-secondary" type="reset">
-                Clear fields
-            </button>
         </div>
     </div>
 

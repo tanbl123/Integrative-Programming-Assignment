@@ -160,22 +160,35 @@ class UserService {
         ];
 
         foreach ($limits as $field => $limit) {
-            if (!array_key_exists($field, $data)) {
-                continue;
-            }
-
-            if (!is_scalar($data[$field]) && $data[$field] !== null) {
+            if (isset($data[$field]) && !is_scalar($data[$field]) && $data[$field] !== null) {
                 $errors[$field] = 'Enter a text value.';
                 continue;
             }
 
-            $value = trim((string) $data[$field]);
+            $value = trim((string) ($data[$field] ?? ''));
 
             if (mb_strlen($value) > $limit) {
                 $errors[$field] = "Use at most {$limit} characters.";
             }
 
-            $values[$field] = $value === '' ? null : $value;
+            $values[$field] = $value;
+        }
+
+        $requiredFields = [
+            'address_line1' => 'Address line 1 is required.',
+            'city' => 'City is required.',
+            'state' => 'State is required.',
+            'postcode' => 'Postcode is required.',
+            'nationality' => 'Nationality is required.',
+            'ic_no' => 'IC number is required.',
+            'gender' => 'Gender is required.',
+            'birth_date' => 'Birth date is required.'
+        ];
+
+        foreach ($requiredFields as $field => $message) {
+            if ($values[$field] === '') {
+                $errors[$field] = $message;
+            }
         }
 
         $validStates = [
@@ -197,15 +210,15 @@ class UserService {
             'Labuan'
         ];
 
-        if (!empty($values['state']) && !in_array($values['state'], $validStates, true)) {
+        if ($values['state'] !== '' && !in_array($values['state'], $validStates, true)) {
             $errors['state'] = 'Enter a valid state.';
         }
 
-        if (!empty($values['postcode']) && !preg_match('/^[0-9]{5}$/', $values['postcode'])) {
+        if ($values['postcode'] !== '' && !preg_match('/^[0-9]{5}$/', $values['postcode'])) {
             $errors['postcode'] = 'Postcode must be 5 digits.';
         }
 
-        if (!empty($values['ic_no'])) {
+        if ($values['ic_no'] !== '') {
             $ic = str_replace('-', '', $values['ic_no']);
 
             if (!preg_match('/^[0-9]{12}$/', $ic)) {
@@ -235,7 +248,9 @@ class UserService {
                     $values['birth_date'] = $icBirthDate;
                 }
             }
-        } elseif (!empty($values['birth_date'])) {
+        }
+
+        if ($values['birth_date'] !== '') {
             $date = DateTimeImmutable::createFromFormat('!Y-m-d', $values['birth_date']);
 
             if (
@@ -248,12 +263,18 @@ class UserService {
             }
         }
 
-        if (!empty($values['gender']) && !in_array($values['gender'], ['Male', 'Female', 'Prefer not to say'], true)) {
+        if ($values['gender'] !== '' && !in_array($values['gender'], ['Male', 'Female', 'Prefer not to say'], true)) {
             $errors['gender'] = 'Select a valid gender option.';
         }
 
         if ($errors !== []) {
             throw new ValidationException($errors);
+        }
+
+        foreach ($values as $field => $value) {
+            if ($value === '') {
+                $values[$field] = null;
+            }
         }
 
         return $values;
@@ -284,7 +305,9 @@ class UserService {
             }
         }
 
-        if ($phone !== '' && !preg_match('/^[0-9+() -]{7,20}$/', $phone)) {
+        if ($phone === '') {
+            $errors['phone_no'] = 'Phone number is required.';
+        } elseif (!preg_match('/^[0-9+() -]{7,20}$/', $phone)) {
             $errors['phone_no'] = 'Enter a valid phone number using 7-20 digits and separators.';
         }
 

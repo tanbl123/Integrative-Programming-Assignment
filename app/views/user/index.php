@@ -50,12 +50,22 @@
     <table class="table">
         <thead>
             <tr>
-                <th><button type="button" class="sort-header" data-column="0">Name</button></th>
-                <th><button type="button" class="sort-header" data-column="1">Email</button></th>
-                <th><button type="button" class="sort-header" data-column="2">Role</button></th>
-                <th><button type="button" class="sort-header" data-column="3">Status</button></th>
-                <th><button type="button" class="sort-header" data-column="4">Created</button></th>
-                <th></th>
+                <th>
+                    <button type="button" class="sort-header" data-column="0">Name</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="1">Email</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="2">Role</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="3">Status</button>
+                </th>
+                <th>
+                    <button type="button" class="sort-header" data-column="4">Created</button>
+                </th>
+                <th>Actions</th>
             </tr>
         </thead>
 
