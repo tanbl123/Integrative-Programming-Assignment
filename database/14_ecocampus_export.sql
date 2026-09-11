@@ -3,7 +3,7 @@
 --
 -- Exported by : Tan Boon Leong (2402865)
 -- Module      : Whole system
--- Exported on : 11 September 2026, 15:13
+-- Exported on : 12 September 2026
 --
 -- WHAT THIS IS
 -- A phpMyAdmin dump of the whole database: every table, and the rows in
@@ -18,16 +18,14 @@
 -- stops at the first table with "Table already exists". To start again,
 -- drop the ecocampus database first and import this on its own.
 --
--- DO NOT ALSO RUN 01 TO 17. Everything those files build is already
--- here: change_type (11), complaint_revisions (12), superseded_at (13),
--- complaint_types (15), the dropped description column (16) and
--- marks_bin_full (17). The file keeps the number 14 it was first given,
--- because that is the name the team knows it by; it is not a step in the
--- sequence.
+-- DO NOT ALSO RUN 01 TO 19. Everything those files build is already
+-- here: change_type including Withdrawn (11, 18), complaint_revisions
+-- (12), superseded_at (13), complaint_types (15), the dropped
+-- description column (16), marks_bin_full (17) and the location
+-- coordinates (19). Nothing needs running after this file.
 --
--- Migrations 18 and 19 were created after this export. After importing this
--- file into an empty database, also run 18_history_withdrawn.sql and
--- 19_location_coordinates.sql.
+-- The file keeps the number 14 it was first given, because that is the
+-- name the team knows it by. It is not a step in the sequence.
 --
 -- The numbered files are still the record of how the schema was designed
 -- and who owns each table; this file is the quickest way to a working
@@ -49,7 +47,7 @@ USE `ecocampus`;
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 11, 2026 at 03:13 PM
+-- Generation Time: Sep 11, 2026 at 06:17 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -94,7 +92,7 @@ INSERT INTO `bins` (`bin_id`, `bin_code`, `location_id`, `category_id`, `fill_st
 (3, 'BIN-A-003', 2, 1, 'Full', 240, 1, '2026-09-10 20:12:31'),
 (4, 'BIN-A-004', 2, 3, 'Full', 240, 1, '2026-09-10 20:12:31'),
 (5, 'BIN-B-001', 3, 2, 'Empty', 120, 1, '2026-09-10 20:12:31'),
-(6, 'BIN-B-002', 4, 1, 'Full', 120, 1, '2026-09-11 09:39:30'),
+(6, 'BIN-B-002', 4, 1, 'Full', 120, 1, '2026-09-11 23:29:40'),
 (7, 'BIN-B-003', 4, 4, 'Empty', 60, 1, '2026-09-10 20:12:31'),
 (8, 'BIN-C-001', 5, 1, 'Full', 240, 1, '2026-09-10 20:12:31'),
 (9, 'BIN-P-001', 6, 1, 'Under Maintenance', 240, 1, '2026-09-10 20:12:31'),
@@ -116,6 +114,14 @@ CREATE TABLE `bin_status_updates` (
   `updated_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `bin_status_updates`
+--
+
+INSERT INTO `bin_status_updates` (`update_id`, `bin_id`, `cleaner_id`, `old_status`, `new_status`, `remarks`, `updated_at`) VALUES
+(1, 6, 1, 'Full', 'Empty', 'Complaint CMP-2026-0009 resolved; no reports left open.', '2026-09-11 23:26:27'),
+(2, 6, 3, 'Empty', 'Full', 'Reported full by complaint CMP-2026-0010.', '2026-09-11 23:29:40');
+
 -- --------------------------------------------------------
 
 --
@@ -134,6 +140,19 @@ CREATE TABLE `collection_assignments` (
   `completed_at` datetime DEFAULT NULL,
   `completion_notes` varchar(1000) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `collection_assignments`
+--
+
+INSERT INTO `collection_assignments` (`assignment_id`, `schedule_id`, `cleaner_id`, `bin_id`, `source_complaint_id`, `priority`, `assignment_status`, `reason`, `completed_at`, `completion_notes`) VALUES
+(1, 1, 6, 3, 1, 'Urgent', 'Skipped', 'Unresolved complaint #1: Overflow', NULL, 'Schedule cancelled by administrator.'),
+(2, 1, 6, 4, 2, 'Urgent', 'Skipped', 'Unresolved complaint #2: Full Bin', NULL, 'Schedule cancelled by administrator.'),
+(3, 1, 6, 8, 3, 'Urgent', 'Skipped', 'Unresolved complaint #3: Damaged Bin', NULL, 'Schedule cancelled by administrator.'),
+(4, 1, 6, 1, 5, 'Urgent', 'Skipped', 'Unresolved complaint #5: Wrong Waste Disposal', NULL, 'Schedule cancelled by administrator.'),
+(5, 1, 6, 6, 9, 'Urgent', 'Skipped', 'Unresolved complaint #9: Overflow', NULL, 'Schedule cancelled by administrator.'),
+(6, 2, 6, 6, 10, 'Urgent', 'Assigned', 'Complaint CMP-2026-0010: Overflow', NULL, NULL),
+(7, 3, 7, 9, 11, 'Urgent', 'Assigned', 'Complaint CMP-2026-0011: Damaged Bin', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -171,6 +190,15 @@ CREATE TABLE `collection_schedules` (
   `deleted_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `collection_schedules`
+--
+
+INSERT INTO `collection_schedules` (`schedule_id`, `admin_id`, `schedule_date`, `time_slot`, `strategy`, `schedule_status`, `notes`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 1, '2026-09-11', '09:00–12:00', 'Complaint Priority', 'Cancelled', NULL, '2026-09-11 22:53:26', '2026-09-11 23:45:36', NULL),
+(2, 1, '2026-09-11', '09:00-12:00', 'Complaint Priority', 'Planned', 'please do cleaning', '2026-09-11 23:54:56', '2026-09-11 23:54:56', NULL),
+(3, 1, '2026-09-12', '09:00-09:30', 'Complaint Priority', 'Planned', 'please replace a new bin', '2026-09-12 00:05:00', '2026-09-12 00:05:00', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -194,15 +222,18 @@ CREATE TABLE `complaints` (
 --
 
 INSERT INTO `complaints` (`complaint_id`, `reporter_id`, `bin_id`, `complaint_type`, `description`, `complaint_status`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 3, 3, 'Overflow', 'The bin beside the food counter is overflowing and rubbish is on the floor.', 'New', '2026-09-10 20:12:31', '2026-09-10 20:12:31', NULL),
+(1, 3, 3, 'Overflow', 'The bin beside the food counter is overflowing and rubbish is on the floor.', 'Assigned', '2026-09-10 20:12:31', '2026-09-11 22:53:26', NULL),
 (2, 4, 4, 'Full Bin', 'Organic waste bin in the cafeteria is completely full since this morning.', 'Assigned', '2026-09-10 20:12:31', '2026-09-10 20:12:31', NULL),
-(3, 5, 8, 'Damaged Bin', 'The lid of the bin at the rear exit of LH1 is broken and will not close.', 'New', '2026-09-10 20:12:31', '2026-09-10 20:12:31', NULL),
+(3, 5, 8, 'Damaged Bin', 'The lid of the bin at the rear exit of LH1 is broken and will not close.', 'Assigned', '2026-09-10 20:12:31', '2026-09-11 22:53:26', NULL),
 (4, 3, 9, 'Dirty Area', 'Area around the car park bin is dirty and smells strongly.', 'Resolved', '2026-09-10 20:12:31', '2026-09-10 20:12:31', NULL),
-(5, 4, 1, 'Wrong Waste Disposal', 'Someone put food waste into the general waste bin in the main lobby.', 'New', '2026-09-10 20:12:31', '2026-09-10 20:12:31', NULL),
+(5, 4, 1, 'Wrong Waste Disposal', 'Someone put food waste into the general waste bin in the main lobby.', 'Assigned', '2026-09-10 20:12:31', '2026-09-11 22:53:26', NULL),
 (6, 4, 3, 'Overflow', 'Rubbish is spilling out of the bin next to the drinks stall. It has been like this since breakfast.', 'New', '2026-09-11 05:15:05', '2026-09-11 05:15:05', NULL),
 (7, 5, 3, 'Overflow', 'Cafeteria bin is overflowing again. Flies around it and the floor is sticky.', 'Assigned', '2026-09-11 05:15:05', '2026-09-11 05:15:05', NULL),
-(8, 3, 8, 'Damaged Bin', 'The bin outside LH1 is cracked down one side, and it also has not been emptied for days.', 'New', '2026-09-11 05:15:05', '2026-09-11 05:15:05', NULL),
-(9, 3, 6, 'Overflow', 'Please clean the bin ASAP', 'New', '2026-09-11 15:39:30', '2026-09-11 11:55:21', NULL);
+(8, 3, 8, 'Damaged Bin', 'The bin outside LH1 is cracked down one side, and it also has not been emptied for days.', 'Assigned', '2026-09-11 05:15:05', '2026-09-11 23:12:25', NULL),
+(9, 3, 6, 'Overflow', 'Please clean the bin ASAP!!', 'Resolved', '2026-09-11 15:39:30', '2026-09-11 23:26:26', NULL),
+(10, 3, 6, 'Overflow', 'please clean the rubbish bin.', 'Assigned', '2026-09-11 23:29:40', '2026-09-11 23:54:56', NULL),
+(11, 3, 9, 'Damaged Bin', 'please replace the bin', 'Assigned', '2026-09-12 00:04:07', '2026-09-12 00:05:00', NULL),
+(12, 4, 8, 'Damaged Bin', 'please replace a new bin, the current bin is broken', 'New', '2026-09-12 00:08:39', '2026-09-12 00:08:39', NULL);
 
 -- --------------------------------------------------------
 
@@ -250,7 +281,18 @@ CREATE TABLE `complaint_notifications` (
 --
 
 INSERT INTO `complaint_notifications` (`notification_id`, `complaint_id`, `recipient_role`, `title`, `body`, `is_read`, `created_at`) VALUES
-(1, 9, 'Administrator', 'New complaint CMP-2026-0009 - Overflow', 'A new Overflow issue was reported for BIN-B-002.', 0, '2026-09-11 09:39:30');
+(1, 9, 'Administrator', 'New complaint CMP-2026-0009 - Overflow', 'A new Overflow issue was reported for BIN-B-002.', 0, '2026-09-11 09:39:30'),
+(2, 9, 'Reporter', 'Complaint CMP-2026-0009 is being dealt with', 'Your report about BIN-B-002 has been accepted and work is being arranged. we will do it ASAP', 1, '2026-09-11 22:52:38'),
+(3, 1, 'Reporter', 'Complaint CMP-2026-0001 is being dealt with', 'Your report about BIN-A-003 has been accepted and work is being arranged. Collection scheduled (schedule #1).', 0, '2026-09-11 22:53:26'),
+(4, 3, 'Reporter', 'Complaint CMP-2026-0003 is being dealt with', 'Your report about BIN-C-001 has been accepted and work is being arranged. Collection scheduled (schedule #1).', 0, '2026-09-11 22:53:26'),
+(5, 5, 'Reporter', 'Complaint CMP-2026-0005 is being dealt with', 'Your report about BIN-A-001 has been accepted and work is being arranged. Collection scheduled (schedule #1).', 0, '2026-09-11 22:53:26'),
+(6, 8, 'Reporter', 'Complaint CMP-2026-0008 is being dealt with', 'Your report about BIN-C-001 has been accepted and work is being arranged.', 0, '2026-09-11 23:12:25'),
+(7, 9, 'Reporter', 'Complaint CMP-2026-0009 resolved', 'Your report about BIN-B-002 was marked Resolved.', 0, '2026-09-11 23:26:27'),
+(8, 10, 'Administrator', 'New complaint CMP-2026-0010 - Overflow', 'A new Overflow issue was reported for BIN-B-002.', 0, '2026-09-11 23:29:40'),
+(9, 10, 'Reporter', 'Complaint CMP-2026-0010 is being dealt with', 'Your report about BIN-B-002 has been accepted and work is being arranged. Collection scheduled (schedule #2).', 0, '2026-09-11 23:54:56'),
+(10, 11, 'Administrator', 'New complaint CMP-2026-0011 - Damaged Bin', 'A new Damaged Bin issue was reported for BIN-P-001.', 0, '2026-09-12 00:04:07'),
+(11, 11, 'Reporter', 'Complaint CMP-2026-0011 is being dealt with', 'Your report about BIN-P-001 has been accepted and work is being arranged. Collection scheduled (schedule #3).', 0, '2026-09-12 00:05:00'),
+(12, 12, 'Administrator', 'New complaint CMP-2026-0012 - Damaged Bin', 'A new Damaged Bin issue was reported for BIN-C-001.', 0, '2026-09-12 00:08:39');
 
 -- --------------------------------------------------------
 
@@ -274,7 +316,9 @@ CREATE TABLE `complaint_revisions` (
 --
 
 INSERT INTO `complaint_revisions` (`revision_id`, `complaint_id`, `edited_by`, `bin_id`, `complaint_type`, `description`, `attachment_id`, `edited_at`) VALUES
-(1, 9, 3, 6, 'Overflow', 'Please clean the bin ASAP', 1, '2026-09-11 17:55:21');
+(1, 9, 3, 6, 'Overflow', 'Please clean the bin ASAP', 1, '2026-09-11 17:55:21'),
+(2, 9, 3, 6, 'Overflow', 'Please clean the bin ASAP', 2, '2026-09-11 21:20:02'),
+(3, 10, 3, 6, 'Overflow', 'please clean the rubbish bin', NULL, '2026-09-11 23:29:50');
 
 -- --------------------------------------------------------
 
@@ -288,7 +332,7 @@ CREATE TABLE `complaint_status_history` (
   `updated_by` int(11) DEFAULT NULL,
   `old_status` varchar(50) DEFAULT NULL,
   `new_status` varchar(50) NOT NULL,
-  `change_type` enum('Status','Details') NOT NULL DEFAULT 'Status',
+  `change_type` enum('Status','Details','Withdrawn') NOT NULL DEFAULT 'Status',
   `remarks` varchar(255) DEFAULT NULL,
   `updated_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -302,7 +346,20 @@ INSERT INTO `complaint_status_history` (`history_id`, `complaint_id`, `updated_b
 (2, 4, 1, 'New', 'Assigned', 'Status', 'Cleaning team notified.', '2026-09-10 20:12:31'),
 (3, 4, 1, 'Assigned', 'Resolved', 'Status', 'Area cleaned and bin emptied.', '2026-09-10 20:12:31'),
 (4, 9, 3, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-11 15:39:30'),
-(5, 9, 3, 'New', 'New', 'Details', 'Edited: photo.', '2026-09-11 17:55:21');
+(5, 9, 3, 'New', 'New', 'Details', 'Edited: photo.', '2026-09-11 17:55:21'),
+(6, 9, 3, 'New', 'New', 'Details', 'Edited: description.', '2026-09-11 21:20:02'),
+(7, 9, 1, 'New', 'Assigned', 'Status', 'we will do it ASAP', '2026-09-11 22:52:38'),
+(8, 1, 1, 'New', 'Assigned', 'Status', 'Collection scheduled (schedule #1).', '2026-09-11 22:53:26'),
+(9, 3, 1, 'New', 'Assigned', 'Status', 'Collection scheduled (schedule #1).', '2026-09-11 22:53:26'),
+(10, 5, 1, 'New', 'Assigned', 'Status', 'Collection scheduled (schedule #1).', '2026-09-11 22:53:26'),
+(11, 8, 1, 'New', 'Assigned', 'Status', NULL, '2026-09-11 23:12:25'),
+(12, 9, 1, 'Assigned', 'Resolved', 'Status', NULL, '2026-09-11 23:26:27'),
+(13, 10, 3, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-11 23:29:40'),
+(14, 10, 3, 'New', 'New', 'Details', 'Edited: description.', '2026-09-11 23:29:50'),
+(15, 10, 1, 'New', 'Assigned', 'Status', 'Collection scheduled (schedule #2).', '2026-09-11 23:54:56'),
+(16, 11, 3, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-12 00:04:07'),
+(17, 11, 1, 'New', 'Assigned', 'Status', 'Collection scheduled (schedule #3).', '2026-09-12 00:05:00'),
+(18, 12, 4, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-12 00:08:39');
 
 -- --------------------------------------------------------
 
@@ -343,6 +400,8 @@ CREATE TABLE `locations` (
   `building_name` varchar(100) DEFAULT NULL,
   `floor_no` varchar(20) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
+  `latitude` decimal(10,7) DEFAULT NULL,
+  `longitude` decimal(10,7) DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -350,14 +409,14 @@ CREATE TABLE `locations` (
 -- Dumping data for table `locations`
 --
 
-INSERT INTO `locations` (`location_id`, `location_name`, `building_name`, `floor_no`, `description`, `deleted_at`) VALUES
-(1, 'Main Lobby', 'Block A', 'Ground', 'Beside the main entrance', NULL),
-(2, 'Cafeteria', 'Block A', 'Level 1', 'Next to the food counters', NULL),
-(3, 'Library Entrance', 'Block B', 'Ground', 'Outside the turnstiles', NULL),
-(4, 'Computer Lab 3', 'Block B', 'Level 2', 'Corridor outside the lab', NULL),
-(5, 'Lecture Hall LH1', 'Block C', 'Ground', 'Rear exit', NULL),
-(6, 'Student Car Park', 'Open Area', 'Ground', 'Near the motorcycle bay', NULL),
-(7, 'Hostel Block D', 'Block D', 'Level 1', 'Common room area', NULL);
+INSERT INTO `locations` (`location_id`, `location_name`, `building_name`, `floor_no`, `description`, `latitude`, `longitude`, `deleted_at`) VALUES
+(1, 'Main Lobby', 'Block A', 'Ground', 'Beside the main entrance', NULL, NULL, NULL),
+(2, 'Cafeteria', 'Block A', 'Level 1', 'Next to the food counters', NULL, NULL, NULL),
+(3, 'Library Entrance', 'Block B', 'Ground', 'Outside the turnstiles', NULL, NULL, NULL),
+(4, 'Computer Lab 3', 'Block B', 'Level 2', 'Corridor outside the lab', NULL, NULL, NULL),
+(5, 'Lecture Hall LH1', 'Block C', 'Ground', 'Rear exit', NULL, NULL, NULL),
+(6, 'Student Car Park', 'Open Area', 'Ground', 'Near the motorcycle bay', NULL, NULL, NULL),
+(7, 'Hostel Block D', 'Block D', 'Level 1', 'Common room area', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -558,13 +617,13 @@ ALTER TABLE `bins`
 -- AUTO_INCREMENT for table `bin_status_updates`
 --
 ALTER TABLE `bin_status_updates`
-  MODIFY `update_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `update_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `collection_assignments`
 --
 ALTER TABLE `collection_assignments`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `collection_records`
@@ -576,13 +635,13 @@ ALTER TABLE `collection_records`
 -- AUTO_INCREMENT for table `collection_schedules`
 --
 ALTER TABLE `collection_schedules`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `complaints`
 --
 ALTER TABLE `complaints`
-  MODIFY `complaint_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `complaint_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `complaint_attachments`
@@ -594,19 +653,19 @@ ALTER TABLE `complaint_attachments`
 -- AUTO_INCREMENT for table `complaint_notifications`
 --
 ALTER TABLE `complaint_notifications`
-  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `complaint_revisions`
 --
 ALTER TABLE `complaint_revisions`
-  MODIFY `revision_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `revision_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `complaint_status_history`
 --
 ALTER TABLE `complaint_status_history`
-  MODIFY `history_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `history_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `complaint_types`
