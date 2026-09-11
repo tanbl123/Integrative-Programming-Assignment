@@ -116,7 +116,9 @@ class UserService {
             ]);
         }
 
-        if ($user->hasOpenAssignments()) {
+        $scheduleClient = new ScheduleServiceClient();
+
+        if ($user->isCleaner() && $scheduleClient->hasOpenAssignments((int) $user->getKey())) {
             throw new ValidationException([
                         'account' => 'Complete, skip, or reassign the open assignments for this cleaner before deleting the account.'
             ]);
