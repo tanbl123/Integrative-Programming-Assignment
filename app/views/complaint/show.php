@@ -208,6 +208,107 @@ $assignments = $complaint->assignmentCounts();
     </section>
 <?php endif; ?>
 
+<?php /*
+ * Book a cleaner, without leaving the complaint.
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management - cross-module integration
+ *
+ * This is the Scheduling module's work, shown here because this is where the
+ * decision is made. It posts to ComplaintController::assign(), which calls
+ * SchedulingService::createForComplaint() - so the booking is created by the
+ * module that owns collections, and this page only asks for the three things
+ * it needs. Offered only while the complaint has no collection: once one
+ * exists the status form takes over.
+ */ ?>
+<?php if (UserPermissions::can($user, 'complaint.manage')
+          && $complaint->getStatus() === Complaint::STATUS_NEW
+          && !in_array(Complaint::STATUS_ASSIGNED, $statuses, true)): ?>
+    <form
+        method="post"
+        action="<?= url('complaint/assign/' . $complaint->getKey()) ?>"
+        class="form-card"
+    >
+        <h2>Book a cleaner</h2>
+
+        <?= csrfField() ?>
+
+        <?php if (!empty($errors['schedule'])): ?>
+            <div class="alert alert-error"><?= e($errors['schedule']) ?></div>
+        <?php endif; ?>
+
+        <p class="field-help">
+            Raises a collection for <strong><?= e($complaint->getBin()?->getBinCode() ?? 'this bin') ?></strong>
+            and moves this complaint to Assigned. The reporter is told.
+        </p>
+
+        <label>
+            Collection date
+            <input
+                type="date"
+                name="schedule_date"
+                required
+                min="<?= e(date('Y-m-d')) ?>"
+                value="<?= e((string) ($_POST['schedule_date'] ?? date('Y-m-d'))) ?>"
+                data-message-required="Choose the day the cleaner should go."
+            >
+            <?php if (!empty($errors['schedule_date'])): ?>
+                <span class="field-error"><?= e($errors['schedule_date']) ?></span>
+            <?php endif; ?>
+        </label>
+
+        <label>
+            Time slot
+            <input
+                name="time_slot"
+                required
+                maxlength="50"
+                placeholder="e.g. 09:00-12:00"
+                value="<?= e((string) ($_POST['time_slot'] ?? '')) ?>"
+                data-message-required="Give the time slot for the visit."
+            >
+            <?php if (!empty($errors['time_slot'])): ?>
+                <span class="field-error"><?= e($errors['time_slot']) ?></span>
+            <?php endif; ?>
+        </label>
+
+        <label>
+            Cleaner
+            <select name="cleaner_id" required>
+                <option value="">Select a cleaner</option>
+                <?php foreach ($cleaners as $cleaner): ?>
+                    <option
+                        value="<?= (int) $cleaner->getKey() ?>"
+                        <?= (string) ($_POST['cleaner_id'] ?? '') === (string) $cleaner->getKey() ? 'selected' : '' ?>
+                    ><?= e($cleaner->getFullName()) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if (!empty($errors['cleaner_id'])): ?>
+                <span class="field-error"><?= e($errors['cleaner_id']) ?></span>
+            <?php endif; ?>
+            <?php if ($cleaners === []): ?>
+                <span class="field-error">No active cleaner is available to assign.</span>
+            <?php endif; ?>
+        </label>
+
+        <label>
+            Notes for the cleaner
+            <textarea name="notes" rows="2" maxlength="500"
+                      placeholder="e.g. Bin is behind the drinks stall."><?= e((string) ($_POST['notes'] ?? '')) ?></textarea>
+            <?php if (!empty($errors['notes'])): ?>
+                <span class="field-error"><?= e($errors['notes']) ?></span>
+            <?php endif; ?>
+        </label>
+
+        <div class="form-actions">
+            <button class="button" type="submit" <?= $cleaners === [] ? 'disabled' : '' ?>>
+                Book cleaner and mark Assigned
+            </button>
+            <button class="button button-secondary" type="reset">Clear fields</button>
+        </div>
+    </form>
+<?php endif; ?>
+
 <?php if (UserPermissions::can($user, 'complaint.manage') && $statuses !== []): ?>
     <form 
         method="post" 
@@ -221,16 +322,15 @@ $assignments = $complaint->assignmentCounts();
         <?php /* Assigned is not in this list until a cleaner is booked to visit
                  the bin - ComplaintService::nextStatusesFor() removes it, and
                  the service refuses it as well, so the form and the rule
-                 cannot drift apart. Saying why it is missing matters more than
-                 saying it is missing: an option that is simply absent reads as
-                 a fault. */ ?>
+                 cannot drift apart. The booking itself is offered below rather
+                 than linked to: sending an administrator to another module to
+                 do it is exactly where the step used to be forgotten. */ ?>
         <?php if ($complaint->getStatus() === Complaint::STATUS_NEW
                   && !in_array(Complaint::STATUS_ASSIGNED, $statuses, true)): ?>
             <p class="field-help">
                 <strong>Assigned</strong> is not available yet. It means a cleaner is on the
                 way, so it can only be set once one is booked to visit this bin.
-                <a href="<?= url('schedule/create') ?>">Generate a collection schedule</a>
-                &mdash; that raises the task and moves this complaint to Assigned on its own.
+                Book one below and this complaint moves to Assigned on its own.
             </p>
         <?php endif; ?>
 

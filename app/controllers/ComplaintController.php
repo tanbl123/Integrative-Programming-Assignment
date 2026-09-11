@@ -119,6 +119,52 @@ class ComplaintController extends Controller
         }
     }
 
+    /**
+     * Books a cleaner for this complaint's bin, without leaving the complaint.
+     *
+     * The lifecycle refuses Assigned until a collection exists, and sending an
+     * administrator to another module to create one is where the step used to
+     * be forgotten. The booking is made here and the complaint moves to
+     * Assigned as part of the same action, so the two cannot come apart.
+     */
+    public function assign(int $id): void
+    {
+        $this->requirePost();
+        try {
+            $user = Auth::requireLogin();
+            UserPermissions::require('complaint.manage');
+            Csrf::requireValid($_POST['_token'] ?? null);
+            $this->requireScalar(['schedule_date', 'time_slot', 'cleaner_id', 'notes']);
+
+            $complaint = $this->service->findVisible($user, $id);
+            if ($complaint === null) {
+                $this->entityNotFound('Complaint');
+                return;
+            }
+
+            $schedule = (new SchedulingService())->createForComplaint($user, $complaint, $_POST);
+
+            Flash::set('success', 'Cleaner booked for '
+                . ($complaint->getBin()?->getBinCode() ?? 'the bin')
+                . ' on ' . $schedule->getDate() . '. This complaint is now Assigned '
+                . 'and the reporter has been told.');
+            $this->redirect('complaint/show/' . $id);
+        } catch (ValidationException $error) {
+            $complaint = Complaint::find($id);
+            if ($complaint === null) {
+                $this->entityNotFound('Complaint');
+                return;
+            }
+            http_response_code(422);
+            $this->view('complaint/show', $this->showData(
+                $complaint, Auth::requireLogin(), $error->getErrors()));
+        } catch (OutOfBoundsException $error) {
+            $this->entityNotFound('Complaint');
+        } catch (AuthenticationException|AuthorizationException $error) {
+            $this->handleAccessFailure($error);
+        }
+    }
+
     public function edit(int $id): void
     {
         try {
@@ -271,6 +317,8 @@ class ComplaintController extends Controller
             'history'             => $complaint->getHistory(),
             'revisions'           => $complaint->getRevisions(),
             'statuses'            => $this->service->nextStatusesFor($complaint),
+            // For the booking form shown when Assigned is not yet available.
+            'cleaners'            => User::findActiveCleaners(),
             'errors'              => $errors,
             'user'                => $user,
             'canEdit'             => $this->service->canEdit($complaint, $user),

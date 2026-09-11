@@ -64,6 +64,90 @@ class SchedulingService {
         }
     }
 
+    /**
+     * Books one cleaner for one bin, raised from one complaint.
+     *
+     * Author : Tan Boon Leong (2402865)
+     * Module : Complaint / Report Management - cross-module integration
+     *
+     * create() generates a round: a strategy chooses the bins and the
+     * administrator schedules whatever it found. That is the right shape for
+     * planning a day's work and the wrong one for answering a single report,
+     * which is what an administrator is doing when they have a complaint open
+     * in front of them. This books the one bin that complaint names.
+     *
+     * The stored strategy is still Complaint Priority, because that is
+     * truthfully why the collection exists, and it keeps the row inside the
+     * schedules enum rather than needing a fourth value for what is really the
+     * same reason with a narrower selection.
+     *
+     * The complaint moves to Assigned through the same private helper the
+     * generated rounds use, so a booking made here is recorded and notified
+     * exactly as one made there.
+     */
+    public function createForComplaint(
+            User $administrator,
+            Complaint $complaint,
+            array $data
+    ): CollectionSchedule {
+        UserPermissions::require('schedule.manage');
+
+        $bin = $complaint->getBin();
+
+        if ($bin === null || !$bin->isActive()) {
+            throw new ValidationException([
+                        'schedule' => 'This complaint\'s bin is no longer active, so no collection can be booked for it.'
+            ]);
+        }
+
+        [$date, $timeSlot, , $cleaner, $notes] = $this->validateSchedule(
+                $data + ['strategy' => 'Complaint Priority']
+        );
+
+        $pdo = Database::getInstance()->pdo();
+        $pdo->beginTransaction();
+
+        try {
+            $schedule = new CollectionSchedule();
+            $schedule->setDetails(
+                    $administrator->getKey(),
+                    $date,
+                    $timeSlot,
+                    'Complaint Priority',
+                    $notes ?? ('Raised from complaint ' . $complaint->getNumber() . '.')
+            );
+            $schedule->save();
+
+            $assignment = new CollectionAssignment();
+            $assignment->setDetails(
+                    $schedule->getKey(),
+                    $cleaner->getKey(),
+                    $bin->getKey(),
+                    $complaint->getKey(),
+                    'Urgent',
+                    'Complaint ' . $complaint->getNumber() . ': ' . $complaint->getType()
+            );
+            $assignment->save();
+
+            $this->markComplaintAssigned(
+                    new ComplaintService(),
+                    (int) $complaint->getKey(),
+                    (int) $schedule->getKey(),
+                    $administrator
+            );
+
+            $pdo->commit();
+
+            return $schedule;
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            throw $error;
+        }
+    }
+
     public function update(int $id, array $data): CollectionSchedule {
         UserPermissions::require('schedule.manage');
 
