@@ -179,8 +179,9 @@ Bin page.
 
 ### Remaining design patterns and web services
 
-- **Observer:** `ComplaintStatusSubject` notifies `ComplaintHistoryObserver`
-  whenever a complaint is created or changes status.
+- **Observer:** `ComplaintStatusSubject` broadcasts one complaint event to
+  four observers - history, notification, bin flag and revision - whenever a
+  complaint is created, changes status, is edited or is withdrawn.
 - **Strategy:** `SchedulingStrategyFactory` selects Full Bins, Complaint
   Priority, or Routine bin-selection algorithms at runtime.
 - **Decorator:** role decorators add permissions to a basic authenticated
@@ -240,3 +241,6 @@ Pull before you start each session:
 
 Put your name in the header comment of every file you create — the
 assignment brief requires it.
+
+`readme.txt` in the project root is the plain-text install guide that ships
+inside the submitted ZIP. If setup steps change here, change them there too.

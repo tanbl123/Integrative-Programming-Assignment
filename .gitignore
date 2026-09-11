@@ -1,6 +1,11 @@
 # NetBeans
+#
+# private/ is genuinely per-developer - it holds the local browser choice and
+# absolute paths from whichever machine last opened the project. project.xml
+# and project.properties are NOT: without both, the folder does not open as a
+# NetBeans project at all, and the assignment requires the project itself to
+# be submitted. They are tracked.
 nbproject/private/
-nbproject/project.properties
 build/
 dist/
 
