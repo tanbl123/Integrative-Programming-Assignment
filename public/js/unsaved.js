@@ -15,11 +15,13 @@
  *
  * Two warnings, because neither covers both cases:
  *
- *   - Clicking a link inside the page raises our own message, which can say
- *     what is at stake.
+ *   - Clicking a link inside the page asks in the system's own dialog, the
+ *     same one a delete asks in. The link is stopped, the question asked, and
+ *     the page left only if the answer is yes.
  *   - Closing the tab, reloading, or the Back button raises the browser's own
- *     dialog, whose wording no site is allowed to set. That is a browser rule,
- *     not an oversight.
+ *     dialog, whose wording and appearance no site is allowed to set. That is
+ *     a browser rule, not an oversight, and it is the reason the first case is
+ *     handled separately rather than left to it.
  *
  * Submitting is saving, so it never warns. A form opts out with
  * data-no-guard - the sign-in form does, where a warning would only be in the
@@ -29,7 +31,19 @@
     'use strict';
 
     const SKIP_TYPES = ['hidden', 'submit', 'button', 'reset', 'image'];
-    const MESSAGE = 'You have unsaved changes on this page. Leave without saving?';
+
+    const ASK = {
+        title: 'Leave without saving?',
+        message: 'You have unsaved changes on this page. '
+               + 'Leaving now discards them.',
+        confirmLabel: 'Discard changes',
+        cancelLabel: 'Stay on this page',
+    };
+
+    /** The shared dialog from ui.js, or the browser's prompt if it is absent. */
+    const ask = options => (window.EcoCampus && window.EcoCampus.confirm)
+        ? window.EcoCampus.confirm(options)
+        : Promise.resolve(window.confirm(options.message));
 
     /** What a control currently holds, as one comparable string. */
     const readValue = field => {
@@ -72,9 +86,21 @@
             if (link.target === '_blank' || link.getAttribute('href').startsWith('#')) {
                 return;
             }
-            if (!window.confirm(MESSAGE)) {
-                event.preventDefault();
-            }
+
+            // A dialog cannot hold up a click the way the browser's own prompt
+            // does, so the navigation is stopped first and repeated afterwards
+            // if the answer is yes.
+            event.preventDefault();
+
+            ask(ASK).then(agreed => {
+                if (!agreed) {
+                    return;
+                }
+                // Leaving was chosen, so the departure warning below has
+                // nothing left to add.
+                saving = true;
+                window.location.assign(link.href);
+            });
         });
 
         // The backstop: closing the tab, reloading, or the Back button. The

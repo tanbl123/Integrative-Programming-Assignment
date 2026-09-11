@@ -60,7 +60,14 @@
 
     /*
      * Confirmation dialog.
+     *
+     * Built once here and published as EcoCampus.confirm(), so that anything
+     * needing to ask before it acts - a delete, an unsaved form being
+     * abandoned - asks in the same dialog rather than in the browser's own
+     * unstyleable one.
      */
+    let confirmWith = null;
+
     if (typeof HTMLDialogElement !== 'undefined') {
         const dialog = make('dialog', '', 'confirm-dialog');
 
@@ -75,20 +82,21 @@
 
         const actions = make('div', '', 'button-row');
 
-        let pending = null;
+        // Resolved by whichever button closes the dialog.
+        let settle = null;
 
-        const cancel = button('Keep unchanged', () => dialog.close());
-
-        const proceed = button('Confirm', () => {
-            const current = pending;
-            pending = null;
+        const finish = answer => {
+            const resolve = settle;
+            settle = null;
             dialog.close();
 
-            if (current) {
-                current.form.dataset.confirmed = 'true';
-                current.form.requestSubmit(current.submitter || undefined);
+            if (resolve) {
+                resolve(answer);
             }
-        });
+        };
+
+        const cancel = button('Keep unchanged', () => finish(false));
+        const proceed = button('Confirm', () => finish(true));
 
         proceed.classList.remove('button-secondary');
         proceed.classList.add('button-danger');
@@ -97,8 +105,32 @@
         dialog.append(title, message, actions);
         document.body.append(dialog);
 
+        // Escape, or the backdrop, counts as declining.
         dialog.addEventListener('close', () => {
-            pending = null;
+            const resolve = settle;
+            settle = null;
+
+            if (resolve) {
+                resolve(false);
+            }
+        });
+
+        /*
+         * Asks the question in this dialog and resolves true if the person
+         * agreed. Shared so that every confirmation in the system looks the
+         * same: the browser's own confirm() cannot be styled and announces
+         * itself as coming from localhost.
+         */
+        confirmWith = options => new Promise(resolve => {
+            settle = resolve;
+
+            title.textContent = options.title || 'Confirm action';
+            message.textContent = options.message || '';
+            proceed.textContent = options.confirmLabel || 'Confirm';
+            cancel.textContent = options.cancelLabel || 'Keep unchanged';
+
+            dialog.showModal();
+            cancel.focus();
         });
 
         document.querySelectorAll('form[onsubmit], form[data-confirm]').forEach(form => {
@@ -119,22 +151,25 @@
 
                 event.preventDefault();
 
-                pending = {
-                    form,
-                    submitter: event.submitter
-                };
+                const submitter = event.submitter;
+                const actionLabel = submitter?.textContent.trim() || 'Confirm';
 
-                const actionLabel = event.submitter?.textContent.trim() || 'Confirm';
-
-                title.textContent = actionLabel + '?';
-                proceed.textContent = actionLabel;
-                message.textContent = confirmation;
-
-                dialog.showModal();
-                cancel.focus();
+                confirmWith({
+                    title: actionLabel + '?',
+                    message: confirmation,
+                    confirmLabel: actionLabel
+                }).then(agreed => {
+                    if (agreed) {
+                        form.dataset.confirmed = 'true';
+                        form.requestSubmit(submitter || undefined);
+                    }
+                });
             });
         });
     } else {
+        // No <dialog> support: the browser's own prompt is all that is left.
+        confirmWith = options => Promise.resolve(window.confirm(options.message || ''));
+
         document.querySelectorAll('form[data-confirm]:not([onsubmit])').forEach(form => {
             form.addEventListener('submit', event => {
                 if (!window.confirm(form.dataset.confirm)) {
@@ -143,6 +178,9 @@
             });
         });
     }
+
+    window.EcoCampus = window.EcoCampus || {};
+    window.EcoCampus.confirm = options => confirmWith(options || {});
 
     /*
      * Filter panels.
