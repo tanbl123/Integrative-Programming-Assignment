@@ -36,7 +36,15 @@
                     <small><?= e($group['bin']?->getLocation()?->getFullLabel() ?? '') ?></small>
                 </summary>
 
-                <form method="post" action="<?= url('complaint/reject-duplicates') ?>">
+                <?php /* The confirmation belongs on the form: ui.js reads
+                         data-confirm from the form element, so a copy on the
+                         button is silently ignored and the reports are rejected
+                         on the first click. */ ?>
+                <form
+                    method="post"
+                    action="<?= url('complaint/reject-duplicates') ?>"
+                    data-confirm="Reject the other <?= count($group['complaints']) - 1 ?> report(s) as duplicates? Each reporter will be notified."
+                >
                     <?= csrfField() ?>
                     <input type="hidden" name="bin_id" value="<?= (int) ($group['bin']?->getKey() ?? 0) ?>">
                     <input type="hidden" name="complaint_type" value="<?= e($group['type']) ?>">
@@ -45,7 +53,7 @@
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th>Keep</th><th>Complaint No.</th><th>Reporter</th>
+                                    <th>Keep</th><th>Complaint ID</th><th>Reporter</th>
                                     <th>Reason given</th><th>Status</th><th>Submitted</th><th>Actions</th>
                                 </tr>
                             </thead>
@@ -77,8 +85,7 @@
 
                     <button
                         class="button button-danger"
-                        type="submit"
-                        data-confirm="Reject the other <?= count($group['complaints']) - 1 ?> report(s) as duplicates? Each reporter will be notified.">
+                        type="submit">
                         Keep selected &middot; reject the other <?= count($group['complaints']) - 1 ?>
                     </button>
                 </form>
@@ -95,7 +102,7 @@
             name="q" 
             id="complaintSearch"
             value="<?= e($filters['query']) ?>" 
-            placeholder="Complaint no., issue, bin, or location"
+            placeholder="Complaint ID, issue, bin, or location"
             >
     </div>
 
@@ -134,11 +141,11 @@
     <table class="table" id="complaintsTable">
         <thead>
             <tr>
-                <?php /* "Complaint No.", not "No.": the value is the complaint's own
-                        reference, not its position in this list. A Reporter sees only
+                <?php /* "Complaint ID", not "No.": the value is the complaint's own
+                        identifier, not its position in this list. A Reporter sees only
                         their own complaints, so the codes are never consecutive, and a
                         heading promising a row count would look wrong to them. */ ?>
-                <th><button type="button" class="sort-header" data-column="0">Complaint No.</button></th>
+                <th><button type="button" class="sort-header" data-column="0">Complaint ID</button></th>
                 <th><button type="button" class="sort-header" data-column="1">Bin</button></th>
                 <th><button type="button" class="sort-header" data-column="2">Issue</button></th>
                 <th><button type="button" class="sort-header" data-column="3">Status</button></th>

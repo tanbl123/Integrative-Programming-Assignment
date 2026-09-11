@@ -60,7 +60,32 @@
 
     /*
      * Confirmation dialog.
+     *
+     * Built once here and published as EcoCampus.confirm(), so that anything
+     * needing to ask before it acts - a delete, an unsaved form being
+     * abandoned - asks in the same dialog rather than in the browser's own
+     * unstyleable one.
      */
+    let confirmWith = null;
+
+    /*
+     * Recognising a destructive form without being told.
+     *
+     * Two signals, either of which is enough: the action it posts to, and a
+     * button styled as dangerous. Every module already writes both - user and
+     * location delete, schedule cancel, bin deactivate, complaint withdraw -
+     * so the confirmation follows the convention the team already uses rather
+     * than asking anyone to remember a new attribute.
+     */
+    const UNDOING_ACTION = /\/(delete|cancel|deactivate|reject|remove|reset)/i;
+
+    const GENERIC_CONFIRMATION =
+        'This action cannot be undone from this page. Do you want to continue?';
+
+    const undoesSomething = form =>
+        UNDOING_ACTION.test(form.getAttribute('action') || '')
+        || form.querySelector('.button-danger') !== null;
+
     if (typeof HTMLDialogElement !== 'undefined') {
         const dialog = make('dialog', '', 'confirm-dialog');
 
@@ -75,20 +100,21 @@
 
         const actions = make('div', '', 'button-row');
 
-        let pending = null;
+        // Resolved by whichever button closes the dialog.
+        let settle = null;
 
-        const cancel = button('Keep unchanged', () => dialog.close());
-
-        const proceed = button('Confirm', () => {
-            const current = pending;
-            pending = null;
+        const finish = answer => {
+            const resolve = settle;
+            settle = null;
             dialog.close();
 
-            if (current) {
-                current.form.dataset.confirmed = 'true';
-                current.form.requestSubmit(current.submitter || undefined);
+            if (resolve) {
+                resolve(answer);
             }
-        });
+        };
+
+        const cancel = button('Keep unchanged', () => finish(false));
+        const proceed = button('Confirm', () => finish(true));
 
         proceed.classList.remove('button-secondary');
         proceed.classList.add('button-danger');
@@ -97,13 +123,44 @@
         dialog.append(title, message, actions);
         document.body.append(dialog);
 
+        // Escape, or the backdrop, counts as declining.
         dialog.addEventListener('close', () => {
-            pending = null;
+            const resolve = settle;
+            settle = null;
+
+            if (resolve) {
+                resolve(false);
+            }
         });
 
-        document.querySelectorAll('form[onsubmit], form[data-confirm]').forEach(form => {
+        /*
+         * Asks the question in this dialog and resolves true if the person
+         * agreed. Shared so that every confirmation in the system looks the
+         * same: the browser's own confirm() cannot be styled and announces
+         * itself as coming from localhost.
+         */
+        confirmWith = options => new Promise(resolve => {
+            settle = resolve;
+
+            title.textContent = options.title || 'Confirm action';
+            message.textContent = options.message || '';
+            proceed.textContent = options.confirmLabel || 'Confirm';
+            cancel.textContent = options.cancelLabel || 'Keep unchanged';
+
+            dialog.showModal();
+            cancel.focus();
+        });
+
+        document.querySelectorAll('main form:not(.filter-panel)').forEach(form => {
             const match = (form.getAttribute('onsubmit') || '').match(/^\s*return confirm\((['"])(.*?)\1\);?\s*$/);
-            const confirmation = form.dataset.confirm || match?.[2];
+
+            // A module's own wording wins. Failing that, a form that undoes
+            // something is confirmed anyway, with wording that suits any
+            // module - so a delete added later is never silent just because
+            // nobody remembered the attribute.
+            const confirmation = form.dataset.confirm
+                || match?.[2]
+                || (undoesSomething(form) ? GENERIC_CONFIRMATION : null);
 
             if (!confirmation) {
                 return;
@@ -119,30 +176,43 @@
 
                 event.preventDefault();
 
-                pending = {
-                    form,
-                    submitter: event.submitter
-                };
+                const submitter = event.submitter;
+                const actionLabel = submitter?.textContent.trim() || 'Confirm';
 
-                const actionLabel = event.submitter?.textContent.trim() || 'Confirm';
-
-                title.textContent = actionLabel + '?';
-                proceed.textContent = actionLabel;
-                message.textContent = confirmation;
-
-                dialog.showModal();
-                cancel.focus();
+                confirmWith({
+                    title: actionLabel + '?',
+                    message: confirmation,
+                    confirmLabel: actionLabel
+                }).then(agreed => {
+                    if (agreed) {
+                        form.dataset.confirmed = 'true';
+                        form.requestSubmit(submitter || undefined);
+                    }
+                });
             });
         });
     } else {
-        document.querySelectorAll('form[data-confirm]:not([onsubmit])').forEach(form => {
+        // No <dialog> support: the browser's own prompt is all that is left.
+        confirmWith = options => Promise.resolve(window.confirm(options.message || ''));
+
+        document.querySelectorAll('main form:not(.filter-panel):not([onsubmit])').forEach(form => {
+            const confirmation = form.dataset.confirm
+                || (undoesSomething(form) ? GENERIC_CONFIRMATION : null);
+
+            if (!confirmation) {
+                return;
+            }
+
             form.addEventListener('submit', event => {
-                if (!window.confirm(form.dataset.confirm)) {
+                if (!window.confirm(confirmation)) {
                     event.preventDefault();
                 }
             });
         });
     }
+
+    window.EcoCampus = window.EcoCampus || {};
+    window.EcoCampus.confirm = options => confirmWith(options || {});
 
     /*
      * Filter panels.

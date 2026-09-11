@@ -98,19 +98,44 @@
         <div class="field-block">
             <span class="field-help">Current photo</span>
 
+            <?php /* The photograph and the control that removes it sit on one
+                     row, so the button reads as belonging to the photo beside
+                     it rather than to the drop zone below.
+
+                     Photo evidence is optional, so a reporter must be able to
+                     get back to having none without withdrawing the complaint
+                     and losing its number and history. The checkbox is the
+                     baseline; the script turns it into the button. Nothing
+                     happens until the form is saved. */ ?>
             <?php foreach ($attachments as $current): ?>
-                <a
-                    class="current-photo"
-                    href="<?= url('complaint/attachment/' . $current->getKey()) ?>"
-                    target="_blank"
-                >
-                    <img src="<?= url('complaint/attachment/' . $current->getKey()) ?>" alt="">
-                    <span>
-                        <strong><?= e($current->getDisplayName()) ?></strong>
-                        <small><?= e($current->getReadableSize()) ?> &middot; opens in a new tab</small>
-                    </span>
-                </a>
+                <?php /* The card is a plain container, not the link. A button
+                         inside a link is invalid, and a click meant for the
+                         button would open the photograph. The link covers the
+                         thumbnail and the filename; the button sits beside it
+                         at the end of the same card. */ ?>
+                <div class="current-photo">
+                    <a
+                        class="current-photo-link"
+                        href="<?= url('complaint/attachment/' . $current->getKey()) ?>"
+                        target="_blank"
+                    >
+                        <img src="<?= url('complaint/attachment/' . $current->getKey()) ?>" alt="">
+                        <span>
+                            <strong><?= e($current->getDisplayName()) ?></strong>
+                            <small><?= e($current->getReadableSize()) ?> &middot; opens in a new tab</small>
+                        </span>
+                    </a>
+
+                    <div class="remove-photo" id="remove-photo-field">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="remove_attachment" value="1" id="remove-attachment">
+                            Remove this photo when I save
+                        </label>
+                    </div>
+                </div>
             <?php endforeach; ?>
+
+            <span class="field-help" id="remove-photo-note"></span>
         </div>
     <?php endif; ?>
 
@@ -140,7 +165,10 @@
                 </p>
 
                 <div class="dropzone-preview" id="attachment-preview" hidden>
-                    <img id="attachment-thumb" alt="" hidden>
+                    <?php /* Clickable: 72 pixels is enough to see that a photo
+                             was attached, not enough to see whether it is the
+                             right one. */ ?>
+                    <img id="attachment-thumb" alt="Open this photo full size" hidden>
                     <span class="dropzone-file">
                         <strong id="attachment-name"></strong>
                         <small id="attachment-size"></small>
@@ -335,6 +363,7 @@
             objectUrl = URL.createObjectURL(file);
             thumb.src = objectUrl;
             thumb.hidden = false;
+            size.textContent = readableSize(file.size) + ' \u00b7 click the photo to see it full size';
         } else {
             thumb.hidden = true;
             thumb.removeAttribute('src');
@@ -377,6 +406,23 @@
         }
     });
 
+    /*
+     * Opening the chosen photo full size, before it is uploaded.
+     *
+     * The file is not on the server yet, so there is nothing to link to; the
+     * object URL the preview already holds is what the new tab is given. The
+     * click is stopped from travelling any further because this thumbnail sits
+     * inside the label that wraps the file input, and the label would take a
+     * stray click as a request to open the file picker again.
+     */
+    thumb.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (objectUrl !== null) {
+            window.open(objectUrl, '_blank', 'noopener');
+        }
+    });
+
     // A file can claim to be an image and not decode as one - a renamed
     // upload, or a truncated photo. The name and size still describe it.
     thumb.addEventListener('error', () => {
@@ -396,5 +442,105 @@
     });
 
     render();   // a re-rendered form after a failed submit starts empty
+})();
+</script>
+
+<?php /*
+ * Removing the photo already on file.
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ *
+ * The checkbox above is what posts, and it is what works with scripting
+ * disabled. This turns it into a button sitting beside the photograph, because
+ * a checkbox below a drop zone does not say which photo it means, and a
+ * reporter who cannot tell will leave it alone.
+ *
+ * Nothing is removed here. The complaint is changed when the form is saved,
+ * and even then the photograph is marked superseded rather than deleted, so
+ * the revision it belonged to can still show it.
+ */ ?>
+<script>
+(() => {
+    'use strict';
+    const field = document.getElementById('remove-photo-field');
+    const box = document.getElementById('attachment-remove-box') || document.getElementById('remove-attachment');
+    const photo = document.querySelector('.current-photo');
+    // Below the row rather than inside it, so a long sentence cannot squash
+    // the photograph or push the button out of line.
+    const note = document.getElementById('remove-photo-note');
+    if (!field || !box || !photo || !note) return;
+
+    field.classList.add('is-enhanced');
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button-secondary';
+
+    // The cross is decoration beside the word, so a screen reader announces
+    // "Remove" rather than "Remove multiplication sign".
+    const cross = document.createElement('span');
+    cross.className = 'remove-photo-cross';
+    cross.setAttribute('aria-hidden', 'true');
+    cross.textContent = '\u00d7';
+
+    /*
+     * Choosing a replacement answers the same question this button asks, so
+     * while one is chosen the button is out of the way. Two controls both
+     * labelled Remove, one acting on the saved photograph and one on the file
+     * just picked, is a choice nobody should have to read twice.
+     */
+    const replacement = document.getElementById('attachment');
+
+    /*
+     * What the reporter asked for, kept apart from what the form currently
+     * posts. Choosing a replacement makes the checkbox moot and unticks it,
+     * but it does not withdraw the request: cancelling the replacement puts
+     * the form back where it was, rather than quietly keeping a photograph the
+     * reporter had already said to remove.
+     */
+    let removalWanted = box.checked;
+
+    const render = () => {
+        const replacing = replacement !== null && replacement.files.length > 0;
+        const removing = removalWanted && !replacing;
+
+        box.checked = removing;
+        field.hidden = replacing;
+        button.textContent = removing ? 'Keep this photo' : 'Remove';
+        if (!removing) {
+            button.append(cross);
+        }
+
+        note.textContent = replacing
+            ? 'This photo will be replaced when you save.'
+            : (removing ? 'This photo will be removed when you save.' : '');
+
+        photo.classList.toggle('is-removing', removing || replacing);
+    };
+
+    button.addEventListener('click', () => {
+        removalWanted = !removalWanted;
+        render();
+        // ui.js clears the form from this event, and unsaved.js watches it.
+        box.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+
+    /*
+     * Clear fields unticks the checkbox and dispatches this, which is the
+     * reporter withdrawing the request rather than the form setting it aside.
+     * render() ticks the box itself and raises no event, so this never
+     * answers its own change.
+     */
+    box.addEventListener('change', () => {
+        removalWanted = box.checked;
+        render();
+    });
+
+    // And the card has to follow whatever the drop zone is holding.
+    replacement?.addEventListener('change', render);
+
+    field.append(button);
+    render();
 })();
 </script>

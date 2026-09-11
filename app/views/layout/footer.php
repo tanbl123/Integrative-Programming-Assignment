@@ -8,6 +8,7 @@
  */
 $uiVersion = filemtime(APP_ROOT . '/public/js/ui.js');
 $validateVersion = filemtime(APP_ROOT . '/public/js/validate.js');
+$unsavedVersion  = filemtime(APP_ROOT . '/public/js/unsaved.js');
 ?>
 </main>
 <footer class="site-footer">
@@ -20,5 +21,7 @@ $validateVersion = filemtime(APP_ROOT . '/public/js/validate.js');
 <?php /* Client-side validation for every module's forms. Loaded after ui.js so the
         Clear fields button it appends is already in place. */ ?>
 <script src="<?= url('public/js/validate.js') ?>?v=<?= (int) $validateVersion ?>" defer></script>
+<?php /* Warns before a form with unsaved changes is abandoned. */ ?>
+<script src="<?= url('public/js/unsaved.js') ?>?v=<?= (int) $unsavedVersion ?>" defer></script>
 </body>
 </html>

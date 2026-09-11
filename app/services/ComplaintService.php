@@ -183,7 +183,7 @@ class ComplaintService
     }
 
     /**
-     * Edits a complaint, optionally replacing its photograph.
+     * Edits a complaint, optionally replacing or removing its photograph.
      *
      * A reporter who attached the wrong photo could previously only withdraw
      * the complaint and start again, because the evidence was fixed at
@@ -195,14 +195,18 @@ class ComplaintService
      * photograph it replaces is marked superseded rather than deleted: the
      * revision written by ComplaintRevisionObserver points at it, so swapping a
      * damning photo for an innocuous one stays as visible as rewriting the
-     * words. Nothing on this path removes a file; the only unlink is in the
-     * rollback below, where a stored file has no row to belong to.
+     * words. Removing a photograph without supplying another does the same -
+     * evidence is optional on a complaint, so a reporter must be able to get
+     * back to having none without withdrawing and losing the complaint's number
+     * and history. Nothing on this path removes a file; the only unlink is in
+     * the rollback below, where a stored file has no row to belong to.
      */
     public function update(
         int $id,
         array $data,
         User $user,
-        ?array $upload = null
+        ?array $upload = null,
+        bool $removePhoto = false
     ): Complaint {
         $complaint = $this->findVisible($user, $id);
         if ($complaint === null) { throw new OutOfBoundsException('Complaint not found.'); }
@@ -230,12 +234,13 @@ class ComplaintService
             $complaint->setDetails($complaint->getReporterId(), $binId, $type, $description);
             $complaint->save();
 
-            if ($stored !== null) {
+            if ($stored !== null || $removePhoto) {
                 // Marked as replaced, never deleted. The revision written below
                 // points at it, so the photograph an edit replaced can still be
                 // seen beside the wording it replaced.
                 $existing?->supersede();
-
+            }
+            if ($stored !== null) {
                 $attachment = new ComplaintAttachment();
                 $attachment->setDetails($complaint->getKey(), $stored);
                 $attachment->save();
@@ -248,6 +253,8 @@ class ComplaintService
             ));
             if ($stored !== null) {
                 $changed[] = 'photo';
+            } elseif ($removePhoto && $existing !== null) {
+                $changed[] = 'photo removed';
             }
 
             // Saving without changing anything is not an event worth recording.

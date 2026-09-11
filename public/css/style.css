@@ -1366,17 +1366,6 @@ td.duplicate-reason {
     margin-top: 0.85rem;
 }
 
-/* A link, so clicking it opens the photograph. It must stay outside the
-   file field's <label>, or the click opens the file picker instead. */
-a.current-photo {
-    text-decoration: none;
-    color: inherit;
-}
-
-a.current-photo:hover {
-    border-color: var(--green);
-}
-
 .current-photo {
     display: flex;
     align-items: center;
@@ -1386,9 +1375,26 @@ a.current-photo:hover {
     border: 1px solid var(--line);
     border-radius: 10px;
     background: #fff;
+    flex-wrap: wrap;
 }
 
-.current-photo img {
+/* The link half of the card: the thumbnail and the filename. It must stay
+   outside the file field's <label>, or a click opens the file picker. */
+.current-photo-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1 1 220px;
+    min-width: 0;
+    text-decoration: none;
+    color: inherit;
+}
+
+.current-photo-link:hover strong {
+    text-decoration: underline;
+}
+
+.current-photo-link img {
     width: 56px;
     height: 56px;
     object-fit: cover;
@@ -1432,6 +1438,82 @@ a.current-photo:hover {
     margin: 0 0 0.35rem;
 }
 
-.revision p:last-child {
+.revision p:last-child,
+.revision .current-photo {
     margin-bottom: 0;
+}
+
+.revision-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.35rem;
+}
+
+/* The wording that was replaced is the point of the panel, so it is set as
+   quoted text rather than as another grey line among the labels. */
+.revision .pre-wrap {
+    margin: 0.35rem 0 0.5rem;
+    padding-left: 0.7rem;
+    border-left: 2px solid var(--line);
+    color: var(--ink);
+}
+
+/* Removing the photo already on a complaint.
+ * Author : Tan Boon Leong (2402865) · Module : Complaint / Report Management */
+/* The Remove button lives inside the photo card, at its far end, so it plainly
+   acts on the photograph it shares a border with. The card is the flex row;
+   the link takes the space that is left. */
+.remove-photo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex: 0 0 auto;
+}
+
+.remove-photo button {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.82rem;
+}
+
+.remove-photo-cross {
+    margin-left: 0.4rem;
+    font-size: 1.05em;
+    line-height: 1;
+}
+
+#remove-photo-note:not(:empty) {
+    margin-top: 0.4rem;
+}
+
+/* The checkbox is the baseline and only hides once the button replaces it.
+   Hidden outright rather than clipped: the button does the same job, and two
+   controls for one choice is worse for a keyboard or screen reader than one.
+   A checkbox hidden by CSS still posts its value when ticked.
+
+   !important only because the shared .checkbox-label rule above declares
+   display: flex !important, which a more specific selector cannot outrank. */
+.remove-photo.is-enhanced .checkbox-label {
+    display: none !important;
+}
+
+.current-photo.is-removing {
+    border-style: dashed;
+    border-color: var(--danger);
+}
+
+/* Only the photograph fades. Dimming the card would fade the button that
+   undoes this, which is the one control that must stay easy to read. */
+.current-photo.is-removing .current-photo-link {
+    opacity: 0.45;
+}
+
+/* The chosen photo's thumbnail opens full size, so it reads as clickable. */
+#attachment-thumb {
+    cursor: zoom-in;
+}
+
+#attachment-thumb:hover {
+    border-color: var(--green);
 }
