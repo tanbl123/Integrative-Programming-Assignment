@@ -80,7 +80,13 @@
                              module still does the work, through the same
                              endpoint the complaint page uses, and all of these
                              reports move to Assigned with it. */ ?>
-                    <form method="post" action="<?= url('complaint/assign/' . $first) ?>">
+                    <form
+                        method="post"
+                        action="<?= url('complaint/assign/' . $first) ?>"
+                        class="group-action"
+                        data-no-auto-clear="1"
+                    >
+                        <h3>Send a cleaner</h3>
                         <?= csrfField() ?>
                         <?php /* So the administrator comes back to the list they
                                  were working through, not to one report of the
@@ -149,8 +155,11 @@
                 <form
                     method="post"
                     action="<?= url('complaint/close-duplicates') ?>"
+                    class="group-action"
+                    data-no-auto-clear="1"
                     data-confirm="Close all <?= count($group['complaints']) ?> reports of this issue? Each reporter is told separately, and none of it can be undone."
                 >
+                    <h3><?= $booked ? 'Close these reports' : 'Or turn them down' ?></h3>
                     <?= csrfField() ?>
                     <input type="hidden" name="bin_id" value="<?= (int) ($group['bin']?->getKey() ?? 0) ?>">
                     <input type="hidden" name="complaint_type" value="<?= e($group['type']) ?>">
