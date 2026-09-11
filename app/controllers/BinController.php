@@ -9,11 +9,16 @@ class BinController extends Controller
 {
     private BinLocationServiceInterface $service;
 
+    /**
+     * Wraps the real service in the Protection Proxy, so every call from this
+     * controller is role-checked before it reaches the bin logic.
+     */
     public function __construct()
     {
         $this->service = new BinLocationServiceProxy(new BinLocationService());
     }
 
+    /** Bin listing, with the search box, fill-status filter and location filter. */
     public function index(): void
     {
         $query = trim((string) ($_GET['q'] ?? ''));
@@ -43,6 +48,10 @@ class BinController extends Controller
         }
     }
 
+    /**
+     * One bin: its details, its status history, and the next planned collection
+     * fetched from the Scheduling module’s web service rather than its tables.
+     */
     public function show(int $id): void
     {
         try {
@@ -68,6 +77,7 @@ class BinController extends Controller
         }
     }
 
+    /** The bin registration form. Administrators only - the Proxy decides that. */
     public function create(): void
     {
         try {
@@ -78,6 +88,7 @@ class BinController extends Controller
         }
     }
 
+    /** Saves a newly registered bin. */
     public function store(): void
     {
         $this->requirePost();
@@ -95,6 +106,7 @@ class BinController extends Controller
         }
     }
 
+    /** The edit form for one bin. */
     public function edit(int $id): void
     {
         try {
@@ -110,6 +122,7 @@ class BinController extends Controller
         }
     }
 
+    /** Saves changes to a bin. */
     public function update(int $id): void
     {
         $this->requirePost();
@@ -134,6 +147,10 @@ class BinController extends Controller
         }
     }
 
+    /**
+     * Retires a bin from service. It is kept, not deleted, so its history and the
+     * complaints that name it stay valid.
+     */
     public function deactivate(int $id): void
     {
         $this->requirePost();
@@ -152,6 +169,7 @@ class BinController extends Controller
         }
     }
 
+    /** The form on which a Cleaner records a bin’s fill status. */
     public function status(int $id): void
     {
         try {
@@ -173,6 +191,7 @@ class BinController extends Controller
         }
     }
 
+    /** Brings a retired bin back into service. */
     public function reactivate(int $id): void
     {
         $this->requirePost();
@@ -191,6 +210,10 @@ class BinController extends Controller
         }
     }
 
+    /**
+     * Saves a fill-status change. The Proxy checks both that the caller may record
+     * one and that the cleaner id is their own.
+     */
     public function updateStatus(int $id): void
     {
         $this->requirePost();
@@ -229,6 +252,10 @@ class BinController extends Controller
         }
     }
 
+    /**
+     * Shared rendering for the create and edit forms, so both show the same fields
+     * and the same errors.
+     */
     private function renderForm(
         string $mode,
         ?Bin $bin,

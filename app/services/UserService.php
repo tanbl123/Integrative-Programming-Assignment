@@ -7,6 +7,11 @@
  */
 class UserService {
 
+    /**
+     * Public self-registration. The role is hard-coded to Reporter rather than read
+     * from the form, so the registration page cannot be used to create an
+     * Administrator.
+     */
     public function registerReporter(array $data): User {
         [$name, $email, $phone] = $this->validateIdentity($data);
         $password = $this->validateNewPassword($data);
@@ -21,6 +26,10 @@ class UserService {
         return $user;
     }
 
+    /**
+     * An Administrator adding an account. Returns the user together with a generated
+     * temporary password, which is shown once and never stored in readable form.
+     */
     public function createByAdministrator(array $data): array {
         UserPermissions::require('user.manage');
 
@@ -39,6 +48,7 @@ class UserService {
         return [$user, $temporaryPassword];
     }
 
+    /** Edits somebody else’s account, including their role and account status. */
     public function updateByAdministrator(int $id, array $data): User {
         $admin = UserPermissions::require('user.manage');
         $user = $this->requireUser($id);
@@ -60,6 +70,12 @@ class UserService {
         return $user;
     }
 
+    /**
+     * Edits your own details. Checks that the account being edited really is the
+     * signed-in one, and does not accept a role at all - changing a role is
+     * updateByAdministrator()’s job, and keeping them apart is what makes it
+     * impossible to promote yourself from the profile page.
+     */
     public function updateOwnProfile(User $user, array $data): User {
         $signedIn = Auth::requireLogin();
 
@@ -76,6 +92,7 @@ class UserService {
         return $user;
     }
 
+    /** Changes your own password, after verifying the current one. */
     public function updateOwnPassword(User $user, array $data): User {
         $signedIn = Auth::requireLogin();
 
@@ -114,11 +131,13 @@ class UserService {
         return $user;
     }
 
+    /** The user directory listing, filtered by role and status. */
     public function search(string $query, string $role, string $status): array {
         UserPermissions::require('user.manage');
         return User::search(trim($query), $role, $status);
     }
 
+    /** One account, for an Administrator. */
     public function find(int $id): ?User {
         UserPermissions::require('user.manage');
 
@@ -127,6 +146,14 @@ class UserService {
         return $user !== null && !$user->isDeleted() ? $user : null;
     }
 
+    /**
+     * Soft-deletes an account.
+     *
+     * Before it does, it asks the Scheduling module whether that cleaner still has
+     * work outstanding - through its web service, because that fact belongs to
+     * Scheduling and not to this module’s tables. Deleting a cleaner mid-round
+     * would strand the assignments.
+     */
     public function deleteByAdministrator(int $id): void {
         $admin = UserPermissions::require('user.manage');
         $user = $this->requireUser($id);
@@ -148,6 +175,7 @@ class UserService {
         $user->delete();
     }
 
+    /** Issues a new temporary password for somebody locked out, and returns it once. */
     public function resetPasswordByAdministrator(int $id): array {
         $admin = UserPermissions::require('user.manage');
         $user = $this->requireUser($id);
@@ -166,6 +194,10 @@ class UserService {
         return [$user, $temporaryPassword];
     }
 
+    /**
+     * Server-side rules for the optional profile fields: IC number, gender, birth
+     * date, address, city, state, postcode and nationality.
+     */
     private function validateDemographics(array $data): array {
         $values = [];
         $errors = [];
@@ -303,6 +335,10 @@ class UserService {
         return $values;
     }
 
+    /**
+     * Server-side rules for name, email and phone. The email must be unique, ignoring
+     * the account being edited.
+     */
     private function validateIdentity(array $data, ?int $currentId = null): array {
         $this->validateTextFields($data, ['full_name', 'email', 'phone_no']);
 
@@ -341,6 +377,7 @@ class UserService {
         return [$name, $email, $phone === '' ? null : $phone];
     }
 
+    /** Checks the role and account status are values the system actually defines. */
     private function validateAccess(array $data): array {
         $this->validateTextFields($data, ['role', 'account_status']);
 
@@ -364,10 +401,15 @@ class UserService {
         return [$role, $status];
     }
 
+    /** Builds a one-time password for a new or reset account. */
     private function generateTemporaryPassword(): string {
         return 'Temp@' . random_int(100000, 999999);
     }
 
+    /**
+     * Checks a new password is long enough and that the confirmation matches, then
+     * returns it for hashing.
+     */
     private function validateNewPassword(array $data): string {
         $this->validateTextFields($data, ['password', 'password_confirmation']);
 
@@ -402,6 +444,7 @@ class UserService {
         return $password;
     }
 
+    /** Refuses a field that arrived as an array rather than a single value. */
     private function validateTextFields(array $data, array $fields): void {
         $errors = [];
 
@@ -416,6 +459,7 @@ class UserService {
         }
     }
 
+    /** Fetch a live account or throw, so no caller works on null or on a deleted one. */
     private function requireUser(int $id): User {
         $user = User::find($id);
 

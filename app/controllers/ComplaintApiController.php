@@ -23,6 +23,7 @@
  */
 class ComplaintApiController extends ApiController
 {
+    /** REST CRUD on one URL, routed by HTTP method. */
     public function resource(?int $id = null): void
     {
         try {
@@ -190,6 +191,7 @@ class ComplaintApiController extends ApiController
         return $this->newRequestId();
     }
 
+    /** Generates an IFA request id of the form CMP-YYYYMMDDHHMMSS-xxxxxxxx. */
     private function newRequestId(): string
     {
         return 'CMP-' . date('YmdHis') . '-' . bin2hex(random_bytes(4));

@@ -9,10 +9,15 @@ class ScheduleController extends Controller {
 
     private SchedulingService $service;
 
+    /** Creates the scheduling service this controller delegates every rule to. */
     public function __construct() {
         $this->service = new SchedulingService();
     }
 
+    /**
+     * The schedule listing. An Administrator sees every round; a Cleaner is sent to
+     * their own assignments instead.
+     */
     public function index(): void {
         try {
             $user = Auth::requireLogin();
@@ -38,6 +43,10 @@ class ScheduleController extends Controller {
         }
     }
 
+    /**
+     * The generate-schedule form. Before it is submitted the page previews the work
+     * waiting by calling the Bin, Complaint and User web services.
+     */
     public function create(): void {
         try {
             UserPermissions::require('schedule.manage');
@@ -47,6 +56,7 @@ class ScheduleController extends Controller {
         }
     }
 
+    /** Runs the chosen strategy and saves the round it produces. */
     public function store(): void {
         $this->requirePost();
 
@@ -69,6 +79,7 @@ class ScheduleController extends Controller {
         }
     }
 
+    /** One schedule and the assignments it created. */
     public function show(int $id): void {
         try {
             $user = Auth::requireLogin();
@@ -104,6 +115,7 @@ class ScheduleController extends Controller {
         }
     }
 
+    /** The edit form for a planned schedule. */
     public function edit(int $id): void {
         try {
             UserPermissions::require('schedule.manage');
@@ -121,6 +133,7 @@ class ScheduleController extends Controller {
         }
     }
 
+    /** Saves changes to a planned schedule. */
     public function update(int $id): void {
         $this->requirePost();
 
@@ -148,6 +161,10 @@ class ScheduleController extends Controller {
         }
     }
 
+    /**
+     * Calls a round off. The assignments are marked skipped and the complaints that
+     * were waiting on it are put back to New by the service.
+     */
     public function cancel(int $id): void {
         $this->requirePost();
 
@@ -168,6 +185,10 @@ class ScheduleController extends Controller {
         }
     }
 
+    /**
+     * Soft-deletes a cancelled or completed schedule, keeping its assignments as a
+     * record of what was done.
+     */
     public function delete(int $id): void {
         $this->requirePost();
 
@@ -188,6 +209,7 @@ class ScheduleController extends Controller {
         }
     }
 
+    /** A Cleaner’s own assignment list, filtered by status. */
     public function my(): void {
         try {
             $user = UserPermissions::require('assignment.view_own');
@@ -206,6 +228,7 @@ class ScheduleController extends Controller {
         }
     }
 
+    /** The form on which a Cleaner records that one bin has been collected. */
     public function complete(int $id): void {
         try {
             $user = UserPermissions::require('assignment.complete');
@@ -235,6 +258,7 @@ class ScheduleController extends Controller {
         }
     }
 
+    /** Saves that completion, with the weight collected and any notes. */
     public function storeCompletion(int $id): void {
         $this->requirePost();
 
@@ -268,6 +292,10 @@ class ScheduleController extends Controller {
         }
     }
 
+    /**
+     * Shared rendering for the create and edit forms, so both offer the same fields
+     * and show errors the same way.
+     */
     private function renderForm(string $mode, ?CollectionSchedule $schedule, array $errors, array $submitted): void {
         $firstAssignment = $schedule?->getAssignments()[0] ?? null;
 

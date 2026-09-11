@@ -18,6 +18,7 @@ class Complaint extends Model
     public const STATUS_RESOLVED = 'Resolved';
     public const STATUS_REJECTED = 'Rejected';
 
+    /** The four lifecycle states. */
     public static function statuses(): array
     {
         return [self::STATUS_NEW, self::STATUS_ASSIGNED, self::STATUS_RESOLVED, self::STATUS_REJECTED];
@@ -32,6 +33,7 @@ class Complaint extends Model
         return $value === null ? null : (string) $value;
     }
 
+    /** Soft delete - the row and its whole status history are kept. */
     public function delete(): bool
     {
         if ($this->getKey() === null) { return false; }
@@ -40,6 +42,7 @@ class Complaint extends Model
         return true;
     }
 
+    /** Is a cleaner still working on this particular complaint. */
     public function hasOpenAssignments(): bool
     {
         return $this->assignmentCounts()['open'] > 0;
@@ -239,6 +242,11 @@ class Complaint extends Model
         return $revisions;
     }
 
+    /**
+     * The listing query: free text, status and location filters. Also matches
+     * CMP-2026-0007, #7 and 7 against the same complaint, because the display code
+     * is derived from the key rather than stored.
+     */
     public static function search(
         ?int $reporterId,
         string $query,
@@ -309,6 +317,10 @@ class Complaint extends Model
         return self::hydrateAll(Database::getInstance()->selectAll($sql, $params));
     }
 
+    /**
+     * Every complaint still New or Assigned. This is what the web service returns
+     * and what the Scheduling module’s Complaint Priority strategy selects from.
+     */
     public static function unresolved(): array
     {
         $rows = Database::getInstance()->selectAll(
@@ -443,6 +455,10 @@ class Complaint extends Model
         return self::hydrateAll($rows);
     }
 
+    /**
+     * How many reports are still open against a bin - what the bin observer checks
+     * before releasing it.
+     */
     public static function countUnresolvedForBin(int $binId): int
     {
         $row = Database::getInstance()->selectOne(

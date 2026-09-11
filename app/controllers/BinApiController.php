@@ -14,11 +14,19 @@ class BinApiController extends ApiController
 {
     private BinLocationServiceInterface $service;
 
+    /**
+     * Wraps the real service in the Protection Proxy, so the web service is guarded
+     * by exactly the same rules as the web pages.
+     */
     public function __construct()
     {
         $this->service = new BinLocationServiceProxy(new BinLocationService());
     }
 
+    /**
+     * Every bin as JSON. Consumed by the Scheduling module when previewing which
+     * bins have work waiting.
+     */
     public function index(): void
     {
         $this->apiEnableIfa();
@@ -47,6 +55,10 @@ class BinApiController extends ApiController
         }
     }
 
+    /**
+     * One bin with its location and category. Consumed by the Complaint module to
+     * show live bin details on a complaint.
+     */
     public function show(int $id): void
     {
         $this->apiEnableIfa();
@@ -63,6 +75,10 @@ class BinApiController extends ApiController
         }
     }
 
+    /**
+     * Lets a Cleaner record a fill-status change over the API. POST only, and the
+     * CSRF token is required.
+     */
     public function updateStatus(int $id): void
     {
         $this->apiEnableIfa();
@@ -85,6 +101,10 @@ class BinApiController extends ApiController
         }
     }
 
+    /**
+     * REST CRUD on one URL, routed by HTTP method: GET and POST on the collection,
+     * GET, PUT, PATCH and DELETE on a single bin.
+     */
     public function resource(?int $id = null): void
     {
         $this->apiEnableIfa();
@@ -114,6 +134,10 @@ class BinApiController extends ApiController
         } catch (Throwable $error) { $this->apiFailure($error); }
     }
 
+    /**
+     * Turns a Bin into the JSON shape. One method, so every endpoint in this
+     * controller returns the same fields.
+     */
     private function serializeBin(Bin $bin): array
     {
         return [

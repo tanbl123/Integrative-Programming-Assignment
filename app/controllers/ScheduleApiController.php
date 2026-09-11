@@ -45,6 +45,7 @@ class ScheduleApiController extends ApiController
         } catch (Throwable $error) { $this->apiFailure($error); }
     }
 
+    /** REST CRUD on schedules, routed by HTTP method. */
     public function resource(?int $id = null): void
     {
         try {
@@ -89,6 +90,7 @@ class ScheduleApiController extends ApiController
         } catch (Throwable $error) { $this->apiFailure($error); }
     }
 
+    /** The signed-in Cleaner’s own assignments as JSON. */
     public function mine(): void
     {
         $this->apiAllow(['GET']);
@@ -109,6 +111,10 @@ class ScheduleApiController extends ApiController
         catch (AuthorizationException $error) { $this->json(['success' => false, 'data' => null, 'message' => $error->getMessage()], 403); }
     }
     
+    /**
+     * Whether a cleaner still has work outstanding. Consumed by the User & Access
+     * module, which asks before deleting an account so a round is never orphaned.
+     */
     public function cleanerOpenAssignments(): void {
         try {
             $this->apiAllow(['GET']);

@@ -28,6 +28,7 @@ class CollectionSchedule extends Model
 
     public function setStatus(string $status): void { $this->set('schedule_status', $status); $this->set('updated_at', ifaTimestamp()); }
     public function isDeleted(): bool { return $this->get('deleted_at') !== null; }
+    /** Soft delete - the schedule and its assignments stay as a record of the round. */
     public function delete(): bool
     {
         if ($this->getKey() === null) { return false; }
@@ -74,6 +75,7 @@ class CollectionSchedule extends Model
     public function getAdministrator(): ?User { return $this->belongsTo(User::class, 'admin_id'); }
     public function getAssignments(): array { return $this->hasMany(CollectionAssignment::class, 'schedule_id'); }
 
+    /** Schedule listing, filtered by date and status. */
     public static function search(string $date = '', string $status = ''): array
     {
         $sql = 'SELECT * FROM collection_schedules WHERE deleted_at IS NULL';

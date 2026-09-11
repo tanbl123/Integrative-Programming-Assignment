@@ -6,6 +6,7 @@
  */
 class UserApiController extends ApiController
 {
+    /** REST CRUD on user accounts, routed by HTTP method. Requires user.manage. */
     public function resource(?int $id = null): void
     {
         try {
@@ -45,6 +46,10 @@ class UserApiController extends ApiController
         }
     }
 
+    /**
+     * The active cleaners as JSON. Consumed by the Scheduling module, whose schedule
+     * form needs somebody to assign the work to.
+     */
     public function cleaners(): void {
         try {
             $this->apiAllow(['GET']);

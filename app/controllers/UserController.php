@@ -9,10 +9,12 @@ class UserController extends Controller {
 
     private UserService $service;
 
+    /** Creates the user service this controller delegates every rule to. */
     public function __construct() {
         $this->service = new UserService();
     }
 
+    /** The user directory, with search and role and status filters. Administrators only. */
     public function index(): void {
         try {
             $query = trim((string) ($_GET['q'] ?? ''));
@@ -30,6 +32,7 @@ class UserController extends Controller {
         }
     }
 
+    /** The form for an Administrator to add an account. */
     public function create(): void {
         try {
             UserPermissions::require('user.manage');
@@ -39,6 +42,7 @@ class UserController extends Controller {
         }
     }
 
+    /** Creates that account and shows the generated temporary password once. */
     public function store(): void {
         $this->requirePost();
 
@@ -61,6 +65,7 @@ class UserController extends Controller {
         }
     }
 
+    /** The edit form for somebody else’s account. */
     public function edit(int $id): void {
         try {
             $user = $this->service->find($id);
@@ -76,6 +81,10 @@ class UserController extends Controller {
         }
     }
 
+    /**
+     * Saves it - including their role and account status, which only an
+     * Administrator may change.
+     */
     public function update(int $id): void {
         $this->requirePost();
 
@@ -103,6 +112,10 @@ class UserController extends Controller {
         }
     }
 
+    /**
+     * Soft-deletes an account, after the service has checked with the Scheduling
+     * module that the person has no work outstanding.
+     */
     public function delete(int $id): void {
         $this->requirePost();
 
@@ -123,6 +136,7 @@ class UserController extends Controller {
         }
     }
 
+    /** Issues a new temporary password for somebody who cannot sign in. */
     public function resetPassword(int $id): void {
         $this->requirePost();
 
@@ -269,6 +283,7 @@ class UserController extends Controller {
         }
     }
 
+    /** Shared rendering for the administrator add and edit forms. */
     private function renderAdminForm(string $mode, ?User $user, array $errors, array $submitted): void {
         $values = $submitted !== [] ? $submitted : [
             'full_name' => $user?->getFullName() ?? '',

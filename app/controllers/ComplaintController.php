@@ -14,6 +14,10 @@ class ComplaintController extends Controller
         $this->service = new ComplaintService();
     }
 
+    /**
+     * The complaint listing. A Reporter sees their own, an Administrator sees every
+     * complaint plus the duplicate-reports panel.
+     */
     public function index(): void
     {
         try {
@@ -44,6 +48,7 @@ class ComplaintController extends Controller
         }
     }
 
+    /** The submission form. */
     public function create(): void
     {
         try {
@@ -54,6 +59,7 @@ class ComplaintController extends Controller
         }
     }
 
+    /** Saves a submitted complaint, with its optional photograph. */
     public function store(): void
     {
         $this->requirePost();
@@ -74,6 +80,7 @@ class ComplaintController extends Controller
         }
     }
 
+    /** The detail page. */
     public function show(int $id): void
     {
         try {
@@ -128,6 +135,7 @@ class ComplaintController extends Controller
         }
     }
 
+    /** Handles the status form. */
     public function updateStatus(int $id): void
     {
         $this->requirePost();
@@ -211,6 +219,7 @@ class ComplaintController extends Controller
         }
     }
 
+    /** The edit form, offered only while the complaint is still the reporter’s to change. */
     public function edit(int $id): void
     {
         try {
@@ -226,6 +235,7 @@ class ComplaintController extends Controller
         } catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
     }
 
+    /** Saves an edit, keeping what the complaint said before. */
     public function update(int $id): void
     {
         $this->requirePost();
@@ -292,6 +302,7 @@ class ComplaintController extends Controller
         }
     }
 
+    /** Withdraw (reporter) or delete (administrator). Soft, and the history survives. */
     public function delete(int $id): void
     {
         $this->requirePost();
@@ -307,6 +318,10 @@ class ComplaintController extends Controller
         catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
     }
 
+    /**
+     * Streams a photograph, re-checking on every request that this user may see the
+     * complaint it belongs to. The uploads folder itself is closed to the web server.
+     */
     public function attachment(int $id): void
     {
         try {

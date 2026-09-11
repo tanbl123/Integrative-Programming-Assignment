@@ -38,6 +38,11 @@ class ComplaintService
         $this->subject->attach(new ComplaintRevisionObserver());
     }
 
+    /**
+     * Submits a complaint: validates, stores any photograph, saves, then raises ONE
+     * event for the observers - all inside a transaction, so a failing observer
+     * leaves nothing half-written.
+     */
     public function create(User $reporter, array $data, ?array $upload): Complaint
     {
         UserPermissions::require('complaint.create');
@@ -118,6 +123,10 @@ class ComplaintService
         throw new AuthorizationException('You cannot access another reporter’s complaint.');
     }
 
+    /**
+     * One live complaint, if this user may see it. Refuses a deleted one; the archive
+     * route handles those.
+     */
     public function findVisible(User $user, int $id): ?Complaint
     {
         $complaint = Complaint::find($id);
@@ -666,6 +675,11 @@ class ComplaintService
         return in_array($complaint->getStatus(), $allowed, true);
     }
 
+    /**
+     * Withdraws or deletes a complaint. The event is raised AFTER the soft delete,
+     * so an observer asking what is still open for the bin gets an answer that
+     * already excludes this one.
+     */
     public function delete(int $id, User $user): void
     {
         $complaint = $this->findVisible($user, $id);
@@ -712,6 +726,10 @@ class ComplaintService
         }
     }
 
+    /**
+     * Server-side validation. The browser’s checks are advice; this gate is the only
+     * authority.
+     */
     private function validateComplaint(array $data): array
     {
         $errors = [];

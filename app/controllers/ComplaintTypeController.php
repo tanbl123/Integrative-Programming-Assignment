@@ -18,6 +18,7 @@ class ComplaintTypeController extends Controller
         $this->service = new ComplaintService();
     }
 
+    /** Lists every issue type with its flag and how many complaints use it. */
     public function index(): void
     {
         try {
@@ -38,16 +39,22 @@ class ComplaintTypeController extends Controller
         }
     }
 
+    /** Adds a type. */
     public function store(): void
     {
         $this->save(null);
     }
 
+    /** Renames one. */
     public function update(int $id): void
     {
         $this->save($id);
     }
 
+    /**
+     * Withdraws a type from use, or brings it back. Withdrawing is not deleting -
+     * complaints already filed under it keep naming it and stay valid.
+     */
     public function toggle(int $id): void
     {
         $this->requirePost();
@@ -68,6 +75,10 @@ class ComplaintTypeController extends Controller
         }
     }
 
+    /**
+     * Removes a type no complaint has ever used. The foreign key enforces the same
+     * rule, so it cannot be got round through the API.
+     */
     public function delete(int $id): void
     {
         $this->requirePost();
@@ -86,6 +97,7 @@ class ComplaintTypeController extends Controller
         }
     }
 
+    /** Shared validation for adding and renaming: 1-50 characters, and unique. */
     private function save(?int $id): void
     {
         $this->requirePost();

@@ -9,11 +9,13 @@ class LocationController extends Controller
 {
     private BinLocationServiceInterface $service;
 
+    /** Wraps the real service in the Protection Proxy, so every call is role-checked. */
     public function __construct()
     {
         $this->service = new BinLocationServiceProxy(new BinLocationService());
     }
 
+    /** The location directory, with search and the OpenStreetMap pins. */
     public function index(): void
     {
         $query = trim((string) ($_GET['q'] ?? ''));
@@ -32,6 +34,7 @@ class LocationController extends Controller
         }
     }
 
+    /** The new-location form. Administrators only. */
     public function create(): void
     {
         try {
@@ -42,6 +45,7 @@ class LocationController extends Controller
         }
     }
 
+    /** Saves a new location. */
     public function store(): void
     {
         $this->requirePost();
@@ -58,6 +62,7 @@ class LocationController extends Controller
         }
     }
 
+    /** The edit form for one location. */
     public function edit(int $id): void
     {
         try {
@@ -73,6 +78,7 @@ class LocationController extends Controller
         }
     }
 
+    /** Saves changes to a location, including its optional map coordinates. */
     public function update(int $id): void
     {
         $this->requirePost();
@@ -96,6 +102,10 @@ class LocationController extends Controller
         }
     }
 
+    /**
+     * Soft-deletes a location. Refused while bins still sit in it, so a bin can
+     * never be left pointing at somewhere that no longer exists.
+     */
     public function delete(int $id): void
     {
         $this->requirePost();
@@ -114,6 +124,7 @@ class LocationController extends Controller
         }
     }
 
+    /** Shared rendering for the create and edit forms. */
     private function renderForm(
         string $mode,
         ?Location $location,

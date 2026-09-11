@@ -9,11 +9,16 @@ class LocationApiController extends ApiController
 {
     private BinLocationServiceInterface $service;
 
+    /**
+     * Wraps the real service in the Protection Proxy, so the API is guarded by the
+     * same rules as the web pages.
+     */
     public function __construct()
     {
         $this->service = new BinLocationServiceProxy(new BinLocationService());
     }
 
+    /** Every location as JSON, in the IFA envelope. */
     public function index(): void
     {
         $this->apiEnableIfa();
@@ -39,6 +44,7 @@ class LocationApiController extends ApiController
         } catch (Throwable $error) { $this->apiFailure($error); }
     }
 
+    /** One location with the bins it holds. */
     public function show(int $id): void
     {
         $this->apiEnableIfa();
@@ -62,6 +68,7 @@ class LocationApiController extends ApiController
         } catch (Throwable $error) { $this->apiFailure($error); }
     }
 
+    /** REST CRUD on one URL, routed by HTTP method. */
     public function resource(?int $id = null): void
     {
         $this->apiEnableIfa();

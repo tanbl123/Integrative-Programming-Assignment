@@ -7,9 +7,20 @@
  */
 class BinLocationService implements BinLocationServiceInterface
 {
+    /**
+     * Deliberately empty. The real service does no permission checking at all -
+     * that is BinLocationServiceProxy’s job, and keeping it out of here is what
+     * makes the Proxy pattern worth having. The interface requires the method, so
+     * the Proxy can be substituted for this class anywhere.
+     */
     public function authorizeAdministrator(): void {}
+    /** Deliberately empty, for the same reason as authorizeAdministrator(). */
     public function authorizeCleaner(): void {}
 
+    /**
+     * Bin listing. Whether inactive bins are included is decided by the caller -
+     * the Proxy passes false unless the user is an Administrator.
+     */
     public function searchBins(
         string $query,
         string $status,
@@ -23,11 +34,13 @@ class BinLocationService implements BinLocationServiceInterface
         return Bin::search(trim($query), $status, $locationId, $includeInactive);
     }
 
+    /** One bin by id, without any visibility rule. The Proxy applies that. */
     public function findBin(int $id): ?Bin
     {
         return Bin::find($id);
     }
 
+    /** Validates and registers a new bin. */
     public function createBin(array $data): Bin
     {
         $values = $this->validateBin($data);
@@ -38,6 +51,10 @@ class BinLocationService implements BinLocationServiceInterface
         return $bin;
     }
 
+    /**
+     * Saves changes to a bin. Some fields are refused while the bin still has open
+     * work, so a cleaner is never sent to a bin whose details moved underneath them.
+     */
     public function updateBin(int $id, array $data): Bin {
         $bin = $this->requireBin($id);
 
@@ -55,6 +72,7 @@ class BinLocationService implements BinLocationServiceInterface
         return $bin;
     }
 
+    /** Retires a bin, but refuses while it still has open work. */
     public function deactivateBin(int $id): void
     {
         $bin = $this->requireBin($id);
@@ -65,6 +83,10 @@ class BinLocationService implements BinLocationServiceInterface
         $bin->save();
     }
 
+    /**
+     * Returns a retired bin to service, refusing if its location has since been
+     * deleted - the bin would have nowhere to be.
+     */
     public function reactivateBin(int $id): Bin
     {
         $bin = $this->requireBin($id);
@@ -76,6 +98,7 @@ class BinLocationService implements BinLocationServiceInterface
         return $bin;
     }
 
+    /** Soft-deletes a location, refusing while bins still sit in it. */
     public function deleteLocation(int $id): void
     {
         $location = $this->requireLocation($id);
@@ -85,6 +108,19 @@ class BinLocationService implements BinLocationServiceInterface
         $location->softDelete();
     }
 
+    /**
+     * Records a change of fill status, and the audit row that explains it.
+     *
+     * This is the method other modules call rather than writing bins.fill_status
+     * themselves - the Complaint module calls it when a report says a bin is full.
+     * Going through here means the checks below run (an inactive bin is refused,
+     * the status must be a real one) and a row is written to bin_status_updates
+     * saying who changed it, from what, to what and why. A bin can therefore never
+     * change state with nothing anywhere to account for it.
+     *
+     * The write joins the caller’s transaction when there is one, so a change made
+     * as part of somebody else’s work commits or rolls back with it.
+     */
     public function updateBinStatus(
         int $id,
         string $status,
@@ -138,17 +174,20 @@ class BinLocationService implements BinLocationServiceInterface
         return $bin;
     }
 
+    /** Location search. */
     public function searchLocations(string $query): array
     {
         return Location::search(trim($query));
     }
 
+    /** One location, or null if it has been deleted. */
     public function findLocation(int $id): ?Location
     {
         $location = Location::find($id);
         return $location !== null && !$location->isDeleted() ? $location : null;
     }
 
+    /** Validates and saves a new location. */
     public function createLocation(array $data): Location
     {
         $values = $this->validateLocation($data);
@@ -158,6 +197,7 @@ class BinLocationService implements BinLocationServiceInterface
         return $location;
     }
 
+    /** Validates and saves changes to a location. */
     public function updateLocation(int $id, array $data): Location
     {
         $location = $this->requireLocation($id);
@@ -167,11 +207,16 @@ class BinLocationService implements BinLocationServiceInterface
         return $location;
     }
 
+    /** The waste categories a bin can be assigned to. */
     public function categories(): array
     {
         return WasteCategory::all();
     }
 
+    /**
+     * Server-side rules for a bin: the code is required, uppercase and unique; the
+     * location and category must exist; the capacity must be a sensible number.
+     */
     private function validateBin(array $data, ?int $currentId = null): array
     {
         $this->requireScalarFields($data, ['bin_code', 'location_id', 'category_id', 'capacity_litre', 'is_active']);
@@ -211,6 +256,10 @@ class BinLocationService implements BinLocationServiceInterface
         return [$code, (int) $locationId, (int) $categoryId, $capacity, $active];
     }
 
+    /**
+     * Server-side rules for a location, including the optional map coordinates -
+     * both must be given together, and both must be inside the valid range.
+     */
     private function validateLocation(array $data): array {
         $this->requireScalarFields($data, [
             'location_name', 'building_name', 'floor_no', 'description',
@@ -277,6 +326,7 @@ class BinLocationService implements BinLocationServiceInterface
         ];
     }
 
+    /** Fetch a bin or throw, so no caller works on null. */
     private function requireBin(int $id): Bin
     {
         $bin = Bin::find($id);
@@ -286,6 +336,10 @@ class BinLocationService implements BinLocationServiceInterface
         return $bin;
     }
 
+    /**
+     * Refuses a field that arrived as an array. Casting one to a string in PHP
+     * yields the text "Array" and emits a warning, so it is rejected before it is read.
+     */
     private function requireScalarFields(array $data, array $fields): void
     {
         $errors = [];
@@ -297,6 +351,7 @@ class BinLocationService implements BinLocationServiceInterface
         if ($errors !== []) { throw new ValidationException($errors); }
     }
 
+    /** Fetch a live location or throw. */
     private function requireLocation(int $id): Location
     {
         $location = $this->findLocation($id);

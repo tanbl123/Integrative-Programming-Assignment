@@ -7,6 +7,16 @@
  */
 class SchedulingService {
 
+    /**
+     * Generates a whole collection round.
+     *
+     * This is the Context of the Strategy pattern. It asks the factory for the
+     * strategy the Administrator chose, calls select(), and never learns which of
+     * the three algorithms answered - every one of them returns the same shape.
+     * One assignment is written per selected bin, and every open complaint on those
+     * bins is moved to Assigned. All of it inside one transaction, so a failure
+     * halfway through leaves no half-built round behind.
+     */
     public function create(User $administrator, array $data): CollectionSchedule {
         UserPermissions::require('schedule.manage');
 
@@ -231,6 +241,14 @@ class SchedulingService {
         }
     }
 
+    /**
+     * Builds "09:00-12:00" from the start and end pickers.
+     *
+     * The column is free text, and free text is where inconsistent data comes from:
+     * the same three hours had already been stored both as "09:00-12:00" and with
+     * an en dash, which no report could group. Two time inputs cannot produce
+     * either mistake. A caller that already has a composed slot still works.
+     */
     private function composeTimeSlot(array $data): string {
         $existing = trim((string) ($data['time_slot'] ?? ''));
 
@@ -260,6 +278,7 @@ class SchedulingService {
         return $from . '-' . $to;
     }
 
+    /** Edits a planned schedule and re-runs the strategy against it. */
     public function update(int $id, array $data): CollectionSchedule {
         UserPermissions::require('schedule.manage');
 
@@ -322,6 +341,11 @@ class SchedulingService {
         }
     }
 
+    /**
+     * Calls a round off: the schedule is marked Cancelled, its assignments are
+     * skipped, and releaseComplaints() puts the complaints that were waiting on it
+     * back to New. A completed round cannot be cancelled.
+     */
     public function cancel(int $id): CollectionSchedule {
         UserPermissions::require('schedule.manage');
 
@@ -368,6 +392,11 @@ class SchedulingService {
         }
     }
 
+    /**
+     * A Cleaner recording that one bin has been collected: the assignment is closed,
+     * the weight and notes are kept as a collection record, and the bin is marked
+     * Empty through the Bin module’s own service.
+     */
     public function completeAssignment(int $id, User $cleaner, array $data): CollectionAssignment {
         UserPermissions::require('assignment.complete');
 
@@ -452,6 +481,10 @@ class SchedulingService {
         }
     }
 
+    /**
+     * One schedule, if this user may see it. An Administrator sees any; a Cleaner
+     * sees only rounds they are assigned to.
+     */
     public function findVisible(User $user, int $id): ?CollectionSchedule {
         $schedule = CollectionSchedule::find($id);
 
@@ -474,6 +507,11 @@ class SchedulingService {
         throw new AuthorizationException('You cannot access this schedule.');
     }
 
+    /**
+     * Soft-deletes a schedule, and only one that is already Cancelled or Completed
+     * with nothing outstanding. The assignments stay, so the record of what was done
+     * survives the schedule being tidied away.
+     */
     public function delete(int $id): void {
         UserPermissions::require('schedule.manage');
 
@@ -563,6 +601,11 @@ class SchedulingService {
         }
     }
 
+    /**
+     * Server-side rules for a schedule: the date cannot be in the past, the time slot
+     * must be present, the strategy must be one the factory knows, the cleaner must
+     * be active, and the two free-text fields must be within length.
+     */
     private function validateSchedule(array $data): array {
         $errors = [];
 
@@ -634,6 +677,7 @@ class SchedulingService {
         ];
     }
 
+    /** Fetch a live schedule or throw, so no caller works on null. */
     private function requireSchedule(int $id): CollectionSchedule {
         $schedule = CollectionSchedule::find($id);
 

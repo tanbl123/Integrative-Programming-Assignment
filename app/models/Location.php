@@ -29,11 +29,16 @@ class Location extends Model
         $value = $this->get('longitude');
         return $value === null ? null : (float) $value;
     }
+    /**
+     * Whether a map pin has been set. Coordinates are optional, so locations created
+     * before the map existed keep working until somebody pins them.
+     */
     public function hasCoordinates(): bool
     {
         return $this->getLatitude() !== null && $this->getLongitude() !== null;
     }
     public function isDeleted(): bool { return $this->get('deleted_at') !== null; }
+    /** Marks the location deleted without removing the row; every query filters it out. */
     public function softDelete(): void { $this->set('deleted_at', ifaTimestamp()); $this->save(); }
 
     public function setDetails(
@@ -64,6 +69,7 @@ class Location extends Model
         return implode(', ', $parts);
     }
 
+    /** Location search by name, building or floor. */
     public static function search(string $query = ''): array
     {
         if ($query === '') {
@@ -81,6 +87,7 @@ class Location extends Model
         return self::hydrateAll($rows);
     }
 
+    /** Every live location, ordered for dropdowns and the directory. */
     public static function allAlphabetical(): array
     {
         return self::hydrateAll(Database::getInstance()->selectAll(

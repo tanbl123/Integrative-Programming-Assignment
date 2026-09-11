@@ -59,7 +59,16 @@ class RoutineBinSelectionStrategy implements BinSelectionStrategy
 
 class SchedulingStrategyFactory
 {
+    /**
+     * The three strategy names. Used both to build the dropdown and to validate what
+     * comes back, so a crafted request cannot name a fourth.
+     */
     public static function names(): array { return ['Full Bins', 'Complaint Priority', 'Routine']; }
+    /**
+     * Turns the chosen name into the matching strategy object, and throws on anything
+     * else. Adding a strategy means one new class and one line here - nothing that
+     * uses a strategy changes.
+     */
     public static function make(string $name): BinSelectionStrategy
     {
         return match ($name) {

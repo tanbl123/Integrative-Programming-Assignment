@@ -24,6 +24,7 @@ class CollectionAssignment extends Model
         if ($this->getKey() === null) { $this->set('assignment_status', 'Assigned'); }
     }
 
+    /** Marks one bin collected, with whatever the cleaner wrote. */
     public function complete(?string $notes): void
     {
         $this->set('assignment_status', 'Completed');
@@ -31,6 +32,10 @@ class CollectionAssignment extends Model
         $this->set('completion_notes', $notes);
     }
 
+    /**
+     * Marks one bin not collected, with the reason - what cancelling a round does to
+     * each of its assignments.
+     */
     public function skip(string $reason): void { $this->set('assignment_status', 'Skipped'); $this->set('completion_notes', $reason); }
     public function getCleanerId(): int { return (int) $this->get('cleaner_id'); }
     public function getStatus(): string { return (string) $this->get('assignment_status'); }
@@ -43,6 +48,7 @@ class CollectionAssignment extends Model
     public function getBin(): ?Bin { return $this->belongsTo(Bin::class, 'bin_id'); }
     public function getSourceComplaint(): ?Complaint { return $this->belongsTo(Complaint::class, 'source_complaint_id'); }
 
+ /** A cleaner’s own assignments, optionally filtered by status. */
  public static function forCleaner(int $cleanerId, string $status = '', string $routeView = ''): array {
         $sql = "
         SELECT a.* 
@@ -74,6 +80,10 @@ class CollectionAssignment extends Model
         return self::hydrateAll(Database::getInstance()->selectAll($sql, $params));
     }
 
+    /**
+     * How many assignments are still open, so a round knows when it is finished and
+     * whether it may be deleted.
+     */
     public static function remainingForSchedule(int $scheduleId): int
     {
         $row = Database::getInstance()->selectOne(

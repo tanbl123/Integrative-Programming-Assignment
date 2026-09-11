@@ -9,6 +9,14 @@ class ComplaintUploadService
         'image/webp' => 'webp',
     ];
 
+    /**
+     * Verifies and stores an uploaded photograph.
+     *
+     * The browser’s Content-Type and the filename are both attacker-controlled, so
+     * neither is trusted: the media type is read from the file’s own bytes with
+     * finfo, the extension comes from a fixed allow-list, and the stored name is
+     * built from 20 random bytes. Nothing the attacker chose reaches the filesystem.
+     */
     public function validateAndStore(?array $upload): ?array
     {
         if ($upload === null || ($upload['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {

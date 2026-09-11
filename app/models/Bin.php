@@ -35,6 +35,7 @@ class Bin extends Model
 
     public function isActive(): bool { return (int) $this->get('is_active') === 1; }
 
+    /** The four fill statuses a bin may hold. */
     public static function statuses(): array
     {
         return [
@@ -66,18 +67,21 @@ class Bin extends Model
         $this->set('last_updated', ifaTimestamp());
     }
 
+    /** Retires the bin. is_active only - the row and its history are kept. */
     public function deactivate(): void
     {
         $this->set('is_active', 0);
         $this->set('last_updated', ifaTimestamp());
     }
 
+    /** Puts a retired bin back into service. */
     public function reactivate(): void
     {
         $this->set('is_active', 1);
         $this->set('last_updated', ifaTimestamp());
     }
     
+    /** Is a cleaner still assigned to this bin. */
     public function hasOpenAssignments(): bool {
         foreach ($this->hasMany(CollectionAssignment::class, 'bin_id') as $assignment) {
             if ($assignment->getStatus() === 'Assigned') {
@@ -88,6 +92,10 @@ class Bin extends Model
         return false;
     }
 
+    /**
+     * Assignments or open complaints - anything that would be stranded if the bin
+     * were retired now. This is what deactivation checks.
+     */
     public function hasOpenWork(): bool {
         if ($this->hasOpenAssignments()) {
             return true;
@@ -132,6 +140,7 @@ class Bin extends Model
         return self::where('is_active', 1);
     }
 
+    /** Look a bin up by the code people use for it, such as BIN-A-001. */
     public static function findByCode(string $code): ?Bin
     {
         $row = Database::getInstance()->selectOne(
@@ -142,6 +151,11 @@ class Bin extends Model
         return $row === null ? null : self::hydrate($row);
     }
 
+    /**
+     * The listing query: free-text search, fill-status filter and location filter.
+     * Inactive bins are included only when the caller is allowed to see them, which
+     * the Proxy decides rather than this method.
+     */
     public static function search(
         string $query = '',
         string $status = '',

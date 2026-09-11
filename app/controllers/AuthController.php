@@ -7,6 +7,7 @@
  */
 class AuthController extends Controller {
 
+    /** The sign-in page. Anybody already signed in is sent to their own dashboard. */
     public function index(): void {
         if (Auth::check()) {
             $this->redirect('');
@@ -22,6 +23,7 @@ class AuthController extends Controller {
         ]);
     }
 
+    /** The public registration form. */
     public function register(): void {
         if (Auth::check()) {
             $this->redirect('user/profile');
@@ -34,6 +36,10 @@ class AuthController extends Controller {
         ]);
     }
 
+    /**
+     * Creates the account. Always a Reporter - the role is never taken from the
+     * form, so nobody can register themselves as an Administrator.
+     */
     public function storeRegistration(): void {
         $this->requirePost();
 
@@ -59,6 +65,10 @@ class AuthController extends Controller {
         }
     }
 
+    /**
+     * Checks the password with password_verify(), starts the session, and sends each
+     * role to the page that is useful to it.
+     */
     public function login(): void {
         $this->requirePost();
 
@@ -140,6 +150,7 @@ class AuthController extends Controller {
         $this->redirect('');
     }
 
+    /** Ends the session. */
     public function logout(): void {
         $this->requirePost();
 

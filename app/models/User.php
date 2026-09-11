@@ -198,6 +198,7 @@ class User extends Model {
         return $this->get('deleted_at') !== null;
     }
 
+    /** The optional profile fields as an array, for the profile page and the API. */
     public function demographics(): array {
         return array_combine(
                 self::DEMOGRAPHIC_FIELDS,
@@ -226,6 +227,10 @@ class User extends Model {
         return true;
     }
 
+    /**
+     * Whether this cleaner still has work outstanding, asked of the Scheduling
+     * module’s web service rather than of its tables.
+     */
     public function hasOpenAssignments(): bool {
         return Database::getInstance()->selectOne(
                         "SELECT assignment_id 
@@ -237,6 +242,10 @@ class User extends Model {
                 ) !== null;
     }
 
+    /**
+     * The JSON shape for the web service. Deliberately omits password_hash, so the
+     * hash cannot leave the system through the API.
+     */
     public function apiData(): array {
         return [
             'id' => $this->getKey(),
@@ -248,6 +257,7 @@ class User extends Model {
                 ] + $this->demographics();
     }
 
+    /** The three role names. */
     public static function roles(): array {
         return [
             self::ROLE_REPORTER,
@@ -256,6 +266,7 @@ class User extends Model {
         ];
     }
 
+    /** How many live accounts there are, for the dashboard. */
     public static function visibleCount(): int {
         $row = Database::getInstance()->selectOne(
                 'SELECT COUNT(*) AS total FROM users WHERE deleted_at IS NULL'
@@ -288,6 +299,7 @@ class User extends Model {
         return $matches[0] ?? null;
     }
 
+    /** The directory query, filtered by free text, role and account status. */
     public static function search(string $query = '', string $role = '', string $status = ''): array {
         $sql = 'SELECT * FROM users WHERE deleted_at IS NULL';
         $params = [];
@@ -313,6 +325,10 @@ class User extends Model {
         return self::hydrateAll(Database::getInstance()->selectAll($sql, $params));
     }
 
+    /**
+     * Every active Cleaner. This is what user-api/cleaners returns, and what the
+     * Scheduling module’s form uses to offer somebody to assign work to.
+     */
     public static function findActiveCleaners(): array {
         return self::hydrateAll(Database::getInstance()->selectAll(
                                 'SELECT * 

@@ -18,6 +18,10 @@
  */
 class ComplaintNotificationController extends Controller
 {
+    /**
+     * The notification panel. Asks the user object which notices are theirs, so a
+     * Reporter and an Administrator get different queues from the same page.
+     */
     public function index(): void
     {
         try {
