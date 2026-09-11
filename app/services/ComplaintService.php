@@ -111,6 +111,15 @@ class ComplaintService
         if (mb_strlen($remarks) > 255) {
             $errors['remarks'] = 'Remarks cannot exceed 255 characters.';
         }
+        // Required for a rejection and optional everywhere else. Resolved and
+        // Assigned are good news and say what happened on their own; Rejected
+        // tells a reporter their report was turned down, and "Your report was
+        // marked Rejected" with nothing after it is the one message in this
+        // system that leaves somebody worse informed than before they read it.
+        if ($status === Complaint::STATUS_REJECTED && trim($remarks) === '') {
+            $errors['remarks'] = 'Say why this report is being rejected. The reporter is '
+                               . 'told the outcome, so they should be told the reason.';
+        }
         if ($errors !== []) {
             throw new ValidationException($errors);
         }

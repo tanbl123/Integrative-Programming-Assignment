@@ -67,9 +67,26 @@ try {
     $null = Api $cleaner PATCH "complaint-api/$cid" @{description='Unauthorized mutation is forbidden.'} 403
     $null = Api $cleaner DELETE "complaint-api/$cid" $null 403
     $null = Api $reporter PATCH "complaint-api/$cid" @{complaint_status='Assigned'} 403
+    # Assigned now means a cleaner is booked to visit the bin, so it is refused
+    # until one is. Booked here with direct SQL rather than through the
+    # scheduling API because the strategies pick their own bins and this
+    # fixture needs this one; the schedule id joins $scheduleIds so the finally
+    # block removes it with the rest.
+    $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Assigned'} 422
+    $gateCleanerId = [int](Sql "SELECT user_id FROM users WHERE role='Cleaner' AND deleted_at IS NULL ORDER BY user_id LIMIT 1;")
+    $gateAdminId = [int](Sql "SELECT user_id FROM users WHERE role='Administrator' AND deleted_at IS NULL ORDER BY user_id LIMIT 1;")
+    Sql ("INSERT INTO collection_schedules (admin_id, schedule_date, time_slot, strategy, notes) " +
+         "VALUES ($gateAdminId, CURDATE(), '09:00-12:00', 'Complaint Priority', 'Synthetic REST regression booking'); " +
+         "INSERT INTO collection_assignments (schedule_id, cleaner_id, bin_id, source_complaint_id, priority, assignment_status, reason) " +
+         "VALUES (LAST_INSERT_ID(), $gateCleanerId, $binId, NULL, 'Urgent', 'Assigned', 'Synthetic REST regression booking');") | Out-Null
+    $gateScheduleId = [int](Sql "SELECT schedule_id FROM collection_schedules WHERE notes='Synthetic REST regression booking' ORDER BY schedule_id DESC LIMIT 1;")
+    $scheduleIds.Add($gateScheduleId)
+    Check ($gateScheduleId -gt 0) 'Collection booked against the complaint bin'
     $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Assigned'}
+    Check ([int](Sql "SELECT COUNT(*) FROM complaints WHERE complaint_id=$cid AND complaint_status='Assigned';") -eq 1) 'Assigned is accepted once a cleaner is booked'
     $null = Api $reporter DELETE "complaint-api/$cid" $null 422
     $null = Api $reporter PATCH "complaint-api/$cid" @{description='Assigned complaint should not change.'} 422
+    $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Rejected'} 422
     $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Resolved'}
     $null = Api $admin DELETE "complaint-api/$cid" $null
     $null = Api $reporter GET "complaint-api/$cid" $null 404

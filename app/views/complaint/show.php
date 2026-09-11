@@ -251,11 +251,22 @@ $assignments = $complaint->assignmentCounts();
 
         <label>
             Remarks
-            <textarea name="remarks" rows="3" maxlength="255"></textarea>
+            <textarea
+                name="remarks"
+                rows="3"
+                maxlength="255"
+                data-required-for="<?= e(Complaint::STATUS_REJECTED) ?>"
+                data-message-required="Say why this report is being rejected."
+                placeholder="e.g. The bin was already emptied before this was reported."
+            ></textarea>
 
             <?php if (!empty($errors['remarks'])): ?>
                 <span class="field-error"><?= e($errors['remarks']) ?></span>
             <?php endif; ?>
+
+            <span class="field-help" id="remarks-help">
+                Optional, and sent to the reporter with the outcome. Required when rejecting.
+            </span>
         </label>
 
         <button class="button" type="submit">
@@ -325,3 +336,41 @@ $assignments = $complaint->assignmentCounts();
         </table>
     </div>
 </section>
+<?php /*
+ * Remarks become required as soon as Rejected is the chosen outcome.
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ *
+ * validate.js reads field.required as a live property rather than caching the
+ * attribute at load, so toggling it here is all that is needed for the same
+ * inline message to appear under this field as under every other required one.
+ * The server enforces it as well; this only saves a round trip.
+ *
+ * Placed after the form so the elements exist, in keeping with the other
+ * view-local scripts in this module.
+ */ ?>
+<script>
+(() => {
+    'use strict';
+    const remarks = document.querySelector('textarea[name="remarks"][data-required-for]');
+    const select = document.querySelector('select[name="complaint_status"]');
+    if (!remarks || !select) return;
+
+    const help = document.getElementById('remarks-help');
+    const requiredFor = remarks.dataset.requiredFor;
+
+    const sync = () => {
+        const needed = select.value === requiredFor;
+        remarks.required = needed;
+        if (help) {
+            help.textContent = needed
+                ? 'Required. The reporter is told their report was rejected, so tell them why.'
+                : 'Optional, and sent to the reporter with the outcome. Required when rejecting.';
+        }
+    };
+
+    select.addEventListener('change', sync);
+    sync();   // a re-rendered form keeps its selection, so check on load too
+})();
+</script>
