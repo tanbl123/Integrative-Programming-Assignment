@@ -68,6 +68,24 @@
      */
     let confirmWith = null;
 
+    /*
+     * Recognising a destructive form without being told.
+     *
+     * Two signals, either of which is enough: the action it posts to, and a
+     * button styled as dangerous. Every module already writes both - user and
+     * location delete, schedule cancel, bin deactivate, complaint withdraw -
+     * so the confirmation follows the convention the team already uses rather
+     * than asking anyone to remember a new attribute.
+     */
+    const UNDOING_ACTION = /\/(delete|cancel|deactivate|reject|remove|reset)/i;
+
+    const GENERIC_CONFIRMATION =
+        'This action cannot be undone from this page. Do you want to continue?';
+
+    const undoesSomething = form =>
+        UNDOING_ACTION.test(form.getAttribute('action') || '')
+        || form.querySelector('.button-danger') !== null;
+
     if (typeof HTMLDialogElement !== 'undefined') {
         const dialog = make('dialog', '', 'confirm-dialog');
 
@@ -133,9 +151,16 @@
             cancel.focus();
         });
 
-        document.querySelectorAll('form[onsubmit], form[data-confirm]').forEach(form => {
+        document.querySelectorAll('main form:not(.filter-panel)').forEach(form => {
             const match = (form.getAttribute('onsubmit') || '').match(/^\s*return confirm\((['"])(.*?)\1\);?\s*$/);
-            const confirmation = form.dataset.confirm || match?.[2];
+
+            // A module's own wording wins. Failing that, a form that undoes
+            // something is confirmed anyway, with wording that suits any
+            // module - so a delete added later is never silent just because
+            // nobody remembered the attribute.
+            const confirmation = form.dataset.confirm
+                || match?.[2]
+                || (undoesSomething(form) ? GENERIC_CONFIRMATION : null);
 
             if (!confirmation) {
                 return;
@@ -170,9 +195,16 @@
         // No <dialog> support: the browser's own prompt is all that is left.
         confirmWith = options => Promise.resolve(window.confirm(options.message || ''));
 
-        document.querySelectorAll('form[data-confirm]:not([onsubmit])').forEach(form => {
+        document.querySelectorAll('main form:not(.filter-panel):not([onsubmit])').forEach(form => {
+            const confirmation = form.dataset.confirm
+                || (undoesSomething(form) ? GENERIC_CONFIRMATION : null);
+
+            if (!confirmation) {
+                return;
+            }
+
             form.addEventListener('submit', event => {
-                if (!window.confirm(form.dataset.confirm)) {
+                if (!window.confirm(confirmation)) {
                     event.preventDefault();
                 }
             });
