@@ -211,30 +211,35 @@ class ComplaintController extends Controller
     /**
      * Closes a whole group of reports of the same issue together.
      *
-     * Every one of them is resolved, not one kept and the others rejected.
-     * Each reporter is notified individually by the observers.
+     * Every one of them gets the same outcome - all resolved, or all
+     * rejected - rather than one kept and the others turned down for having
+     * arrived second. Each reporter is notified individually by the
+     * observers.
      */
-    public function resolveDuplicates(): void
+    public function closeDuplicates(): void
     {
         $this->requirePost();
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
-            $this->requireScalar(['bin_id', 'complaint_type', 'remarks']);
+            $this->requireScalar(['bin_id', 'complaint_type', 'outcome', 'remarks']);
 
             $binId = filter_var($_POST['bin_id'] ?? null, FILTER_VALIDATE_INT);
             if ($binId === false) {
                 throw new ValidationException(['complaint' => 'Choose a valid group of reports.']);
             }
 
-            ['resolved' => $resolved, 'waiting' => $waiting] = $this->service->resolveDuplicates(
+            $outcome = $this->input('outcome');
+
+            ['closed' => $closed, 'waiting' => $waiting] = $this->service->closeDuplicates(
                 (int) $binId,
                 $this->input('complaint_type'),
+                $outcome,
                 $this->input('remarks'),
                 Auth::requireLogin()
             );
 
-            Flash::set('success', $resolved . ' report' . ($resolved === 1 ? '' : 's')
-                . ' resolved, and every reporter has been told.'
+            Flash::set('success', $closed . ' report' . ($closed === 1 ? '' : 's') . ' '
+                . mb_strtolower($outcome) . ', and every reporter has been told.'
                 . ($waiting === [] ? '' : ' ' . implode(', ', $waiting)
                     . (count($waiting) === 1 ? ' is' : ' are')
                     . ' still waiting for a cleaner to be booked.'));

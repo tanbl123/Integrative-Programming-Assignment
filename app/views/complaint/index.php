@@ -134,39 +134,57 @@
                             Book a cleaner for all <?= count($group['complaints']) ?> reports
                         </button>
                     </form>
-                <?php else: ?>
-                    <?php /* The confirmation belongs on the form: ui.js reads
-                             data-confirm from the form element, so a copy on
-                             the button is silently ignored and the reports are
-                             closed on the first click. */ ?>
-                    <form
-                        method="post"
-                        action="<?= url('complaint/resolve-duplicates') ?>"
-                        data-confirm="Resolve all <?= count($group['complaints']) ?> reports of this issue? Each reporter is told separately, and none of it can be undone."
-                    >
-                        <?= csrfField() ?>
-                        <input type="hidden" name="bin_id" value="<?= (int) ($group['bin']?->getKey() ?? 0) ?>">
-                        <input type="hidden" name="complaint_type" value="<?= e($group['type']) ?>">
-
-                        <label>
-                            What was done
-                            <input
-                                name="remarks"
-                                required
-                                maxlength="255"
-                                placeholder="e.g. Bin emptied and the area around it cleaned."
-                                data-message-required="Say what was done; every reporter is told this."
-                            >
-                            <span class="field-help">
-                                Sent to all <?= count($group['complaints']) ?> reporters with the outcome.
-                            </span>
-                        </label>
-
-                        <button class="button" type="submit">
-                            Resolve all <?= count($group['complaints']) ?> reports
-                        </button>
-                    </form>
                 <?php endif; ?>
+
+                <?php /* Closing the group, either way. Rejecting needs no
+                         collection - a report nobody is going to act on can be
+                         turned down whether or not a cleaner was ever sent -
+                         so it is offered in both states, while resolving
+                         appears only once somebody has been.
+
+                         The confirmation belongs on the form: ui.js reads
+                         data-confirm from the form element, so a copy on a
+                         button is silently ignored and the reports are closed
+                         on the first click. */ ?>
+                <form
+                    method="post"
+                    action="<?= url('complaint/close-duplicates') ?>"
+                    data-confirm="Close all <?= count($group['complaints']) ?> reports of this issue? Each reporter is told separately, and none of it can be undone."
+                >
+                    <?= csrfField() ?>
+                    <input type="hidden" name="bin_id" value="<?= (int) ($group['bin']?->getKey() ?? 0) ?>">
+                    <input type="hidden" name="complaint_type" value="<?= e($group['type']) ?>">
+
+                    <label>
+                        <?= $booked ? 'What was done' : 'Why these reports are being rejected' ?>
+                        <input
+                            name="remarks"
+                            required
+                            maxlength="255"
+                            placeholder="<?= $booked
+                                ? 'e.g. Bin emptied and the area around it cleaned.'
+                                : 'e.g. This bin was removed from the cafeteria last week.' ?>"
+                            data-message-required="Say why; every reporter is told this."
+                        >
+                        <span class="field-help">
+                            Sent to all <?= count($group['complaints']) ?> reporters with the outcome.
+                        </span>
+                    </label>
+
+                    <div class="button-row">
+                        <?php if ($booked): ?>
+                            <button class="button" type="submit"
+                                    name="outcome" value="<?= e(Complaint::STATUS_RESOLVED) ?>">
+                                Resolve all <?= count($group['complaints']) ?> reports
+                            </button>
+                        <?php endif; ?>
+
+                        <button class="button button-danger" type="submit"
+                                name="outcome" value="<?= e(Complaint::STATUS_REJECTED) ?>">
+                            Reject all <?= count($group['complaints']) ?> reports
+                        </button>
+                    </div>
+                </form>
             </details>
         <?php endforeach; ?>
     </section>

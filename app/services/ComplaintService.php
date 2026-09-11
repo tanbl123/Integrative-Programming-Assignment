@@ -215,11 +215,26 @@ class ComplaintService
      *
      * The whole group commits or none of it does.
      *
-     * @return array{resolved:int,waiting:list<string>}
+     * Rejecting a group is the other outcome and needs no collection: a
+     * report nobody is going to act on can be turned down whether or not a
+     * cleaner was ever sent. Resolving one does need a collection, because
+     * resolved means the issue was dealt with.
+     *
+     * @return array{closed:int,waiting:list<string>}
      */
-    public function resolveDuplicates(int $binId, string $type, string $remarks, User $administrator): array
-    {
+    public function closeDuplicates(
+        int $binId,
+        string $type,
+        string $status,
+        string $remarks,
+        User $administrator
+    ): array {
         UserPermissions::require('complaint.manage');
+
+        if (!in_array($status, [Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED], true)) {
+            throw new ValidationException([
+                'complaint' => 'Choose whether to resolve or to reject these reports.']);
+        }
 
         $group = Complaint::openForBinAndType($binId, $type);
         if (count($group) < 2) {
@@ -228,7 +243,9 @@ class ComplaintService
         }
         if (trim($remarks) === '') {
             throw new ValidationException([
-                'remarks' => 'Say what was done. Every reporter in this group is told the same thing.']);
+                'remarks' => $status === Complaint::STATUS_REJECTED
+                    ? 'Say why these reports are being rejected. Every reporter is told the same thing.'
+                    : 'Say what was done. Every reporter in this group is told the same thing.']);
         }
 
         $pdo = Database::getInstance()->pdo();
@@ -237,13 +254,16 @@ class ComplaintService
             $pdo->beginTransaction();
         }
         try {
-            $resolved = 0;
+            $closed = 0;
             $waiting = [];
 
             foreach ($group as $complaint) {
                 $id = (int) $complaint->getKey();
 
-                if ($complaint->getStatus() === Complaint::STATUS_NEW) {
+                // Rejecting is reachable from New and from Assigned alike, so
+                // only resolving has to pass through Assigned first.
+                if ($status === Complaint::STATUS_RESOLVED
+                        && $complaint->getStatus() === Complaint::STATUS_NEW) {
                     if (!$complaint->binHasOpenCollection()) {
                         $waiting[] = $complaint->getNumber();
                         continue;
@@ -251,21 +271,21 @@ class ComplaintService
                     $this->updateStatus($id, Complaint::STATUS_ASSIGNED, $remarks, $administrator);
                 }
 
-                $this->updateStatus($id, Complaint::STATUS_RESOLVED, $remarks, $administrator);
-                $resolved++;
+                $this->updateStatus($id, $status, $remarks, $administrator);
+                $closed++;
             }
 
-            if ($resolved === 0) {
+            if ($closed === 0) {
                 throw new ValidationException([
                     'complaint' => 'No cleaner has been sent to this bin yet, so none of these '
-                                 . 'reports can be resolved. Book a collection first.']);
+                                 . 'reports can be resolved. Book a collection first, or reject them.']);
             }
 
             if ($ownsTransaction) {
                 $pdo->commit();
             }
 
-            return ['resolved' => $resolved, 'waiting' => $waiting];
+            return ['closed' => $closed, 'waiting' => $waiting];
         } catch (Throwable $error) {
             if ($ownsTransaction && $pdo->inTransaction()) {
                 $pdo->rollBack();
