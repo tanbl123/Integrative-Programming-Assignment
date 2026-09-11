@@ -82,7 +82,7 @@ All seeded accounts use the password `password123`.
 
 | Email | Role |
 |---|---|
-| admin@ecocampus.edu.my | Administrator |
+| admin@ecocampus.my | Administrator |
 | siti@student.ecocampus.my | Reporter |
 | zaki@cleaner.ecocampus.my | Cleaner |
 

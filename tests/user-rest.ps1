@@ -1,7 +1,7 @@
 # User REST integration regression for local XAMPP.
 param(
     [string]$BaseUrl = 'http://localhost/EcoCampus',
-    [string]$AdminEmail = 'admin@ecocampus.edu.my',
+    [string]$AdminEmail = 'admin@ecocampus.my',
     [string]$AdminPassword = 'password123',
     [string]$MysqlPath = 'C:/xampp/mysql/bin/mysql.exe',
     [string]$Database = 'ecocampus'

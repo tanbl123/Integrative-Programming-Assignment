@@ -44,7 +44,7 @@ function Api($identity, [string]$method, [string]$path, $body, [int]$expected = 
     return $json
 }
 try {
-    $admin = Login 'admin@ecocampus.edu.my'
+    $admin = Login 'admin@ecocampus.my'
     $reporter = Login 'siti@student.ecocampus.my'
     $cleaner = Login 'zaki@cleaner.ecocampus.my'
     $bins = Api $admin GET 'bin-api' $null
