@@ -34,6 +34,10 @@ class ComplaintController extends Controller
                 'duplicateGroups' => UserPermissions::can($user, 'complaint.manage')
                     ? Complaint::duplicateGroups()
                     : [],
+                // For booking a cleaner straight from a duplicate group.
+                'cleaners' => UserPermissions::can($user, 'complaint.manage')
+                    ? User::findActiveCleaners()
+                    : [],
             ]);
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);
@@ -134,7 +138,7 @@ class ComplaintController extends Controller
             $user = Auth::requireLogin();
             UserPermissions::require('complaint.manage');
             Csrf::requireValid($_POST['_token'] ?? null);
-            $this->requireScalar(['schedule_date', 'time_slot', 'cleaner_id', 'notes']);
+            $this->requireScalar(['schedule_date', 'time_from', 'time_to', 'cleaner_id', 'notes', 'from']);
 
             $complaint = $this->service->findVisible($user, $id);
             if ($complaint === null) {
@@ -147,8 +151,10 @@ class ComplaintController extends Controller
             Flash::set('success', 'Cleaner booked for '
                 . ($complaint->getBin()?->getBinCode() ?? 'the bin')
                 . ' on ' . $schedule->getDate() . '. This complaint is now Assigned '
-                . 'and the reporter has been told.');
-            $this->redirect('complaint/show/' . $id);
+                . 'and every reporter has been told.');
+            // A fixed marker chooses between two known pages; nothing posted
+            // can name a destination of its own.
+            $this->redirect($this->input('from') === 'list' ? 'complaint' : 'complaint/show/' . $id);
         } catch (ValidationException $error) {
             $complaint = Complaint::find($id);
             if ($complaint === null) {
