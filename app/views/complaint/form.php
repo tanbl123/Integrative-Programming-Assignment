@@ -492,14 +492,20 @@
      */
     const replacement = document.getElementById('attachment');
 
+    /*
+     * What the reporter asked for, kept apart from what the form currently
+     * posts. Choosing a replacement makes the checkbox moot and unticks it,
+     * but it does not withdraw the request: cancelling the replacement puts
+     * the form back where it was, rather than quietly keeping a photograph the
+     * reporter had already said to remove.
+     */
+    let removalWanted = box.checked;
+
     const render = () => {
         const replacing = replacement !== null && replacement.files.length > 0;
-        const removing = box.checked && !replacing;
+        const removing = removalWanted && !replacing;
 
-        if (replacing && box.checked) {
-            box.checked = false;   // the replacement supersedes it anyway
-        }
-
+        box.checked = removing;
         field.hidden = replacing;
         button.textContent = removing ? 'Keep this photo' : 'Remove';
         if (!removing) {
@@ -514,14 +520,22 @@
     };
 
     button.addEventListener('click', () => {
-        box.checked = !box.checked;
+        removalWanted = !removalWanted;
+        render();
         // ui.js clears the form from this event, and unsaved.js watches it.
         box.dispatchEvent(new Event('change', {bubbles: true}));
-        render();
     });
 
-    // Clear fields resets the checkbox; the button has to follow it.
-    box.addEventListener('change', render);
+    /*
+     * Clear fields unticks the checkbox and dispatches this, which is the
+     * reporter withdrawing the request rather than the form setting it aside.
+     * render() ticks the box itself and raises no event, so this never
+     * answers its own change.
+     */
+    box.addEventListener('change', () => {
+        removalWanted = box.checked;
+        render();
+    });
 
     // And the card has to follow whatever the drop zone is holding.
     replacement?.addEventListener('change', render);
