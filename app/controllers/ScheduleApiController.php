@@ -108,4 +108,57 @@ class ScheduleApiController extends ApiController
         } catch (AuthenticationException $error) { $this->json(['success' => false, 'data' => null, 'message' => $error->getMessage()], 401); }
         catch (AuthorizationException $error) { $this->json(['success' => false, 'data' => null, 'message' => $error->getMessage()], 403); }
     }
+    
+    public function cleanerOpenAssignments(): void {
+        try {
+            $this->apiAllow(['GET']);
+
+            $requestId = trim((string) ($_GET['requestID'] ?? ''));
+            $timeStamp = trim((string) ($_GET['timeStamp'] ?? ''));
+            $cleanerId = filter_var($_GET['cleanerId'] ?? null, FILTER_VALIDATE_INT);
+
+            if ($requestId === '' || $timeStamp === '' || $cleanerId === false) {
+                $this->json([
+                    'status' => 'F',
+                    'success' => false,
+                    'hasOpenAssignments' => false,
+                    'openAssignmentCount' => 0,
+                    'message' => 'requestID, cleanerId, and timeStamp are required.',
+                    'requestID' => $requestId,
+                    'timeStamp' => ifaTimestamp()
+                ]);
+                return;
+            }
+
+            $row = Database::getInstance()->selectOne(
+                    "SELECT COUNT(*) AS total
+                    FROM collection_assignments
+                    WHERE cleaner_id = ?
+                    AND assignment_status = 'Assigned'",
+                    [(int) $cleanerId]
+            );
+
+            $count = (int) ($row['total'] ?? 0);
+
+            $this->json([
+                'status' => 'S',
+                'success' => true,
+                'hasOpenAssignments' => $count > 0,
+                'openAssignmentCount' => $count,
+                'message' => $count > 0 ? 'Cleaner has open assignments.' : 'Cleaner has no open assignments.',
+                'requestID' => $requestId,
+                'timeStamp' => ifaTimestamp()
+            ]);
+        } catch (Throwable $error) {
+            $this->json([
+                'status' => 'E',
+                'success' => false,
+                'hasOpenAssignments' => false,
+                'openAssignmentCount' => 0,
+                'message' => 'Unable to check cleaner assignments.',
+                'requestID' => $_GET['requestID'] ?? '',
+                'timeStamp' => ifaTimestamp()
+                    ], 500);
+        }
+    }
 }
