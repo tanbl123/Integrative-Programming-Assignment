@@ -60,7 +60,7 @@
                                             <?= (int) $item->getKey() === $group['keepId'] ? 'checked' : '' ?>
                                             aria-label="Keep complaint #<?= (int) $item->getKey() ?>">
                                     </td>
-                                    <td><?= (int) $item->getKey() ?></td>
+                                    <td><?= e($item->getNumber()) ?></td>
                                     <td><?= e($item->getReporter()?->getFullName() ?? 'Unknown') ?></td>
                                     <?php /* Each reporter described the issue in their own words. The
                                             administrator needs them side by side to judge which report
@@ -134,10 +134,10 @@
     <table class="table" id="complaintsTable">
         <thead>
             <tr>
-                <?php /* "Complaint No.", not "No.": the value is the complaint's own number,
-                        not its position in this list. A Reporter sees only their own
-                        complaints, so the numbers are not consecutive, and a heading that
-                        promised a row count would look wrong to them. */ ?>
+                <?php /* "Complaint No.", not "No.": the value is the complaint's own
+                        reference, not its position in this list. A Reporter sees only
+                        their own complaints, so the codes are never consecutive, and a
+                        heading promising a row count would look wrong to them. */ ?>
                 <th><button type="button" class="sort-header" data-column="0">Complaint No.</button></th>
                 <th><button type="button" class="sort-header" data-column="1">Bin</button></th>
                 <th><button type="button" class="sort-header" data-column="2">Issue</button></th>
@@ -159,6 +159,10 @@
                     data-search="<?=
                     e(mb_strtolower(
                                     $complaint->getNumber() . ' ' .
+                                    // Also the bare key, so typing 12 or #12
+                                    // finds CMP-2026-0012 the way the
+                                    // server-side search already does.
+                                    '#' . $complaint->getKey() . ' ' .
                                     ($bin?->getBinCode() ?? '') . ' ' .
                                     ($location?->getFullLabel() ?? '') . ' ' .
                                     $complaint->getType()
@@ -167,7 +171,7 @@
                     data-status="<?= e($complaint->getStatus()) ?>"
                     data-location="<?= e((string) ($location?->getKey() ?? '')) ?>"
                     >
-                    <td><?= (int) $complaint->getKey() ?></td>
+                    <td><?= e($complaint->getNumber()) ?></td>
 
                     <td>
     <?= e($bin?->getBinCode() ?? 'Unknown') ?><br>

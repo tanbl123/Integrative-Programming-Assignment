@@ -75,25 +75,42 @@ class Complaint extends Model
     }
 
     /**
-     * The complaint's number as a sentence refers to it, for example #7.
+     * The complaint's number as every screen and message shows it,
+     * for example CMP-2026-0008.
      *
-     * complaint_id is an AUTO_INCREMENT key, so MySQL has already guaranteed
-     * that the number is unique within the table and is never reissued. The
-     * number shown to a user is therefore that key and nothing else: there is
-     * no second identifier to keep in step with it, and no migration behind
-     * it. The listing prints the bare key under a No. heading; this method
-     * adds the # for the places where the number appears inside a sentence.
+     * complaint_id is AUTO_INCREMENT, so MySQL has already guaranteed the
+     * number is unique within the table and never reissued. This method only
+     * dresses that key for display, deriving the year from created_at and
+     * padding the key to four digits. Nothing is stored, so the code and the
+     * key cannot drift apart and no migration stands behind it.
      *
-     * Note that showing the key is presentation, not protection. Another
-     * reporter cannot reach a complaint by guessing a number:
-     * ComplaintService::findVisible() refuses it on authorisation, which is
-     * what actually prevents enumeration.
+     * The padding is the point rather than decoration. A Reporter sees only
+     * their own complaints, so the numbers they see are never consecutive -
+     * 1, 4, 8 with the rest belonging to other people. A bare 1, 4, 8 reads
+     * as a list that has lost rows; CMP-2026-0001, CMP-2026-0004 and
+     * CMP-2026-0008 read as what they are, the complaint's own reference,
+     * which no one expects to run consecutively. The same code serves the
+     * Administrator, so both roles quote the same thing.
+     *
+     * The database keeps the integer key, so every foreign key that points at
+     * a complaint - attachments, status history, notifications and the
+     * Scheduling module's source_complaint_id - is untouched.
+     *
+     * Note that this is presentation, not protection. Another reporter cannot
+     * reach a complaint by guessing a number: ComplaintService::findVisible()
+     * refuses it on authorisation, which is what actually prevents
+     * enumeration.
      */
     public function getNumber(): string
     {
         $id = $this->getKey();
+        if ($id === null) {
+            return 'CMP-NEW';
+        }
+        $created = (string) $this->get('created_at');
+        $year = $created !== '' ? substr($created, 0, 4) : date('Y');
 
-        return $id === null ? 'not yet saved' : '#' . $id;
+        return sprintf('CMP-%s-%04d', $year, $id);
     }
 
     public function getReporterId(): int { return (int) $this->get('reporter_id'); }
@@ -127,9 +144,10 @@ class Complaint extends Model
             $clause = 'c.description LIKE ? OR c.complaint_type LIKE ? OR b.bin_code LIKE ?';
             array_push($params, $like, $like, $like);
 
-            // A number the user typed, as 7 or as #7, should find the
-            // complaint it names rather than being matched as free text.
-            if (preg_match('/^\s*#?0*(\d+)\s*$/', $query, $found) === 1) {
+            // A code such as CMP-2026-0007, or a bare 7 or #7, should find the
+            // complaint it names. The code is derived from the key rather than
+            // stored, so the key is recovered from it and matched directly.
+            if (preg_match('/^\s*(?:CMP-\d{4}-|#)?0*(\d+)\s*$/i', $query, $found) === 1) {
                 $clause .= ' OR c.complaint_id = ?';
                 $params[] = (int) $found[1];
             }

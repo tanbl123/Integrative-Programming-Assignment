@@ -17,7 +17,7 @@ $removeConfirm = $isAdmin
 
 <div class="page-heading">
     <div>
-        <p class="eyebrow">Complaint <?= e($complaint->getNumber()) ?></p>
+        <p class="eyebrow"><?= e($complaint->getNumber()) ?></p>
         <h1><?= e($complaint->getType()) ?></h1>
         <p class="lead">
             <?= e($complaint->getBin()?->getBinCode() ?? 'Unknown bin') ?>
