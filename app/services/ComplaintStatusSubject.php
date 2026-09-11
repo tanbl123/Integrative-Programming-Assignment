@@ -108,6 +108,14 @@ class ComplaintNotificationObserver implements ComplaintObserver
     ): void {
         $binCode = $complaint->getBin()?->getBinCode() ?? 'an unknown bin';
 
+        // Remarks are not repeated to the reporter on the two middle steps.
+        // Those are raised by the Scheduling module, whose remark names the
+        // schedule it created - "Collection scheduled (schedule #3)." - which
+        // is the right thing for the history and nothing at all to somebody
+        // who cannot open a schedule and has no idea there are three. Both
+        // bodies below already say what happened in full. Resolved and
+        // Rejected keep theirs, because there the reason IS the message, and
+        // a rejection cannot be saved without one.
         if ($event === self::EVENT_WITHDRAWN) {
             // Administrators are told, because a report they may already have
             // read and planned around has just left their list. The reporter
@@ -157,8 +165,7 @@ class ComplaintNotificationObserver implements ComplaintObserver
             $role  = User::ROLE_REPORTER;
             $title = 'Complaint ' . $complaint->getNumber() . ' is waiting again';
             $body  = 'The collection arranged for ' . $binCode . ' is no longer going ahead, '
-                   . 'so your report is waiting to be dealt with again.'
-                   . ($remarks !== null && $remarks !== '' ? ' ' . $remarks : '');
+                   . 'so your report is waiting to be dealt with again.';
         } elseif ($newStatus === Complaint::STATUS_ASSIGNED) {
             // The reporter, not the administrators. Whoever moved it here
             // knows they did; the person waiting to hear does not, and this
@@ -167,8 +174,7 @@ class ComplaintNotificationObserver implements ComplaintObserver
             // Scheduling module raised a collection against it.
             $role  = User::ROLE_REPORTER;
             $title = 'Complaint ' . $complaint->getNumber() . ' is being dealt with';
-            $body  = 'Your report about ' . $binCode . ' has been accepted and work is being arranged.'
-                   . ($remarks !== null && $remarks !== '' ? ' ' . $remarks : '');
+            $body  = 'Your report about ' . $binCode . ' has been accepted and work is being arranged.';
         } elseif (in_array($newStatus, [Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED], true)) {
             $role  = User::ROLE_REPORTER;
             $title = 'Complaint ' . $complaint->getNumber() . ' ' . strtolower($newStatus);

@@ -431,7 +431,8 @@ $assignments = $complaint->assignmentCounts();
             <?php endif; ?>
 
             <span class="field-help" id="remarks-help">
-                Optional, and sent to the reporter with the outcome. Required when rejecting.
+                Optional. Always recorded in the status history, and sent to the reporter
+                when you resolve or reject. Required when rejecting.
             </span>
         </label>
 
@@ -532,7 +533,8 @@ $assignments = $complaint->assignmentCounts();
         if (help) {
             help.textContent = needed
                 ? 'Required. The reporter is told their report was rejected, so tell them why.'
-                : 'Optional, and sent to the reporter with the outcome. Required when rejecting.';
+                : 'Optional. Always recorded in the status history, and sent to the reporter '
+                    + 'when you resolve or reject. Required when rejecting.';
         }
     };
 
