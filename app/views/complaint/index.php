@@ -86,7 +86,7 @@
                         class="group-action"
                         data-no-auto-clear="1"
                     >
-                        <h3>Send a cleaner</h3>
+                        <h3>Book a cleaner</h3>
                         <?= csrfField() ?>
                         <?php /* So the administrator comes back to the list they
                                  were working through, not to one report of the
@@ -134,6 +134,12 @@
                             <?php if ($cleaners === []): ?>
                                 <span class="field-error">No active cleaner is available to assign.</span>
                             <?php endif; ?>
+                        </label>
+
+                        <label>
+                            Notes for the cleaner
+                            <textarea name="notes" rows="2" maxlength="500"
+                                      placeholder="e.g. Bin is behind the drinks stall."></textarea>
                         </label>
 
                         <button class="button" type="submit" <?= $cleaners === [] ? 'disabled' : '' ?>>

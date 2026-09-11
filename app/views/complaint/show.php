@@ -272,6 +272,7 @@ $assignments = $complaint->assignmentCounts();
         method="post"
         action="<?= url('complaint/assign/' . $complaint->getKey()) ?>"
         class="form-card"
+        data-no-auto-clear="1"
     >
         <h2>Book a cleaner</h2>
 
@@ -367,8 +368,11 @@ $assignments = $complaint->assignmentCounts();
             <?php endif; ?>
         </label>
 
-        <?php /* No reset button here: ui.js appends one to every form that does
-                 not opt out, and declaring a second produced two. */ ?>
+        <?php /* No Clear fields on a booking form, here or on the duplicate
+                 groups. Its defaults - today, 09:00 to 12:00 - are the values
+                 an administrator usually wants, so emptying them leaves the
+                 form worse than it was found. The status form below starts
+                 empty and keeps its reset. */ ?>
         <button class="button" type="submit" <?= $cleaners === [] ? 'disabled' : '' ?>>
             Book cleaner and mark Assigned
         </button>
