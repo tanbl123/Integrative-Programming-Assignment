@@ -53,20 +53,29 @@ $removeConfirm = $isAdmin
     </div>
 </div>
 
+<?php
+/* The lifecycle status is an Administrator's decision; whether a collection
+   has actually been raised is the Scheduling module's record. Generating a
+   Complaint Priority schedule moves the status by itself, but an
+   Administrator can also set Assigned by hand here - and then forget to
+   schedule anything, leaving a complaint that says it is being dealt with
+   while nobody has been sent. Rather than forbid the manual move, which is
+   the only way to record a collection arranged off-system, the two facts are
+   shown side by side and the gap between them is named. */
+$assignments = $complaint->assignmentCounts();
+?>
 <section class="detail-grid">
     <div>
         <span>Status</span>
         <strong><?= e($complaint->getStatus()) ?></strong>
-        <?php /* The lifecycle status is an Administrator's decision. Whether a
-                 cleaner is actually out on this report is the Scheduling
-                 module's record, and the two are set independently - a
-                 complaint can still read New while an assignment raised from
-                 it is open. Rather than overwrite one module's column from
-                 another, the two are simply both shown, which is also what
-                 ComplaintService::canEdit() tests before letting anyone
-                 change the complaint. */ ?>
-        <?php if ($complaint->hasOpenAssignments()): ?>
+        <?php if ($assignments['open'] > 0): ?>
             <span class="detail-note">A cleaner has been scheduled for this bin.</span>
+        <?php elseif ($assignments['total'] > 0): ?>
+            <span class="detail-note">The scheduled collection has been completed.</span>
+        <?php elseif ($complaint->getStatus() === Complaint::STATUS_ASSIGNED): ?>
+            <span class="detail-note detail-note-alert">
+                No collection has been scheduled for this bin.
+            </span>
         <?php endif; ?>
     </div>
 
@@ -93,7 +102,7 @@ $removeConfirm = $isAdmin
                     <tr><th>Current fill status</th><td><span class="badge badge-status"><?= e((string) ($binInfo['fill_status'] ?? '-')) ?></span></td></tr>
                     <tr><th>Location</th><td><?= e((string) ($binInfo['location']['label'] ?? '-')) ?></td></tr>
                     <tr><th>Waste category</th><td><?= e((string) ($binInfo['category']['name'] ?? '-')) ?></td></tr>
-                    <tr><th>Capacity</th><td><?= $binInfo['capacity_litre'] === null ? '-' : (int) $binInfo['capacity_litre'] . ' litres' ?></td></tr>
+                    <tr><th>Capacity</th><td><?= ($binInfo['capacity_litre'] ?? null) === null ? '-' : (int) $binInfo['capacity_litre'] . ' litres' ?></td></tr>
                     <tr><th>Bin last updated</th><td><?= e((string) ($binInfo['last_updated'] ?? '-')) ?></td></tr>
                     <tr><th>Service request ID</th><td><code><?= e((string) $binServiceRequestId) ?></code></td></tr>
                 </tbody>
@@ -204,6 +213,23 @@ $removeConfirm = $isAdmin
         <h2>Update status</h2>
 
         <?= csrfField() ?>
+
+        <?php /* Assigned is offered here, but generating the collection is the
+                 route that actually sends somebody. Saying so at the point of
+                 the decision is what stops the status being moved instead of
+                 the work being arranged. Only shown while it is still the
+                 pending choice - once a collection exists, or the complaint
+                 has moved on, the note has nothing left to warn about. */ ?>
+        <?php if (in_array(Complaint::STATUS_ASSIGNED, $statuses, true) && $assignments['total'] === 0): ?>
+            <p class="field-help">
+                Marking this <strong>Assigned</strong> records your decision, but it does not
+                send anybody. To have a cleaner collect this bin, generate a
+                <strong>Complaint Priority</strong> schedule instead &mdash; that raises the task
+                and moves this complaint to Assigned on its own.
+                <a href="<?= url('schedule/create') ?>">Generate a collection schedule</a>.
+                Set it here only when the collection has been arranged some other way.
+            </p>
+        <?php endif; ?>
 
         <label>
             Next status

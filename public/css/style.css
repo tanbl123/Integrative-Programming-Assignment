@@ -775,9 +775,15 @@ textarea::placeholder {
    above is the grid's label styling and would make it read as one. */
 .detail-grid .detail-note {
     margin-top: 0.35rem;
-    color: var(--warn);
+    color: var(--muted);
     font-size: 0.78rem;
     font-weight: 600;
+}
+
+/* Says the status and the scheduling record disagree, which is a thing to
+   act on rather than a thing to know. */
+.detail-grid .detail-note-alert {
+    color: var(--danger);
 }
 
 .danger-zone {

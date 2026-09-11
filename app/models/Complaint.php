@@ -34,10 +34,35 @@ class Complaint extends Model
 
     public function hasOpenAssignments(): bool
     {
+        return $this->assignmentCounts()['open'] > 0;
+    }
+
+    /**
+     * How much collection work the Scheduling module has raised from this
+     * complaint, and how much of it is still outstanding.
+     *
+     * The two numbers say different things and the complaint page needs both.
+     * No assignment at all, on a complaint an Administrator has marked
+     * Assigned, means somebody moved the status by hand and never scheduled
+     * the collection - nobody is coming. Assignments that all closed means the
+     * cleaner has been and the complaint is waiting to be resolved. Only the
+     * open count tells you work is still pending.
+     *
+     * @return array{open:int,total:int}
+     */
+    public function assignmentCounts(): array
+    {
+        $open = 0;
+        $total = 0;
+
         foreach (CollectionAssignment::where('source_complaint_id', $this->getKey()) as $assignment) {
-            if ($assignment->getStatus() === 'Assigned') { return true; }
+            $total++;
+            if ($assignment->getStatus() === 'Assigned') {
+                $open++;
+            }
         }
-        return false;
+
+        return ['open' => $open, 'total' => $total];
     }
 
     /**
