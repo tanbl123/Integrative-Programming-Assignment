@@ -11,13 +11,28 @@ class Location extends Model
     protected static string $table      = 'locations';
     protected static string $primaryKey = 'location_id';
     protected static array  $columns    = [
-        'location_name', 'building_name', 'floor_no', 'description', 'deleted_at',
+        'location_name', 'building_name', 'floor_no', 'description',
+        'latitude', 'longitude', 'deleted_at',
     ];
 
     public function getLocationName(): string { return (string) $this->get('location_name'); }
     public function getBuildingName(): ?string { return $this->get('building_name'); }
     public function getFloorNo(): ?string      { return $this->get('floor_no'); }
     public function getDescription(): ?string  { return $this->get('description'); }
+    public function getLatitude(): ?float
+    {
+        $value = $this->get('latitude');
+        return $value === null ? null : (float) $value;
+    }
+    public function getLongitude(): ?float
+    {
+        $value = $this->get('longitude');
+        return $value === null ? null : (float) $value;
+    }
+    public function hasCoordinates(): bool
+    {
+        return $this->getLatitude() !== null && $this->getLongitude() !== null;
+    }
     public function isDeleted(): bool { return $this->get('deleted_at') !== null; }
     public function softDelete(): void { $this->set('deleted_at', ifaTimestamp()); $this->save(); }
 
@@ -25,12 +40,16 @@ class Location extends Model
         string $name,
         ?string $building,
         ?string $floor,
-        ?string $description
+        ?string $description,
+        ?float $latitude = null,
+        ?float $longitude = null
     ): void {
         $this->set('location_name', $name);
         $this->set('building_name', $building);
         $this->set('floor_no', $floor);
         $this->set('description', $description);
+        $this->set('latitude', $latitude);
+        $this->set('longitude', $longitude);
     }
 
     /** A single readable line, e.g. "Block A, Level 2 - Main Lobby". */
@@ -72,5 +91,17 @@ class Location extends Model
     public function getBins(): array
     {
         return $this->hasMany(Bin::class, 'location_id');
+    }
+
+    /** Active bins grouped by fill state for the location directory and map. */
+    public function getBinStatusCounts(): array
+    {
+        $counts = array_fill_keys(Bin::statuses(), 0);
+        foreach ($this->getBins() as $bin) {
+            if ($bin->isActive() && isset($counts[$bin->getFillStatus()])) {
+                $counts[$bin->getFillStatus()]++;
+            }
+        }
+        return $counts;
     }
 }

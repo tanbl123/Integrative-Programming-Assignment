@@ -28,6 +28,8 @@ class LocationApiController extends ApiController
                     'building' => $location->getBuildingName(),
                     'floor' => $location->getFloorNo(),
                     'description' => $location->getDescription(),
+                    'latitude' => $location->getLatitude(),
+                    'longitude' => $location->getLongitude(),
                     'label' => $location->getFullLabel(),
                 ], $locations),
                 200,
@@ -53,6 +55,8 @@ class LocationApiController extends ApiController
                     'building' => $location->getBuildingName(),
                     'floor' => $location->getFloorNo(),
                     'description' => $location->getDescription(),
+                    'latitude' => $location->getLatitude(),
+                    'longitude' => $location->getLongitude(),
                     'label' => $location->getFullLabel(),
             ]);
         } catch (Throwable $error) { $this->apiFailure($error); }

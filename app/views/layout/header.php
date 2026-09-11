@@ -20,6 +20,14 @@ $styleVersion = filemtime(APP_ROOT . '/public/css/style.css');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($title ?? 'EcoCampus') ?></title>
     <link rel="stylesheet" href="<?= url('public/css/style.css') ?>?v=<?= (int) $styleVersion ?>">
+    <?php if (!empty($useLeaflet)): ?>
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+            crossorigin=""
+        >
+    <?php endif; ?>
 </head>
 <body>
 <header class="site-header">

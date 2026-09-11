@@ -61,6 +61,8 @@ CREATE TABLE locations (
     building_name VARCHAR(100) NULL,
     floor_no      VARCHAR(20)  NULL,
     description   VARCHAR(255) NULL,
+    latitude      DECIMAL(10, 7) NULL,
+    longitude     DECIMAL(10, 7) NULL,
     deleted_at    DATETIME NULL DEFAULT NULL,
     INDEX idx_locations_deleted (deleted_at)
 ) ENGINE=InnoDB;

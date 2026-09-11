@@ -43,10 +43,11 @@ start with an empty `ecocampus` database and import, **in this order**:
 
 1. `database/14_ecocampus_export.sql` — complete schema and demonstration data
 2. `database/18_history_withdrawn.sql` — adds the newest complaint history event
+3. `database/19_location_coordinates.sql` — adds optional OpenStreetMap pins
 
 Do not run files 01 to 17 after file 14. As an alternative clean setup, files
 `01_schema.sql` and `02_seed.sql` already contain the current schema and seed
-data, including the change made by migration 18.
+data, including the changes made by migrations 18 and 19.
 
 ### 4. Configure (only if needed)
 
@@ -85,6 +86,7 @@ order. The complete migration sequence is:
 13. `database/16_drop_type_description.sql`
 14. `database/17_type_marks_bin_full.sql`
 15. `database/18_history_withdrawn.sql`
+16. `database/19_location_coordinates.sql`
 
 The numbered migrations are designed for existing installations. A new
 installation should use one of the two clean setup choices above.
@@ -157,6 +159,10 @@ delegates to the real service only after checking the authenticated role.
 - Administrator: register/edit/deactivate bins and create/edit locations.
 - Cleaner: view bins and record fill-status updates with an audit history.
 - Reporter: search and view active bin/location records.
+
+The location directory uses OpenStreetMap pins, searchable location cards, and
+active/full/maintenance bin totals. Coordinates are optional so existing
+locations continue working until an Administrator pins them from Edit location.
 
 Authenticated JSON endpoints are available at:
 

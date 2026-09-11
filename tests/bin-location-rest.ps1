@@ -47,13 +47,26 @@ try {
     $timestampJson=$timestampReply.Content | ConvertFrom-Json
     Check ($timestampReply.StatusCode -eq 200 -and $timestampJson.status -eq 'S') 'Bin API rejected a timestamp-only tracked request'
     Check (-not [string]::IsNullOrWhiteSpace($timestampJson.requestID)) 'Timestamp-only request did not receive a generated requestID'
-    $location=Api $admin POST 'location-api' @{location_name="REST-$suffix";building_name='Block C';floor_no='Ground';description='Disposable integration fixture'} 201
+    $null=Api $admin POST 'location-api' @{location_name="BAD-PAIR-$suffix";building_name='Block C';floor_no='Ground';latitude=3.215118} 422
+    $null=Api $admin POST 'location-api' @{location_name="BAD-RANGE-$suffix";building_name='Block C';floor_no='Ground';latitude=91;longitude=101.728345} 422
+    $location=Api $admin POST 'location-api' @{location_name="REST-$suffix";building_name='Block C';floor_no='Ground';description='Disposable integration fixture';latitude=3.215118;longitude=101.728345} 201
     $locationId=[int]$location.data.location_id
     $read=Api $admin GET "location-api/$locationId" $null
     Check ($read.data.name -eq "REST-$suffix") 'Location read mismatch'
+    Check ([Math]::Abs([double]$read.data.latitude - 3.215118) -lt 0.0000001) 'Location latitude was not returned'
+    Check ([Math]::Abs([double]$read.data.longitude - 101.728345) -lt 0.0000001) 'Location longitude was not returned'
     $patched=Api $admin PATCH "location-api/$locationId" @{description='Updated through REST'}
     Check ($patched.data.description -eq 'Updated through REST') 'Location PATCH failed'
-    $null=Api $admin PUT "location-api/$locationId" @{location_name="REST-$suffix";building_name='Block D';floor_no='First';description='Replaced'}
+    Check ([Math]::Abs([double]$patched.data.latitude - 3.215118) -lt 0.0000001) 'Location PATCH cleared its coordinates'
+    $null=Api $admin PUT "location-api/$locationId" @{location_name="REST-$suffix";building_name='Block D';floor_no='First';description='Replaced';latitude=3.215218;longitude=101.728445}
+    $locationPage=Invoke-WebRequest "$BaseUrl/location?q=REST-$suffix" -WebSession $admin.Session
+    Check ($locationPage.Content -match 'id="campusLocationMap"') 'Location directory map is missing'
+    Check ($locationPage.Content -match 'OpenStreetMap') 'Location directory does not identify the map'
+    Check ($locationPage.Content -match ('data-location-id="{0}"' -f $locationId)) 'Mapped location card is missing'
+    Check ($locationPage.Content -match 'Show on map') 'Location card map action is missing'
+    $locationForm=Invoke-WebRequest "$BaseUrl/location/edit/$locationId" -WebSession $admin.Session
+    Check ($locationForm.Content -match 'id="locationPickerMap"') 'Location coordinate picker is missing'
+    Check ($locationForm.Content -match 'name="latitude"') 'Location latitude field is missing'
     $bin=Api $admin POST 'bin-api' @{bin_code="TEST-$suffix";location_id=$locationId;category_id=1;capacity_litre=100;is_active=1} 201
     $binId=[int]$bin.data.id
     $null=Api $admin GET "bin-api/$binId" $null

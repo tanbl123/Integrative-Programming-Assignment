@@ -25,9 +25,9 @@
 -- because that is the name the team knows it by; it is not a step in the
 -- sequence.
 --
--- Migration 18 was created after this export. After importing this file into
--- an empty database, also run 18_history_withdrawn.sql so complaint deletion
--- can store the Withdrawn Observer event.
+-- Migrations 18 and 19 were created after this export. After importing this
+-- file into an empty database, also run 18_history_withdrawn.sql and
+-- 19_location_coordinates.sql.
 --
 -- The numbered files are still the record of how the schema was designed
 -- and who owns each table; this file is the quickest way to a working
