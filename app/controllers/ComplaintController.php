@@ -79,11 +79,50 @@ class ComplaintController extends Controller
         try {
             $user = Auth::requireLogin();
             $complaint = $this->service->findVisible($user, $id);
+
+            // Falling back to the archive rather than 404ing means a link that
+            // worked yesterday still works today: a notification the reporter
+            // was sent, or a page an administrator had open, leads to the
+            // record instead of to a dead end. The archived page is read-only,
+            // which showData() decides, not this method.
+            $archived = false;
+            if ($complaint === null) {
+                $complaint = $this->service->findArchived($user, $id);
+                $archived = true;
+            }
             if ($complaint === null) {
                 $this->entityNotFound('Complaint');
                 return;
             }
-            $this->view('complaint/show', $this->showData($complaint, $user));
+            $this->view('complaint/show', $this->showData($complaint, $user, [], $archived));
+        } catch (AuthenticationException|AuthorizationException $error) {
+            $this->handleAccessFailure($error);
+        }
+    }
+
+    /**
+     * The archive of withdrawn and deleted complaints.
+     *
+     * Author : Tan Boon Leong (2402865)
+     *
+     * Removal is a soft delete, and the status history of a removed complaint
+     * survives it. Before this page nothing could reach either, so the record
+     * of how a complaint was handled disappeared along with the complaint as
+     * far as anybody using the system could tell. A Reporter sees the reports
+     * they withdrew and the ones archived after they were answered; an
+     * Administrator sees every archived complaint. Which is which is decided
+     * by the role object, exactly as the live listing decides it.
+     */
+    public function archive(): void
+    {
+        try {
+            $user = Auth::requireLogin();
+            $this->view('complaint/archive', [
+                'title' => 'Archived complaints',
+                'complaints' => $this->service->archivedFor($user),
+                'user' => $user,
+                'isAdmin' => UserPermissions::can($user, 'complaint.manage'),
+            ]);
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);
         }
@@ -312,8 +351,12 @@ class ComplaintController extends Controller
      * @param array<string,string> $errors
      * @return array<string,mixed>
      */
-    private function showData(Complaint $complaint, User $user, array $errors = []): array
-    {
+    private function showData(
+        Complaint $complaint,
+        User $user,
+        array $errors = [],
+        bool $archived = false
+    ): array {
         // WEB SERVICE CONSUMPTION
         // Authoritative bin details are requested from the Bin & Location
         // module's REST service rather than read from its tables. If that
@@ -329,7 +372,7 @@ class ComplaintController extends Controller
             'attachments'         => $complaint->getAttachments(),
             'history'             => $complaint->getHistory(),
             'revisions'           => $complaint->getRevisions(),
-            'statuses'            => $this->service->nextStatusesFor($complaint),
+            'statuses'            => $archived ? [] : $this->service->nextStatusesFor($complaint),
             // For the booking form shown when Assigned is not yet available.
             'cleaners'            => User::findActiveCleaners(),
             // Every open report of this issue on this bin, including this one.
@@ -340,8 +383,12 @@ class ComplaintController extends Controller
                 : [],
             'errors'              => $errors,
             'user'                => $user,
-            'canEdit'             => $this->service->canEdit($complaint, $user),
-            'canDelete'           => $this->service->canDelete($complaint, $user),
+            'archived'            => $archived,
+            // Nothing may be done to an archived complaint. Deciding that here
+            // rather than in the view means every action the page offers is
+            // withdrawn by one answer, and a form added later cannot forget.
+            'canEdit'             => !$archived && $this->service->canEdit($complaint, $user),
+            'canDelete'           => !$archived && $this->service->canDelete($complaint, $user),
             'isAdmin'             => UserPermissions::can($user, 'complaint.manage'),
             'binInfo'             => $binInfo,
             'binServiceError'     => $binClient->getLastError(),

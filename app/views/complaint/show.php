@@ -12,11 +12,31 @@ $canEditComplaint = $canEdit;
 // Resolved or Rejected - because deleting is not an outcome and tells the
 // reporter nothing.
 $canDeleteComplaint = $canDelete;
+
+// Defaulted here as well as set by the controller, so that a route which
+// renders this view without deciding the question is treated as an ordinary
+// complaint rather than silently losing the archive banner.
+$isArchived = $archived ?? false;
 $removeLabel = $isAdmin ? 'Delete complaint' : 'Withdraw complaint';
 $removeConfirm = $isAdmin
     ? 'Delete this complaint? Its history is retained.'
     : 'Withdraw this complaint? You can submit a new one later if needed.';
 ?>
+
+<?php if ($isArchived): ?>
+    <?php /* The whole page is read-only below this line. Every form is gated
+             on values showData() has already emptied - $statuses, $canEdit,
+             $canDelete - and the booking form on $isArchived directly, because
+             its own condition would otherwise still be satisfied by a
+             withdrawn complaint that never left New. */ ?>
+    <div class="alert alert-info">
+        <strong>This complaint is archived.</strong>
+        <?= $isAdmin
+            ? 'It was withdrawn by its reporter, or deleted after it had been answered. The record and its history are kept; nothing further can be done to it.'
+            : 'It was withdrawn, or closed and archived after you were told the outcome. You can still read what happened to it.' ?>
+        <a href="<?= url('complaint/archive') ?>">Back to the archive</a>
+    </div>
+<?php endif; ?>
 
 <div class="page-heading">
     <div>
@@ -274,7 +294,8 @@ $assignments = $complaint->assignmentCounts();
  * booking form away from exactly the reports that most need it offered here
  * rather than on the Schedules tab.
  */ ?>
-<?php if (UserPermissions::can($user, 'complaint.manage')
+<?php if (!$isArchived
+          && UserPermissions::can($user, 'complaint.manage')
           && $complaint->getStatus() === Complaint::STATUS_NEW
           && !$complaint->binHasOpenCollection()): ?>
     <form
@@ -481,7 +502,11 @@ $assignments = $complaint->assignmentCounts();
         </button>
     </form>
 
-<?php elseif (UserPermissions::can($user, 'complaint.manage')): ?>
+<?php /* Not shown for an archived complaint. It reaches this branch because
+         showData() empties $statuses, but "in a final state" would be untrue
+         of a withdrawn report, which never left New - and the banner at the
+         top of the page has already said what did happen to it. */ ?>
+<?php elseif (!$isArchived && UserPermissions::can($user, 'complaint.manage')): ?>
 
     <?php if (!empty($errors['complaint_status'])): ?>
         <div class="alert alert-error">

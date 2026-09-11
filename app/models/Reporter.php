@@ -35,6 +35,14 @@ class Reporter extends User
         return Complaint::search($this->getKey(), trim($query), $status, $locationId);
     }
 
+    /** Only the reports this reporter withdrew, or that were archived after they were answered. */
+    public function archivedComplaints(): array
+    {
+        UserPermissions::require('complaint.view_own');
+
+        return Complaint::archived($this->getKey());
+    }
+
     /** A reporter may open their own complaint and nobody else's. */
     public function maySee(Complaint $complaint): bool
     {

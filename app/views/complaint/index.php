@@ -6,9 +6,15 @@
         <p class="lead">Track reported waste issues from submission to resolution.</p>
     </div>
 
-    <?php if (UserPermissions::can($user, 'complaint.create')): ?>
-        <a class="button" href="<?= url('complaint/create') ?>">Report issue</a>
-    <?php endif; ?>
+    <div class="button-row">
+        <?php /* Withdrawn and deleted reports are kept, not destroyed, so
+                 there has to be somewhere to read them. */ ?>
+        <a class="button button-secondary" href="<?= url('complaint/archive') ?>">Archive</a>
+
+        <?php if (UserPermissions::can($user, 'complaint.create')): ?>
+            <a class="button" href="<?= url('complaint/create') ?>">Report issue</a>
+        <?php endif; ?>
+    </div>
 </div>
 
 <?php /*
@@ -16,8 +22,9 @@
  *
  * Several people reporting one overflowing bin is one problem, not several.
  * Each group is shown as a single row that expands to the individual reports,
- * and can be closed in one action: the oldest report stays open and the rest
- * are rejected as duplicates, each notifying its own reporter.
+ * and is answered as a group: one cleaner booked for the bin moves all of
+ * them to Assigned, and one outcome closes all of them - each notifying its
+ * own reporter separately. No report is turned down for being second.
  */ ?>
 <?php if ($duplicateGroups !== []): ?>
     <section class="content-card duplicate-groups">

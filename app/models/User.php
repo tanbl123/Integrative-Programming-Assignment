@@ -103,6 +103,19 @@ class User extends Model {
     }
 
     /**
+     * The withdrawn or deleted complaints this user may look back at.
+     *
+     * Asked of the user for the same reason visibleComplaints() is: which
+     * archived reports are yours is a fact about your role, so the role
+     * answers it. A Cleaner inherits the base answer of none.
+     *
+     * @return list<Complaint>
+     */
+    public function archivedComplaints(): array {
+        return [];
+    }
+
+    /**
      * The complaint notifications this user may read, newest first.
      *
      * Asked of the user for the same reason visibleComplaints() is: which

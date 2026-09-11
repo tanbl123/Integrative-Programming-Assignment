@@ -84,6 +84,40 @@ class ComplaintService
         return $user->visibleComplaints($query, $status, $locationId);
     }
 
+    /**
+     * The archive: complaints that have been withdrawn or deleted.
+     *
+     * The same two questions the live listing asks, asked of the same place.
+     * Whose reports these are is decided by the role, not by a flag passed in
+     * from the controller, so a Reporter cannot be handed somebody else's.
+     *
+     * @return list<Complaint>
+     */
+    public function archivedFor(User $user): array
+    {
+        return $user->archivedComplaints();
+    }
+
+    /**
+     * One archived complaint, for reading only.
+     *
+     * findVisible() refuses a deleted complaint, which is right for every
+     * route that might act on one. This is the one route that may open it,
+     * and it applies exactly the same ownership rule - a Reporter sees their
+     * own and nobody else's - so the archive cannot become a way around it.
+     */
+    public function findArchived(User $user, int $id): ?Complaint
+    {
+        $complaint = Complaint::find($id);
+        if ($complaint === null || !$complaint->isDeleted()) {
+            return null;
+        }
+        if ($user->maySee($complaint)) {
+            return $complaint;
+        }
+        throw new AuthorizationException('You cannot access another reporter’s complaint.');
+    }
+
     public function findVisible(User $user, int $id): ?Complaint
     {
         $complaint = Complaint::find($id);

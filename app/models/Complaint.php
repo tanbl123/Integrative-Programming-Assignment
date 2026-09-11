@@ -24,6 +24,14 @@ class Complaint extends Model
     }
 
     public function isDeleted(): bool { return $this->get('deleted_at') !== null; }
+
+    /** When it was withdrawn or deleted, for the archive listing. */
+    public function getDeletedAt(): ?string
+    {
+        $value = $this->get('deleted_at');
+        return $value === null ? null : (string) $value;
+    }
+
     public function delete(): bool
     {
         if ($this->getKey() === null) { return false; }
@@ -269,6 +277,35 @@ class Complaint extends Model
             $params[] = $locationId;
         }
         $sql .= ' ORDER BY c.complaint_id DESC';
+        return self::hydrateAll(Database::getInstance()->selectAll($sql, $params));
+    }
+
+    /**
+     * Complaints that have been withdrawn or deleted, newest first.
+     *
+     * Author : Tan Boon Leong (2402865)
+     *
+     * Removal in this module is a soft delete: the row stays, and so does its
+     * status history. Until this query existed nothing could reach either of
+     * them, so a complaint and the whole record of how it was handled left the
+     * system together as far as anybody using it could tell - which defeats
+     * the point of writing the history down.
+     *
+     * $reporterId scopes the result to one person's own reports; null means
+     * every archived complaint, which only an Administrator asks for.
+     *
+     * @return list<Complaint>
+     */
+    public static function archived(?int $reporterId): array
+    {
+        $sql = 'SELECT * FROM complaints WHERE deleted_at IS NOT NULL';
+        $params = [];
+        if ($reporterId !== null) {
+            $sql .= ' AND reporter_id = ?';
+            $params[] = $reporterId;
+        }
+        $sql .= ' ORDER BY deleted_at DESC, complaint_id DESC';
+
         return self::hydrateAll(Database::getInstance()->selectAll($sql, $params));
     }
 

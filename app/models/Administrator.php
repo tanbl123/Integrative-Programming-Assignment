@@ -29,6 +29,13 @@ class Administrator extends User
         return Complaint::search(null, trim($query), $status, $locationId);
     }
 
+    public function archivedComplaints(): array
+    {
+        UserPermissions::require('complaint.manage');
+
+        return Complaint::archived(null);
+    }
+
     public function maySee(Complaint $complaint): bool
     {
         return UserPermissions::can($this, 'complaint.manage');
