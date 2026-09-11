@@ -10,6 +10,8 @@ class SchedulingService {
     public function create(User $administrator, array $data): CollectionSchedule {
         UserPermissions::require('schedule.manage');
 
+        $data['time_slot'] = $this->composeTimeSlot($data);
+
         [$date, $timeSlot, $strategyName, $cleaner, $notes] = $this->validateSchedule($data);
 
         $selections = SchedulingStrategyFactory::make($strategyName)->select();
@@ -113,6 +115,8 @@ class SchedulingService {
             ]);
         }
 
+        $data['time_slot'] = $this->composeTimeSlot($data);
+
         [$date, $timeSlot, , $cleaner, $notes] = $this->validateSchedule(
                 $data + ['strategy' => 'Complaint Priority']
         );
@@ -161,6 +165,52 @@ class SchedulingService {
         }
     }
 
+    /**
+     * Builds a time slot from a start and an end time.
+     *
+     * Author : Tan Boon Leong (2402865)
+     * Module : Complaint / Report Management
+     *
+     * time_slot is a free-text column, and free text is where inconsistent
+     * data comes from: the same three hours have already been written into it
+     * as "09:00-12:00" and as "09:00–:12:00" with an en dash, which no
+     * report could group and no person would think to search for twice. Two
+     * time inputs cannot produce either mistake, and the browser shows them in
+     * whatever notation the reader expects while posting an unambiguous 24
+     * hour value.
+     *
+     * A caller that already has a composed slot - anything posting time_slot
+     * directly rather than the pair - keeps working unchanged.
+     */
+    private function composeTimeSlot(array $data): string {
+        $existing = trim((string) ($data['time_slot'] ?? ''));
+
+        if (!isset($data['time_from'], $data['time_to']) && $existing !== '') {
+            return $existing;
+        }
+
+        $from = is_scalar($data['time_from'] ?? null) ? trim((string) $data['time_from']) : '';
+        $to = is_scalar($data['time_to'] ?? null) ? trim((string) $data['time_to']) : '';
+
+        $isTime = static fn(string $value): bool
+                => (bool) preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $value);
+
+        if (!$isTime($from) || !$isTime($to)) {
+            throw new ValidationException([
+                        'time_slot' => 'Choose a start time and an end time.'
+            ]);
+        }
+
+        // Zero-padded 24 hour times compare correctly as strings.
+        if ($to <= $from) {
+            throw new ValidationException([
+                        'time_slot' => 'The end time must be later than the start time.'
+            ]);
+        }
+
+        return $from . '-' . $to;
+    }
+
     public function update(int $id, array $data): CollectionSchedule {
         UserPermissions::require('schedule.manage');
 
@@ -171,6 +221,8 @@ class SchedulingService {
                         'schedule' => 'Only planned schedules can be modified.'
             ]);
         }
+
+        $data['time_slot'] = $this->composeTimeSlot($data);
 
         [$date, $timeSlot, $strategyName, $cleaner, $notes] = $this->validateSchedule($data);
 

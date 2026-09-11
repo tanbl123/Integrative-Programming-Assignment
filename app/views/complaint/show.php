@@ -288,7 +288,7 @@ $assignments = $complaint->assignmentCounts();
 
         <?php /* When and how long sit together: they are one decision, and the
                  same two-column grid the User and Schedule forms use. */ ?>
-        <div class="form-grid">
+        <div class="form-grid time-grid">
             <label>
                 Collection date
                 <input
@@ -304,20 +304,39 @@ $assignments = $complaint->assignmentCounts();
                 <?php endif; ?>
             </label>
 
-            <label>
-                Time slot
-                <input
-                    name="time_slot"
-                    required
-                    maxlength="50"
-                    placeholder="e.g. 09:00-12:00"
-                    value="<?= e((string) ($_POST['time_slot'] ?? '')) ?>"
-                    data-message-required="Give the time slot for the visit."
-                >
+        <?php /* Two time inputs rather than one text box. The column is free
+                     text and has already collected the same three hours written
+                     two ways; a picker cannot produce either mistake, and the
+                     browser shows the reader whichever notation they expect while
+                     posting an unambiguous 24 hour value. */ ?>
+            <div class="time-range-field">
+                <span class="time-range-legend">Time slot</span>
+                <div class="time-range">
+                    <label>
+                        From
+                        <input
+                            type="time"
+                            name="time_from"
+                            required
+                            value="<?= e((string) ($_POST['time_from'] ?? '09:00')) ?>"
+                            data-message-required="Choose a start time."
+                        >
+                    </label>
+                    <label>
+                        To
+                        <input
+                            type="time"
+                            name="time_to"
+                            required
+                            value="<?= e((string) ($_POST['time_to'] ?? '12:00')) ?>"
+                            data-message-required="Choose an end time."
+                        >
+                    </label>
+                </div>
                 <?php if (!empty($errors['time_slot'])): ?>
                     <span class="field-error"><?= e($errors['time_slot']) ?></span>
                 <?php endif; ?>
-            </label>
+            </div>
         </div>
 
         <label>

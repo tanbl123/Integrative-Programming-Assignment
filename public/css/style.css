@@ -2069,3 +2069,51 @@ td.duplicate-reason {
         align-items: stretch;
     }
 }
+
+/* ---------- Time slot, as a start and an end ----------
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ *
+ * Stands in for a label around a pair of inputs: a label may wrap one
+ * control, not two, so the caption is a span and the two times are their
+ * own labels inside it.
+ */
+.time-range-field {
+    margin-bottom: 1rem;
+}
+
+.time-range-legend {
+    display: block;
+    color: var(--ink);
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.time-range {
+    display: flex;
+    gap: 0.6rem;
+}
+
+.time-range label {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.time-range input {
+    width: 100%;
+}
+
+/* The time pair carries a caption row the other field in its row does not,
+   so without this the neighbouring input sits proud of the two times. The
+   grid supplies its own gap, and the field's own margin on top of that was
+   what kept the two from lining up. */
+.time-grid > label {
+    align-self: end;
+}
+
+.form-grid .time-range-field {
+    margin-bottom: 0;
+}

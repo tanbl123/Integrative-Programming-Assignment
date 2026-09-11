@@ -35,6 +35,37 @@ class CollectionSchedule extends Model
         $this->save();
         return true;
     }
+    /**
+     * A stored time slot split back into a start and an end.
+     *
+     * Author : Tan Boon Leong (2402865)
+     *
+     * The column is free text and has held both "09:00-12:00" and the same
+     * hours with an en dash, so both separators are accepted. Anything that is
+     * not a pair of 24 hour times comes back empty rather than half-parsed,
+     * which leaves the two inputs blank and makes the reader choose again
+     * instead of silently keeping a value nobody can see.
+     *
+     * @return array{from:string,to:string}
+     */
+    public static function splitTimeSlot(?string $slot): array
+    {
+        $matched = preg_match(
+            '/^\s*([01][0-9]|2[0-3]:?[0-5][0-9]|[01][0-9]:[0-5][0-9])\s*[-\x{2013}\x{2014}]\s*(.+?)\s*$/u',
+            (string) $slot,
+            $parts
+        );
+
+        $isTime = static fn(string $value): bool
+            => (bool) preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $value);
+
+        if ($matched !== 1 || !$isTime($parts[1]) || !$isTime($parts[2])) {
+            return ['from' => '', 'to' => ''];
+        }
+
+        return ['from' => $parts[1], 'to' => $parts[2]];
+    }
+
     public function getDate(): string { return (string) $this->get('schedule_date'); }
     public function getTimeSlot(): string { return (string) $this->get('time_slot'); }
     public function getStrategy(): string { return (string) $this->get('strategy'); }
