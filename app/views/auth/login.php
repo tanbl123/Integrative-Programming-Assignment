@@ -16,7 +16,15 @@
         </div>
     <?php endif; ?>
 
-    <form method="post" action="<?= url('auth/login') ?>" class="form-stack" data-no-auto-clear="1">
+    <?php /* data-no-guard: signing in is not work in progress, and a warning on
+         the way to the registration link would only be in the way. */ ?>
+<form
+    method="post"
+    action="<?= url('auth/login') ?>"
+    class="form-stack"
+    data-no-auto-clear="1"
+    data-no-guard="1"
+>
         <?= csrfField() ?>
 
         <label>

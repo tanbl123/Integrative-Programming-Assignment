@@ -36,7 +36,15 @@
                     <small><?= e($group['bin']?->getLocation()?->getFullLabel() ?? '') ?></small>
                 </summary>
 
-                <form method="post" action="<?= url('complaint/reject-duplicates') ?>">
+                <?php /* The confirmation belongs on the form: ui.js reads
+                         data-confirm from the form element, so a copy on the
+                         button is silently ignored and the reports are rejected
+                         on the first click. */ ?>
+                <form
+                    method="post"
+                    action="<?= url('complaint/reject-duplicates') ?>"
+                    data-confirm="Reject the other <?= count($group['complaints']) - 1 ?> report(s) as duplicates? Each reporter will be notified."
+                >
                     <?= csrfField() ?>
                     <input type="hidden" name="bin_id" value="<?= (int) ($group['bin']?->getKey() ?? 0) ?>">
                     <input type="hidden" name="complaint_type" value="<?= e($group['type']) ?>">
@@ -77,8 +85,7 @@
 
                     <button
                         class="button button-danger"
-                        type="submit"
-                        data-confirm="Reject the other <?= count($group['complaints']) - 1 ?> report(s) as duplicates? Each reporter will be notified.">
+                        type="submit">
                         Keep selected &middot; reject the other <?= count($group['complaints']) - 1 ?>
                     </button>
                 </form>
