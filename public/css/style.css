@@ -1362,6 +1362,21 @@ td.duplicate-reason {
 
 /* The photo already on file, shown on the edit form above the drop zone.
  * Author : Tan Boon Leong (2402865) · Module : Complaint / Report Management */
+.field-block {
+    margin-top: 0.85rem;
+}
+
+/* A link, so clicking it opens the photograph. It must stay outside the
+   file field's <label>, or the click opens the file picker instead. */
+a.current-photo {
+    text-decoration: none;
+    color: inherit;
+}
+
+a.current-photo:hover {
+    border-color: var(--green);
+}
+
 .current-photo {
     display: flex;
     align-items: center;

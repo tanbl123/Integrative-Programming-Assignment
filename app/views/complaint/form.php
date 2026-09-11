@@ -91,26 +91,31 @@
         <?php endif; ?>
     </label>
 
-    <label>
-            <?= $editId === null ? 'Photo evidence (optional)' : 'Photo evidence' ?>
+    <?php /* The photo already on file, OUTSIDE the label below. Inside it, a
+             click anywhere here activates the file input and opens the picker
+             instead of the photograph the reporter meant to look at. */ ?>
+    <?php if ($attachments !== []): ?>
+        <div class="field-block">
+            <span class="field-help">Current photo</span>
 
-            <?php /* On an edit the photo already on file is shown first, so the
-                     reporter can see what a new upload would replace. Editing is
-                     only open while a complaint is New and unassigned, so nobody
-                     has acted on that photograph yet. */ ?>
-            <?php if ($attachments !== []): ?>
-                <span class="field-help">Current photo</span>
-
-                <?php foreach ($attachments as $current): ?>
-                    <span class="current-photo">
-                        <img src="<?= url('complaint/attachment/' . $current->getKey()) ?>" alt="">
-                        <span>
-                            <strong><?= e($current->getDisplayName()) ?></strong>
-                            <small><?= e($current->getReadableSize()) ?></small>
-                        </span>
+            <?php foreach ($attachments as $current): ?>
+                <a
+                    class="current-photo"
+                    href="<?= url('complaint/attachment/' . $current->getKey()) ?>"
+                    target="_blank"
+                >
+                    <img src="<?= url('complaint/attachment/' . $current->getKey()) ?>" alt="">
+                    <span>
+                        <strong><?= e($current->getDisplayName()) ?></strong>
+                        <small><?= e($current->getReadableSize()) ?> &middot; opens in a new tab</small>
                     </span>
-                <?php endforeach; ?>
-            <?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
+    <label>
+            <?= $editId === null ? 'Photo evidence (optional)' : 'Replace this photo' ?>
 
             <?php /* The plain file input is the baseline and is never removed.
                      The script below only dresses this container: with scripting
