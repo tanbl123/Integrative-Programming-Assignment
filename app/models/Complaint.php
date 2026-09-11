@@ -253,14 +253,25 @@ class Complaint extends Model
      */
     public static function duplicateGroups(): array
     {
+        // Which one to keep by default. An Assigned report is one a cleaner
+        // has already been sent out on, so it is the one the work is attached
+        // to; rejecting it and keeping an untouched New report would leave the
+        // group's live complaint with nobody on it. Where none is assigned the
+        // oldest wins, as the first person to report it.
+        //
+        // It is only the default. The administrator chooses from the group.
         $rows = Database::getInstance()->selectAll(
-            'SELECT bin_id, complaint_type, COUNT(*) AS total, MIN(complaint_id) AS keep_id'
+            'SELECT bin_id, complaint_type, COUNT(*) AS total,'
+            . ' COALESCE('
+            . '   MIN(CASE WHEN complaint_status = ? THEN complaint_id END),'
+            . '   MIN(complaint_id)'
+            . ' ) AS keep_id'
             . ' FROM complaints'
             . ' WHERE deleted_at IS NULL AND complaint_status IN (?, ?)'
             . ' GROUP BY bin_id, complaint_type'
             . ' HAVING COUNT(*) > 1'
             . ' ORDER BY total DESC, bin_id ASC',
-            [self::STATUS_NEW, self::STATUS_ASSIGNED]
+            [self::STATUS_ASSIGNED, self::STATUS_NEW, self::STATUS_ASSIGNED]
         );
 
         $groups = [];
