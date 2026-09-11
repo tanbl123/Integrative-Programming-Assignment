@@ -155,6 +155,22 @@ three tables written and one deliberately not.
 | `requireScalar()` | Refuses a field posted as an array. `complaint_status[]=New` would cast to the string "Array" and emit a warning. |
 | `renderForm()` | Shared rendering for create and edit. |
 
+### `app/controllers/ComplaintTypeController.php` — maintaining the issue types
+
+| Function | What it does |
+|---|---|
+| `index()` | Lists every issue type with its `marks_bin_full` flag and how many complaints use it. |
+| `store()` / `update()` | Add a type, or rename one. Both go through `save()`. |
+| `toggle()` | Withdraws a type from use, or brings it back. **Withdrawing is not deleting** — complaints already filed under it keep naming it and stay valid. |
+| `delete()` | Removes a type only when no complaint has ever used it. The foreign key enforces the same thing, so it cannot be got round by calling the API. |
+| `save()` | Shared validation for add and rename: 1–50 characters, and the name must be unique. |
+| `render()` | Draws the maintenance screen. |
+
+**Worth saying:** *"A new type is not offered to reporters the moment it is
+created — someone has to activate it. That leaves a gap in which a typo can be
+corrected, and a typo matters here because a complaint naming a type pins it
+forever through the foreign key."*
+
 ### `app/controllers/ComplaintNotificationController.php` — the bell icon
 
 | Function | What it does |
