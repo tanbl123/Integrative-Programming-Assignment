@@ -40,4 +40,4 @@ defined('MAP_DEFAULT_LNG') or define('MAP_DEFAULT_LNG', 101.728345);
 defined('MAP_DEFAULT_ZOOM') or define('MAP_DEFAULT_ZOOM', 16);
 
 // Set to false before the demo so visitors never see raw error text.
-defined('DEBUG') or define('DEBUG', true);
+defined('DEBUG') or define('DEBUG', false);
