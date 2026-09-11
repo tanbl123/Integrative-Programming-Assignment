@@ -7,8 +7,10 @@
 $canEditComplaint = $canEdit;
 
 // Decided by ComplaintService::canDelete() so the button and the service
-// agree: a Reporter may withdraw only an untouched complaint, an
-// Administrator may delete only from New or a final state.
+// agree: a Reporter may withdraw only an untouched complaint, and an
+// Administrator may delete only one that has already been answered -
+// Resolved or Rejected - because deleting is not an outcome and tells the
+// reporter nothing.
 $canDeleteComplaint = $canDelete;
 $removeLabel = $isAdmin ? 'Delete complaint' : 'Withdraw complaint';
 $removeConfirm = $isAdmin
