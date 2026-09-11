@@ -17,20 +17,28 @@ class ComplaintType extends Model
     protected static string $table = 'complaint_types';
     protected static string $primaryKey = 'type_id';
     protected static array $columns = [
-        'type_name', 'description', 'is_active', 'sort_order', 'created_at',
+        'type_name', 'is_active', 'sort_order', 'created_at',
     ];
 
     public function getName(): string { return (string) $this->get('type_name'); }
-    public function getDescription(): ?string { return $this->get('description'); }
     public function isActive(): bool { return (int) $this->get('is_active') === 1; }
     public function getSortOrder(): int { return (int) $this->get('sort_order'); }
 
-    public function setDetails(string $name, ?string $description, bool $active, int $order): void
+    public function setDetails(string $name, bool $active, int $order): void
     {
         $this->set('type_name', $name);
-        $this->set('description', $description === '' ? null : $description);
         $this->set('is_active', $active ? 1 : 0);
         $this->set('sort_order', $order);
+    }
+
+    /** Where a newly added type goes: after everything already listed. */
+    public static function nextSortOrder(): int
+    {
+        $row = Database::getInstance()
+            ->query('SELECT COALESCE(MAX(sort_order), 0) AS highest FROM complaint_types')
+            ->fetch();
+
+        return (int) ($row['highest'] ?? 0) + 10;
     }
 
     /** Every type, in the order an Administrator arranged them. */

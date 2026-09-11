@@ -30,10 +30,7 @@ class ComplaintTypeController extends Controller
             $type = $edit === false || $edit === null ? null : ComplaintType::find((int) $edit);
 
             $this->render($user, [], $type === null ? [] : [
-                'type_name'   => $type->getName(),
-                'description' => $type->getDescription() ?? '',
-                'sort_order'  => (string) $type->getSortOrder(),
-                'is_active'   => $type->isActive() ? '1' : '0',
+                'type_name' => $type->getName(),
             ], $type?->getKey());
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);

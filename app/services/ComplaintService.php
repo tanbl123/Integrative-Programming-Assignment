@@ -302,11 +302,16 @@ class ComplaintService
     private const WITHDRAWABLE_BY_REPORTER = [Complaint::STATUS_NEW];
 
     /**
-     * Adds or edits an issue type.
+     * Adds an issue type, or renames one.
      *
-     * Only an Administrator, because the list governs what every reporter may
-     * file. The name must be unique, which the database also enforces, and
-     * must not be blank - a nameless option in a dropdown is unusable.
+     * The name is the whole of it. A type is available to reporters the moment
+     * it exists - creating one nobody may choose would be pointless - and
+     * withdrawing it later is what setTypeActive() is for. Its place in the
+     * dropdown is not an Administrator's decision either: the six seeded types
+     * keep Other last, and anything added goes after them.
+     *
+     * Only an Administrator, because this list governs what every reporter may
+     * file. The name must be unique, which the database enforces as well.
      *
      * @throws ValidationException
      */
@@ -315,19 +320,10 @@ class ComplaintService
         UserPermissions::require('complaint.manage');
 
         $name = trim((string) ($data['type_name'] ?? ''));
-        $description = trim((string) ($data['description'] ?? ''));
-        $order = filter_var($data['sort_order'] ?? 0, FILTER_VALIDATE_INT);
-        $active = ($data['is_active'] ?? '0') === '1';
 
         $errors = [];
         if ($name === '' || mb_strlen($name) > 50) {
             $errors['type_name'] = 'Give the issue type a name of 1-50 characters.';
-        }
-        if (mb_strlen($description) > 255) {
-            $errors['description'] = 'Description cannot exceed 255 characters.';
-        }
-        if ($order === false) {
-            $errors['sort_order'] = 'Order must be a whole number.';
         }
 
         $type = $id === null ? new ComplaintType() : ComplaintType::find($id);
@@ -345,7 +341,11 @@ class ComplaintService
             throw new ValidationException($errors);
         }
 
-        $type->setDetails($name, $description, $active, (int) $order);
+        $type->setDetails(
+            $name,
+            $id === null ? true : $type->isActive(),
+            $id === null ? ComplaintType::nextSortOrder() : $type->getSortOrder()
+        );
         $type->save();
 
         return $type;
@@ -366,7 +366,7 @@ class ComplaintService
         if ($type === null) {
             throw new OutOfBoundsException('Issue type not found.');
         }
-        $type->setDetails($type->getName(), $type->getDescription(), $active, $type->getSortOrder());
+        $type->setDetails($type->getName(), $active, $type->getSortOrder());
         $type->save();
 
         return $type;

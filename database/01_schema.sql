@@ -135,12 +135,13 @@ CREATE TABLE bin_status_updates (
 -- new type would have needed.
 -- ---------------------------------------------------------------------
 CREATE TABLE complaint_types (
-    type_id     INT AUTO_INCREMENT PRIMARY KEY,
-    type_name   VARCHAR(50) NOT NULL UNIQUE,
-    description VARCHAR(255) NULL,
-    is_active   TINYINT(1) NOT NULL DEFAULT 1,
-    sort_order  INT NOT NULL DEFAULT 0,
-    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    type_id    INT AUTO_INCREMENT PRIMARY KEY,
+    type_name  VARCHAR(50) NOT NULL UNIQUE,
+    is_active  TINYINT(1) NOT NULL DEFAULT 1,
+    -- Where the type sits in the reporter's dropdown. Seeded so that Other
+    -- stays last; a type added later is appended after it.
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------

@@ -28,22 +28,20 @@
 USE ecocampus;
 
 CREATE TABLE IF NOT EXISTS complaint_types (
-    type_id     INT AUTO_INCREMENT PRIMARY KEY,
-    type_name   VARCHAR(50) NOT NULL UNIQUE,
-    description VARCHAR(255) NULL,
-    is_active   TINYINT(1) NOT NULL DEFAULT 1,
-    sort_order  INT NOT NULL DEFAULT 0,
-    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    type_id    INT AUTO_INCREMENT PRIMARY KEY,
+    type_name  VARCHAR(50) NOT NULL UNIQUE,
+    is_active  TINYINT(1) NOT NULL DEFAULT 1,
+    -- Where the type sits in the reporter's dropdown. Not something an
+    -- administrator sets: the six seeded types keep Other last, and a new
+    -- type is appended after them.
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- The six the module shipped with, so nothing already filed is orphaned.
-INSERT IGNORE INTO complaint_types (type_name, description, sort_order) VALUES
-('Full Bin',             'The bin is full and needs collecting.',            10),
-('Overflow',             'Waste is spilling out around the bin.',            20),
-('Damaged Bin',          'The bin itself is broken, burnt or missing.',      30),
-('Dirty Area',           'The area around the bin needs cleaning.',          40),
-('Wrong Waste Disposal', 'Waste was put in a bin of the wrong category.',    50),
-('Other',                'Anything the categories above do not cover.',      60);
+INSERT IGNORE INTO complaint_types (type_name, sort_order) VALUES
+('Full Bin', 10), ('Overflow', 20), ('Damaged Bin', 30),
+('Dirty Area', 40), ('Wrong Waste Disposal', 50), ('Other', 60);
 
 -- The ENUM becomes a plain string so the lookup table can govern it.
 ALTER TABLE complaints
