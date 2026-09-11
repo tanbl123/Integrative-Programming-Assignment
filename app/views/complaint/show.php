@@ -141,7 +141,7 @@ $removeConfirm = $isAdmin
                         >
                             <img src="<?= url('complaint/attachment/' . $revision->getAttachment()->getKey()) ?>" alt="">
                             <span>
-                                <strong>Photo replaced by this edit</strong>
+                                <strong>Photo on the complaint before this edit</strong>
                                 <small><?= e($revision->getAttachment()->getReadableSize()) ?></small>
                             </span>
                         </a>

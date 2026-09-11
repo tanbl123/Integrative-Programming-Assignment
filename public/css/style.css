@@ -1435,3 +1435,29 @@ a.current-photo:hover {
 .revision p:last-child {
     margin-bottom: 0;
 }
+
+/* Removing the photo already on a complaint.
+ * Author : Tan Boon Leong (2402865) · Module : Complaint / Report Management */
+.remove-photo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+
+/* The checkbox is the baseline and only hides once the button replaces it.
+   Hidden outright rather than clipped: the button does the same job, and two
+   controls for one choice is worse for a keyboard or screen reader than one.
+   A checkbox hidden by CSS still posts its value when ticked.
+
+   !important only because the shared .checkbox-label rule above declares
+   display: flex !important, which a more specific selector cannot outrank. */
+.remove-photo.is-enhanced .checkbox-label {
+    display: none !important;
+}
+
+.current-photo.is-removing {
+    opacity: 0.45;
+    border-style: dashed;
+    border-color: var(--danger);
+}

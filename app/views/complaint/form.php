@@ -111,6 +111,19 @@
                     </span>
                 </a>
             <?php endforeach; ?>
+
+            <?php /* Photo evidence is optional, so a reporter must be able to
+                     get back to having none without withdrawing the complaint
+                     and losing its number and history. The checkbox is the
+                     baseline; the script turns it into a button beside the
+                     photo, where what it removes is not in question. Nothing
+                     happens until the form is saved. */ ?>
+            <div class="remove-photo" id="remove-photo-field">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="remove_attachment" value="1" id="remove-attachment">
+                    Remove this photo when I save
+                </label>
+            </div>
         </div>
     <?php endif; ?>
 
@@ -396,5 +409,59 @@
     });
 
     render();   // a re-rendered form after a failed submit starts empty
+})();
+</script>
+
+<?php /*
+ * Removing the photo already on file.
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ *
+ * The checkbox above is what posts, and it is what works with scripting
+ * disabled. This turns it into a button sitting beside the photograph, because
+ * a checkbox below a drop zone does not say which photo it means, and a
+ * reporter who cannot tell will leave it alone.
+ *
+ * Nothing is removed here. The complaint is changed when the form is saved,
+ * and even then the photograph is marked superseded rather than deleted, so
+ * the revision it belonged to can still show it.
+ */ ?>
+<script>
+(() => {
+    'use strict';
+    const field = document.getElementById('remove-photo-field');
+    const box = document.getElementById('attachment-remove-box') || document.getElementById('remove-attachment');
+    const photo = document.querySelector('.current-photo');
+    if (!field || !box || !photo) return;
+
+    field.classList.add('is-enhanced');
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button-secondary';
+
+    const note = document.createElement('span');
+    note.className = 'field-help';
+
+    const render = () => {
+        const removing = box.checked;
+        button.textContent = removing ? 'Keep this photo' : 'Remove photo';
+        note.textContent = removing ? 'This photo will be removed when you save.' : '';
+        photo.classList.toggle('is-removing', removing);
+    };
+
+    button.addEventListener('click', () => {
+        box.checked = !box.checked;
+        // ui.js clears the form from this event, and unsaved.js watches it.
+        box.dispatchEvent(new Event('change', {bubbles: true}));
+        render();
+    });
+
+    // Clear fields resets the checkbox; the button has to follow it.
+    box.addEventListener('change', render);
+
+    field.append(button, note);
+    render();
 })();
 </script>
