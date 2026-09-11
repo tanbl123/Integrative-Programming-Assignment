@@ -28,6 +28,8 @@ class SchedulingService {
             $schedule->setDetails($administrator->getKey(), $date, $timeSlot, $strategyName, $notes);
             $schedule->save();
 
+            $complaints = new ComplaintService();
+
             foreach ($selections as $selection) {
                 $assignment = new CollectionAssignment();
 
@@ -41,6 +43,13 @@ class SchedulingService {
                 );
 
                 $assignment->save();
+
+                $this->markComplaintAssigned(
+                        $complaints,
+                        $selection['complaint_id'],
+                        $schedule->getKey(),
+                        $administrator
+                );
             }
 
             $pdo->commit();
@@ -273,6 +282,62 @@ class SchedulingService {
         }
 
         $schedule->delete();
+    }
+
+    /**
+     * Moves the complaint a task was raised from to Assigned.
+     *
+     * Author : Tan Boon Leong (2402865)
+     * Module : Complaint / Report Management - cross-module integration
+     *
+     * Only the Complaint Priority strategy carries a complaint; a full-bin or
+     * routine round passes null and nothing happens here. Without this the
+     * complaint stayed New while a cleaner was already scheduled against it,
+     * so the reporter saw no sign that anything had begun.
+     *
+     * It goes through ComplaintService rather than writing complaint_status,
+     * so the complaint module's own rules apply and its observers run: the
+     * change is recorded in the history against this administrator, and the
+     * reporter is notified.
+     *
+     * Only a New complaint is moved. Assigned, Resolved and Rejected are all
+     * refused by the lifecycle, and a refusal here would throw and take the
+     * whole schedule down with it - so the check happens before the call
+     * rather than as an exception afterwards. A complaint can legitimately
+     * already be Assigned: an administrator may have triaged it by hand, or
+     * an earlier schedule may have covered the same bin.
+     *
+     * There is no matching step when a schedule is cancelled. The lifecycle
+     * has no route from Assigned back to New, and it should not: the
+     * administrator's triage decision still stands even if this particular
+     * round was called off. What disappears is the "a cleaner has been
+     * scheduled" note on the complaint, which is read from the assignments
+     * themselves and so corrects itself.
+     */
+    private function markComplaintAssigned(
+            ComplaintService $complaints,
+            ?int $complaintId,
+            int $scheduleId,
+            User $administrator
+    ): void {
+        if ($complaintId === null) {
+            return;
+        }
+
+        $complaint = Complaint::find($complaintId);
+
+        if ($complaint === null
+                || $complaint->isDeleted()
+                || $complaint->getStatus() !== Complaint::STATUS_NEW) {
+            return;
+        }
+
+        $complaints->updateStatus(
+                $complaintId,
+                Complaint::STATUS_ASSIGNED,
+                'Collection scheduled (schedule #' . $scheduleId . ').',
+                $administrator
+        );
     }
 
     private function validateSchedule(array $data): array {

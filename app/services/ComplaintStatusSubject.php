@@ -150,6 +150,16 @@ class ComplaintNotificationObserver implements ComplaintObserver
             $role  = User::ROLE_ADMIN;
             $title = 'New complaint ' . $complaint->getNumber() . ' - ' . $complaint->getType();
             $body  = 'A new ' . $complaint->getType() . ' issue was reported for ' . $binCode . '.';
+        } elseif ($newStatus === Complaint::STATUS_ASSIGNED) {
+            // The reporter, not the administrators. Whoever moved it here
+            // knows they did; the person waiting to hear does not, and this
+            // is the first sign their report has been acted on at all. It
+            // arrives whether an administrator triaged it by hand or the
+            // Scheduling module raised a collection against it.
+            $role  = User::ROLE_REPORTER;
+            $title = 'Complaint ' . $complaint->getNumber() . ' is being dealt with';
+            $body  = 'Your report about ' . $binCode . ' has been accepted and work is being arranged.'
+                   . ($remarks !== null && $remarks !== '' ? ' ' . $remarks : '');
         } elseif (in_array($newStatus, [Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED], true)) {
             $role  = User::ROLE_REPORTER;
             $title = 'Complaint ' . $complaint->getNumber() . ' ' . strtolower($newStatus);

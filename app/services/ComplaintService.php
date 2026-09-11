@@ -107,8 +107,16 @@ class ComplaintService
             throw new ValidationException($errors);
         }
 
+        // A caller may already be inside a transaction - the Scheduling module
+        // moves a complaint to Assigned from inside its own - and PDO refuses
+        // a nested beginTransaction(). Joining the caller's transaction rather
+        // than opening one means the complaint, its history and the caller's
+        // own work commit or roll back together.
         $pdo = Database::getInstance()->pdo();
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) {
+            $pdo->beginTransaction();
+        }
         try {
             $complaint->setStatus($status);
             $complaint->save();
@@ -119,10 +127,12 @@ class ComplaintService
                 $administrator,
                 $remarks === '' ? null : $remarks
             );
-            $pdo->commit();
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
             return $complaint;
         } catch (Throwable $error) {
-            if ($pdo->inTransaction()) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             throw $error;
@@ -141,9 +151,13 @@ class ComplaintService
      * New and Assigned both permit a transition to Rejected, so no complaint
      * in the group can be left stranded.
      *
-     * Each rejection commits on its own - updateStatus() opens its own
-     * transaction and PDO will not nest them - so a failure part way through
-     * leaves the earlier rejections recorded rather than rolling them back.
+     * The whole group commits or none of it does. This used to be impossible:
+     * updateStatus() opened a transaction unconditionally and PDO refuses a
+     * nested one, so each rejection had to commit on its own and a failure
+     * part way through left some reporters told and others not. Now that
+     * updateStatus() joins a transaction already in progress, the loop can own
+     * one - so an administrator closing a group of four either closes all
+     * four or changes nothing.
      *
      * @return int how many duplicates were rejected
      */
@@ -170,20 +184,35 @@ class ComplaintService
             }
         }
 
-        $rejected = 0;
-        foreach ($group as $complaint) {
-            if ((int) $complaint->getKey() === $keepId) {
-                continue;
-            }
-            $this->updateStatus(
-                (int) $complaint->getKey(),
-                Complaint::STATUS_REJECTED,
-                'Duplicate of complaint ' . $keptNumber . '.',
-                $administrator
-            );
-            $rejected++;
+        $pdo = Database::getInstance()->pdo();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) {
+            $pdo->beginTransaction();
         }
-        return $rejected;
+        try {
+            $rejected = 0;
+            foreach ($group as $complaint) {
+                if ((int) $complaint->getKey() === $keepId) {
+                    continue;
+                }
+                $this->updateStatus(
+                    (int) $complaint->getKey(),
+                    Complaint::STATUS_REJECTED,
+                    'Duplicate of complaint ' . $keptNumber . '.',
+                    $administrator
+                );
+                $rejected++;
+            }
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
+            return $rejected;
+        } catch (Throwable $error) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $error;
+        }
     }
 
     /**
