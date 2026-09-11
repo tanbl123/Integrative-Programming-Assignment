@@ -44,6 +44,9 @@ interface ComplaintObserver
     /** An edit to the complaint's own fields, with the status unchanged. */
     public const EVENT_DETAILS = 'Details';
 
+    /** The complaint was withdrawn by its reporter, or deleted by an admin. */
+    public const EVENT_WITHDRAWN = 'Withdrawn';
+
     /**
      * @param array{bin:int,type:string,description:string}|null $previous
      *        What the complaint said before an EVENT_DETAILS edit. Only the
@@ -76,9 +79,9 @@ class ComplaintHistoryObserver implements ComplaintObserver
         string $event = self::EVENT_STATUS,
         ?array $previous = null
     ): void {
-        // Both kinds of event are recorded. An edit carries the same status on
-        // each side, and change_type is what tells the two apart when the
-        // history is read back.
+        // All three kinds of event are recorded. An edit and a withdrawal both
+        // carry the same status on each side, and change_type is what tells
+        // them apart from a transition when the history is read back.
         $history = new ComplaintStatusHistory();
         $history->setDetails(
             $complaint->getKey(), $actor?->getKey(), $oldStatus, $newStatus, $remarks, $event);
@@ -104,6 +107,24 @@ class ComplaintNotificationObserver implements ComplaintObserver
         ?array $previous = null
     ): void {
         $binCode = $complaint->getBin()?->getBinCode() ?? 'an unknown bin';
+
+        if ($event === self::EVENT_WITHDRAWN) {
+            // Administrators are told, because a report they may already have
+            // read and planned around has just left their list. The reporter
+            // is not: either they withdrew it themselves, or an Administrator
+            // removed a complaint that had already been resolved or rejected,
+            // which notified them at the time.
+            $notification = new ComplaintNotification();
+            $notification->setDetails(
+                $complaint->getKey(),
+                User::ROLE_ADMIN,
+                'Complaint ' . $complaint->getNumber() . ' withdrawn',
+                ($actor?->getFullName() ?? 'Someone') . ' withdrew the ' . $complaint->getType()
+                    . ' report about ' . $binCode . '.'
+            );
+            $notification->save();
+            return;
+        }
 
         if ($event === self::EVENT_DETAILS) {
             // A reporter revising their own wording needs no telling. Somebody
@@ -183,6 +204,10 @@ class ComplaintNotificationObserver implements ComplaintObserver
  * judgement from anybody. That path is exact. This one exists so that a bin
  * a reporter says is full looks full on the bin board too.
  *
+ * A withdrawal is treated as a closure, not as a separate case: the claim
+ * that marked the bin Full has been taken back, so the bin is released on
+ * exactly the same condition as a resolution - nothing else open against it.
+ *
  * Bins under maintenance are never touched - that status is owned by the Bin
  * module and must not be overwritten by a complaint.
  */
@@ -206,8 +231,10 @@ class ComplaintBinFlagObserver implements ComplaintObserver
         string $event = self::EVENT_STATUS,
         ?array $previous = null
     ): void {
-        // Rewording a report says nothing about how full the bin is.
-        if ($event !== self::EVENT_STATUS) {
+        // Rewording a report says nothing about how full the bin is. A
+        // withdrawal does: the claim that marked the bin Full has been taken
+        // back, and is handled below alongside a resolution.
+        if ($event !== self::EVENT_STATUS && $event !== self::EVENT_WITHDRAWN) {
             return;
         }
         $bin = $complaint->getBin();
@@ -238,14 +265,23 @@ class ComplaintBinFlagObserver implements ComplaintObserver
             return;
         }
 
-        // Resolved, and nothing else outstanding for this bin: it has been emptied.
-        if ($newStatus === Complaint::STATUS_RESOLVED
+        // The bin is released when the last thing keeping it Full goes away,
+        // whether that is the complaint being resolved or being withdrawn.
+        // A withdrawal is the case this observer used to miss entirely: the
+        // complaint vanished, nothing ran, and the bin stayed Full with
+        // nothing open to account for it.
+        $closed = $event === self::EVENT_WITHDRAWN
+            || $newStatus === Complaint::STATUS_RESOLVED;
+
+        if ($closed
             && Complaint::countUnresolvedForBin((int) $bin->getKey()) === 0
             && $bin->getFillStatus() === Bin::STATUS_FULL) {
             $bins->updateBinStatus(
                 (int) $bin->getKey(),
                 Bin::STATUS_EMPTY,
-                'Complaint ' . $complaint->getNumber() . ' resolved; no reports left open.',
+                $event === self::EVENT_WITHDRAWN
+                    ? 'Complaint ' . $complaint->getNumber() . ' withdrawn; no reports left open.'
+                    : 'Complaint ' . $complaint->getNumber() . ' resolved; no reports left open.',
                 $actor?->getKey() ?? $complaint->getReporterId()
             );
         }

@@ -463,7 +463,33 @@ class ComplaintService
                     . 'outcome is recorded and the reporter is notified.'
                     : 'You can only withdraw a complaint that has not been acted on yet.']);
         }
-        $complaint->delete();
+
+        $status = $complaint->getStatus();
+        $pdo = Database::getInstance()->pdo();
+        $pdo->beginTransaction();
+        try {
+            $complaint->delete();
+
+            // Raised AFTER the soft delete, so that an observer asking what is
+            // still open for this bin gets an answer that already excludes
+            // this complaint. Withdrawing used to raise nothing at all, which
+            // left the history with no record of who removed the complaint
+            // and left a bin marked Full by a report that no longer existed.
+            $this->subject->notify(
+                $complaint,
+                $status,
+                $status,
+                $user,
+                'Withdrawn by ' . $user->getFullName() . '.',
+                ComplaintObserver::EVENT_WITHDRAWN
+            );
+            $pdo->commit();
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $error;
+        }
     }
 
     private function validateComplaint(array $data): array

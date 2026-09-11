@@ -35,6 +35,12 @@ class ComplaintStatusHistory extends Model
     {
         return $this->getChangeType() === ComplaintObserver::EVENT_DETAILS;
     }
+
+    /** True when this row records the complaint being withdrawn or deleted. */
+    public function isWithdrawal(): bool
+    {
+        return $this->getChangeType() === ComplaintObserver::EVENT_WITHDRAWN;
+    }
     public function getUpdatedAt(): string { return (string) $this->get('updated_at'); }
     public function getUpdatedBy(): ?User { return $this->belongsTo(User::class, 'updated_by'); }
 }

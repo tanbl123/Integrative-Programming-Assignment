@@ -258,11 +258,14 @@ $removeConfirm = $isAdmin
                         <td><?= e($entry->getUpdatedAt()) ?></td>
                         <td><?= e($entry->getUpdatedBy()?->getFullName() ?? 'System') ?></td>
                         <td>
-                            <?php /* An edit carries the same status on both sides, so the
-                                     arrow would read "New → New". change_type is what
-                                     separates the two kinds of row. */ ?>
+                            <?php /* An edit and a withdrawal both carry the same status
+                                     on each side, so the arrow would read "New → New".
+                                     change_type is what separates the three kinds of
+                                     row. */ ?>
                             <?php if ($entry->isDetailsEdit()): ?>
                                 Details edited
+                            <?php elseif ($entry->isWithdrawal()): ?>
+                                Withdrawn
                             <?php else: ?>
                                 <?= e($entry->getOldStatus() ?? 'Created') ?>
                                 →
