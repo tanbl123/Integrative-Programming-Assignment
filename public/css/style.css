@@ -1359,3 +1359,29 @@ td.duplicate-reason {
         flex-wrap: wrap;
     }
 }
+
+/* The photo already on file, shown on the edit form above the drop zone.
+ * Author : Tan Boon Leong (2402865) · Module : Complaint / Report Management */
+.current-photo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+    padding: 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.current-photo img {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+}
+
+.current-photo small {
+    display: block;
+    color: var(--muted);
+}

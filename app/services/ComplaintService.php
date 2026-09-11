@@ -180,16 +180,73 @@ class ComplaintService
         return $rejected;
     }
 
-    public function update(int $id, array $data, User $user): Complaint
-    {
+    /**
+     * Edits a complaint, optionally replacing or removing its photograph.
+     *
+     * A reporter who attached the wrong photo could previously only withdraw
+     * the complaint and start again, because the evidence was fixed at
+     * submission. Editing is permitted only while a complaint is New and
+     * unassigned, which is exactly the window in which nobody has acted on the
+     * photograph yet, so replacing it destroys no evidence anyone relied on.
+     *
+     * The replacement is verified and written to disk before anything changes,
+     * so a rejected file leaves the complaint exactly as it was. The file it
+     * replaces is removed only once the transaction has committed: unlinking
+     * earlier would destroy the old photograph and then roll back to a row
+     * that still names it.
+     */
+    public function update(
+        int $id,
+        array $data,
+        User $user,
+        ?array $upload = null,
+        bool $removePhoto = false
+    ): Complaint {
         $complaint = $this->findVisible($user, $id);
         if ($complaint === null) { throw new OutOfBoundsException('Complaint not found.'); }
         if ($complaint->getStatus() !== Complaint::STATUS_NEW || $complaint->hasOpenAssignments()) {
             throw new ValidationException(['complaint' => 'Only new complaints without open assignments can be edited.']);
         }
         [$binId, $type, $description] = $this->validateComplaint(array_replace($complaint->toArray(), $data));
-        $complaint->setDetails($complaint->getReporterId(), $binId, $type, $description);
-        $complaint->save();
+
+        $stored = (new ComplaintUploadService())->validateAndStore($upload);
+        $superseded = [];
+
+        $pdo = Database::getInstance()->pdo();
+        $pdo->beginTransaction();
+        try {
+            $complaint->setDetails($complaint->getReporterId(), $binId, $type, $description);
+            $complaint->save();
+
+            if ($stored !== null || $removePhoto) {
+                foreach ($complaint->getAttachments() as $existing) {
+                    $superseded[] = UPLOAD_PATH . DIRECTORY_SEPARATOR
+                                  . basename($existing->getStoredName());
+                    $existing->delete();
+                }
+            }
+            if ($stored !== null) {
+                $attachment = new ComplaintAttachment();
+                $attachment->setDetails($complaint->getKey(), $stored);
+                $attachment->save();
+            }
+            $pdo->commit();
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            if ($stored !== null && isset($stored['path']) && is_file($stored['path'])) {
+                unlink($stored['path']);
+            }
+            throw $error;
+        }
+
+        // Past the point of no return, so the old files can go.
+        foreach ($superseded as $path) {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
         return $complaint;
     }
 

@@ -91,9 +91,24 @@
         <?php endif; ?>
     </label>
 
-    <?php if ($editId === null): ?>
-        <label>
-            Photo evidence (optional)
+    <label>
+            <?= $editId === null ? 'Photo evidence (optional)' : 'Photo evidence' ?>
+
+            <?php /* On an edit the photo already on file is shown first, so the
+                     reporter can see what a new upload would replace. Editing is
+                     only open while a complaint is New and unassigned, so nobody
+                     has acted on that photograph yet. */ ?>
+            <?php if ($attachments !== []): ?>
+                <?php foreach ($attachments as $current): ?>
+                    <span class="current-photo">
+                        <img src="<?= url('complaint/attachment/' . $current->getKey()) ?>" alt="">
+                        <span>
+                            <strong><?= e($current->getDisplayName()) ?></strong>
+                            <small><?= e($current->getReadableSize()) ?></small>
+                        </span>
+                    </span>
+                <?php endforeach; ?>
+            <?php endif; ?>
 
             <?php /* The plain file input is the baseline and is never removed.
                      The script below only dresses this container: with scripting
@@ -112,7 +127,7 @@
 
                 <p class="dropzone-hint" id="attachment-hint">
                     <strong>Drag a photo here</strong>
-                    <span>or click to choose one</span>
+                    <span><?= $attachments !== [] ? 'or click to choose a replacement' : 'or click to choose one' ?></span>
                 </p>
 
                 <div class="dropzone-preview" id="attachment-preview" hidden>
@@ -127,11 +142,22 @@
                 </div>
             </div>
 
-            <span class="field-help">JPEG, PNG, or WebP; maximum 5 MB.</span>
+            <span class="field-help">
+                JPEG, PNG, or WebP; maximum 5 MB.
+                <?= $attachments !== [] ? 'Uploading a photo replaces the one above.' : '' ?>
+            </span>
 
             <?php if (!empty($errors['attachment'])): ?>
                 <span class="field-error"><?= e($errors['attachment']) ?></span>
             <?php endif; ?>
+        </label>
+
+    <?php /* Outside the label above: a <label> cannot contain another one, and
+             a click here would otherwise reopen the file picker. */ ?>
+    <?php if ($attachments !== []): ?>
+        <label class="checkbox-label">
+            <input type="checkbox" name="remove_attachment" value="1">
+            Remove this photo without replacing it
         </label>
     <?php endif; ?>
 

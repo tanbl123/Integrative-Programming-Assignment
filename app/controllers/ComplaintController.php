@@ -124,7 +124,7 @@ class ComplaintController extends Controller
         try {
             $complaint = $this->service->findVisible(Auth::requireLogin(), $id);
             if ($complaint === null) { $this->entityNotFound('Complaint'); return; }
-            $this->renderForm([], $complaint->toArray(), $id);
+            $this->renderForm([], $complaint->toArray(), $id, $complaint->getAttachments());
         } catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
     }
 
@@ -133,12 +133,19 @@ class ComplaintController extends Controller
         $this->requirePost();
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
-            $this->service->update($id, $_POST, Auth::requireLogin());
+            $this->service->update(
+                $id,
+                $_POST,
+                Auth::requireLogin(),
+                $_FILES['attachment'] ?? null,
+                ($_POST['remove_attachment'] ?? '') === '1'
+            );
             Flash::set('success', 'Complaint details updated.');
             $this->redirect('complaint/show/' . $id);
         } catch (ValidationException $error) {
             http_response_code(422);
-            $this->renderForm($error->getErrors(), $_POST, $id);
+            $existing = Complaint::find($id);
+            $this->renderForm($error->getErrors(), $_POST, $id, $existing?->getAttachments() ?? []);
         } catch (OutOfBoundsException $error) { $this->entityNotFound('Complaint'); }
         catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
     }
@@ -290,13 +297,20 @@ class ComplaintController extends Controller
         }
     }
 
-    private function renderForm(array $errors, array $values, ?int $editId = null): void
-    {
+    /** @param ComplaintAttachment[] $attachments */
+    private function renderForm(
+        array $errors,
+        array $values,
+        ?int $editId = null,
+        array $attachments = []
+    ): void {
         $this->view('complaint/form', [
             'title' => $editId === null ? 'Report Waste Issue' : 'Edit Complaint',
             'errors' => $errors,
             'values' => $values,
             'editId' => $editId,
+            // The photo already on file, so an edit can show what it replaces.
+            'attachments' => $attachments,
             'bins' => Bin::findActive(),
             'types' => Complaint::types(),
             // Lets the form warn about issues already open for the chosen bin.
