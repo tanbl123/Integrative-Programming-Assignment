@@ -33,6 +33,9 @@ $styleVersion = filemtime(APP_ROOT . '/public/css/style.css');
                 <?php if (UserPermissions::can($currentUser, 'complaint.create') || UserPermissions::can($currentUser, 'complaint.manage')): ?>
                     <a href="<?= url('complaint') ?>">Complaints</a>
                 <?php endif; ?>
+                <?php if (UserPermissions::can($currentUser, 'complaint.manage')): ?>
+                    <a href="<?= url('complaint-type') ?>">Issue types</a>
+                <?php endif; ?>
                 <?php if (UserPermissions::can($currentUser, 'schedule.manage')): ?>
                     <a href="<?= url('schedule') ?>">Schedules</a>
                 <?php elseif (UserPermissions::can($currentUser, 'assignment.view_own')): ?>

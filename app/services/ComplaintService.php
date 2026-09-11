@@ -302,6 +302,103 @@ class ComplaintService
     private const WITHDRAWABLE_BY_REPORTER = [Complaint::STATUS_NEW];
 
     /**
+     * Adds or edits an issue type.
+     *
+     * Only an Administrator, because the list governs what every reporter may
+     * file. The name must be unique, which the database also enforces, and
+     * must not be blank - a nameless option in a dropdown is unusable.
+     *
+     * @throws ValidationException
+     */
+    public function saveType(?int $id, array $data, User $user): ComplaintType
+    {
+        UserPermissions::require('complaint.manage');
+
+        $name = trim((string) ($data['type_name'] ?? ''));
+        $description = trim((string) ($data['description'] ?? ''));
+        $order = filter_var($data['sort_order'] ?? 0, FILTER_VALIDATE_INT);
+        $active = ($data['is_active'] ?? '0') === '1';
+
+        $errors = [];
+        if ($name === '' || mb_strlen($name) > 50) {
+            $errors['type_name'] = 'Give the issue type a name of 1-50 characters.';
+        }
+        if (mb_strlen($description) > 255) {
+            $errors['description'] = 'Description cannot exceed 255 characters.';
+        }
+        if ($order === false) {
+            $errors['sort_order'] = 'Order must be a whole number.';
+        }
+
+        $type = $id === null ? new ComplaintType() : ComplaintType::find($id);
+        if ($id !== null && $type === null) {
+            throw new OutOfBoundsException('Issue type not found.');
+        }
+
+        foreach (ComplaintType::allOrdered() as $existing) {
+            if (mb_strtolower($existing->getName()) === mb_strtolower($name)
+                && $existing->getKey() !== $type?->getKey()) {
+                $errors['type_name'] = 'That issue type already exists.';
+            }
+        }
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
+
+        $type->setDetails($name, $description, $active, (int) $order);
+        $type->save();
+
+        return $type;
+    }
+
+    /**
+     * Withdraws an issue type from use, or brings it back.
+     *
+     * Withdrawing is not deleting. Complaints already filed under the type
+     * keep naming it, and the row has to stay for them to remain valid; what
+     * changes is that no new complaint can choose it.
+     */
+    public function setTypeActive(int $id, bool $active, User $user): ComplaintType
+    {
+        UserPermissions::require('complaint.manage');
+
+        $type = ComplaintType::find($id);
+        if ($type === null) {
+            throw new OutOfBoundsException('Issue type not found.');
+        }
+        $type->setDetails($type->getName(), $type->getDescription(), $active, $type->getSortOrder());
+        $type->save();
+
+        return $type;
+    }
+
+    /**
+     * Deletes an issue type nobody has used.
+     *
+     * A type complaints were filed under is never deleted: the complaints
+     * name it, and removing it would leave them naming something that does
+     * not exist. The database refuses it too, through ON DELETE RESTRICT;
+     * this check exists so the refusal arrives as a sentence rather than as
+     * a foreign key error.
+     */
+    public function deleteType(int $id, User $user): void
+    {
+        UserPermissions::require('complaint.manage');
+
+        $type = ComplaintType::find($id);
+        if ($type === null) {
+            throw new OutOfBoundsException('Issue type not found.');
+        }
+        $used = $type->complaintCount();
+        if ($used > 0) {
+            throw new ValidationException(['type' => $used . ' complaint'
+                . ($used === 1 ? ' was' : 's were') . ' filed under "' . $type->getName()
+                . '", so it cannot be deleted. Withdraw it from use instead.']);
+        }
+        $type->delete();
+    }
+
+    /**
      * True when this user may change this complaint's own details right now.
      *
      * The reporter who wrote it, or an Administrator. Editing stays shut once a
@@ -377,6 +474,9 @@ class ComplaintService
         if ($bin === null || !$bin->isActive()) {
             $errors['bin_id'] = 'Select an active campus bin.';
         }
+        // Checked against the types currently in use. The database refuses
+        // an unknown one as well, through the foreign key, so a type deleted
+        // between this check and the insert cannot slip through.
         if (!in_array($type, Complaint::types(), true)) {
             $errors['complaint_type'] = 'Select a valid issue type.';
         }

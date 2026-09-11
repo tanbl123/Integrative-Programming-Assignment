@@ -25,6 +25,19 @@
 -- and who owns each table; this file is the quickest way to a working
 -- copy for a demonstration.
 --
+-- ONE EXCEPTION, and it matters. This dump was taken before
+-- 15_complaint_types.sql existed, so it has no complaint_types table and
+-- its complaints.complaint_type is still an ENUM. The application reads
+-- the issue types from that table, so a database built from this file
+-- alone cannot open the complaint form.
+--
+--   After importing this file, run 15_complaint_types.sql.
+--
+-- It is written to be safe on top of an existing database: the table is
+-- created only if absent, the six types are inserted only if absent, and
+-- the ENUM is converted in place. Any migration numbered above this file
+-- should be applied the same way.
+--
 -- The CREATE DATABASE and USE lines below are not part of the phpMyAdmin
 -- export. They were added so the file can be imported without a database
 -- having been selected first, which is the commonest way this import

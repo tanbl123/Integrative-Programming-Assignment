@@ -53,9 +53,17 @@ class Complaint extends Model
         };
     }
 
+    /**
+     * The issue types a reporter may choose right now.
+     *
+     * Read from complaint_types, which an Administrator maintains, rather
+     * than fixed here. A type withdrawn from use disappears from this list
+     * while every complaint already filed under it stays readable, because
+     * complaints store the name and the withdrawn row is still there.
+     */
     public static function types(): array
     {
-        return ['Full Bin', 'Overflow', 'Damaged Bin', 'Dirty Area', 'Wrong Waste Disposal', 'Other'];
+        return ComplaintType::activeNames();
     }
 
     public function setDetails(int $reporterId, int $binId, string $type, string $description): void
