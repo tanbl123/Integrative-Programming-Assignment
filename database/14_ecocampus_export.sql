@@ -47,7 +47,7 @@ USE `ecocampus`;
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 11, 2026 at 06:17 PM
+-- Generation Time: Sep 11, 2026 at 09:46 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -87,13 +87,13 @@ CREATE TABLE `bins` (
 --
 
 INSERT INTO `bins` (`bin_id`, `bin_code`, `location_id`, `category_id`, `fill_status`, `capacity_litre`, `is_active`, `last_updated`) VALUES
-(1, 'BIN-A-001', 1, 1, 'Half', 120, 1, '2026-09-10 20:12:31'),
+(1, 'BIN-A-001', 1, 1, 'Full', 120, 1, '2026-09-12 03:10:45'),
 (2, 'BIN-A-002', 1, 2, 'Empty', 120, 1, '2026-09-10 20:12:31'),
 (3, 'BIN-A-003', 2, 1, 'Full', 240, 1, '2026-09-10 20:12:31'),
 (4, 'BIN-A-004', 2, 3, 'Full', 240, 1, '2026-09-10 20:12:31'),
-(5, 'BIN-B-001', 3, 2, 'Empty', 120, 1, '2026-09-10 20:12:31'),
+(5, 'BIN-B-001', 3, 2, 'Full', 120, 1, '2026-09-12 02:23:12'),
 (6, 'BIN-B-002', 4, 1, 'Full', 120, 1, '2026-09-11 23:29:40'),
-(7, 'BIN-B-003', 4, 4, 'Empty', 60, 1, '2026-09-10 20:12:31'),
+(7, 'BIN-B-003', 4, 4, 'Empty', 60, 1, '2026-09-12 01:31:56'),
 (8, 'BIN-C-001', 5, 1, 'Full', 240, 1, '2026-09-10 20:12:31'),
 (9, 'BIN-P-001', 6, 1, 'Under Maintenance', 240, 1, '2026-09-10 20:12:31'),
 (10, 'BIN-D-001', 7, 2, 'Half', 120, 1, '2026-09-10 20:12:31');
@@ -120,7 +120,11 @@ CREATE TABLE `bin_status_updates` (
 
 INSERT INTO `bin_status_updates` (`update_id`, `bin_id`, `cleaner_id`, `old_status`, `new_status`, `remarks`, `updated_at`) VALUES
 (1, 6, 1, 'Full', 'Empty', 'Complaint CMP-2026-0009 resolved; no reports left open.', '2026-09-11 23:26:27'),
-(2, 6, 3, 'Empty', 'Full', 'Reported full by complaint CMP-2026-0010.', '2026-09-11 23:29:40');
+(2, 6, 3, 'Empty', 'Full', 'Reported full by complaint CMP-2026-0010.', '2026-09-11 23:29:40'),
+(3, 7, 3, 'Empty', 'Full', 'Reported full by complaint CMP-2026-0013.', '2026-09-12 01:27:47'),
+(4, 7, 1, 'Full', 'Empty', 'Complaint CMP-2026-0013 resolved; no reports left open.', '2026-09-12 01:31:56'),
+(5, 5, 3, 'Empty', 'Full', 'Reported full by complaint CMP-2026-0016.', '2026-09-12 02:23:12'),
+(6, 1, 3, 'Half', 'Full', 'Reported full by complaint CMP-2026-0017.', '2026-09-12 03:10:45');
 
 -- --------------------------------------------------------
 
@@ -152,7 +156,9 @@ INSERT INTO `collection_assignments` (`assignment_id`, `schedule_id`, `cleaner_i
 (4, 1, 6, 1, 5, 'Urgent', 'Skipped', 'Unresolved complaint #5: Wrong Waste Disposal', NULL, 'Schedule cancelled by administrator.'),
 (5, 1, 6, 6, 9, 'Urgent', 'Skipped', 'Unresolved complaint #9: Overflow', NULL, 'Schedule cancelled by administrator.'),
 (6, 2, 6, 6, 10, 'Urgent', 'Assigned', 'Complaint CMP-2026-0010: Overflow', NULL, NULL),
-(7, 3, 7, 9, 11, 'Urgent', 'Assigned', 'Complaint CMP-2026-0011: Damaged Bin', NULL, NULL);
+(7, 3, 7, 9, 11, 'Urgent', 'Assigned', 'Complaint CMP-2026-0011: Damaged Bin', NULL, NULL),
+(8, 4, 6, 7, 13, 'Urgent', 'Assigned', 'Complaint CMP-2026-0013: Overflow', NULL, NULL),
+(9, 5, 7, 3, 1, 'Urgent', 'Assigned', 'Complaint CMP-2026-0001: Overflow', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -197,7 +203,9 @@ CREATE TABLE `collection_schedules` (
 INSERT INTO `collection_schedules` (`schedule_id`, `admin_id`, `schedule_date`, `time_slot`, `strategy`, `schedule_status`, `notes`, `created_at`, `updated_at`, `deleted_at`) VALUES
 (1, 1, '2026-09-11', '09:00–12:00', 'Complaint Priority', 'Cancelled', NULL, '2026-09-11 22:53:26', '2026-09-11 23:45:36', NULL),
 (2, 1, '2026-09-11', '09:00-12:00', 'Complaint Priority', 'Planned', 'please do cleaning', '2026-09-11 23:54:56', '2026-09-11 23:54:56', NULL),
-(3, 1, '2026-09-12', '09:00-09:30', 'Complaint Priority', 'Planned', 'please replace a new bin', '2026-09-12 00:05:00', '2026-09-12 00:05:00', NULL);
+(3, 1, '2026-09-12', '09:00-09:30', 'Complaint Priority', 'Planned', 'please replace a new bin', '2026-09-12 00:05:00', '2026-09-12 00:05:00', NULL),
+(4, 1, '2026-09-12', '09:00-12:00', 'Complaint Priority', 'Planned', 'please clean the bin', '2026-09-12 01:29:24', '2026-09-12 01:29:24', NULL),
+(5, 1, '2026-09-12', '09:00-12:00', 'Complaint Priority', 'Planned', 'please clean this area', '2026-09-12 01:58:46', '2026-09-12 01:58:46', NULL);
 
 -- --------------------------------------------------------
 
@@ -227,13 +235,18 @@ INSERT INTO `complaints` (`complaint_id`, `reporter_id`, `bin_id`, `complaint_ty
 (3, 5, 8, 'Damaged Bin', 'The lid of the bin at the rear exit of LH1 is broken and will not close.', 'Assigned', '2026-09-10 20:12:31', '2026-09-11 22:53:26', NULL),
 (4, 3, 9, 'Dirty Area', 'Area around the car park bin is dirty and smells strongly.', 'Resolved', '2026-09-10 20:12:31', '2026-09-10 20:12:31', NULL),
 (5, 4, 1, 'Wrong Waste Disposal', 'Someone put food waste into the general waste bin in the main lobby.', 'Assigned', '2026-09-10 20:12:31', '2026-09-11 22:53:26', NULL),
-(6, 4, 3, 'Overflow', 'Rubbish is spilling out of the bin next to the drinks stall. It has been like this since breakfast.', 'New', '2026-09-11 05:15:05', '2026-09-11 05:15:05', NULL),
+(6, 4, 3, 'Overflow', 'Rubbish is spilling out of the bin next to the drinks stall. It has been like this since breakfast.', 'Assigned', '2026-09-11 05:15:05', '2026-09-12 01:58:46', NULL),
 (7, 5, 3, 'Overflow', 'Cafeteria bin is overflowing again. Flies around it and the floor is sticky.', 'Assigned', '2026-09-11 05:15:05', '2026-09-11 05:15:05', NULL),
 (8, 3, 8, 'Damaged Bin', 'The bin outside LH1 is cracked down one side, and it also has not been emptied for days.', 'Assigned', '2026-09-11 05:15:05', '2026-09-11 23:12:25', NULL),
 (9, 3, 6, 'Overflow', 'Please clean the bin ASAP!!', 'Resolved', '2026-09-11 15:39:30', '2026-09-11 23:26:26', NULL),
 (10, 3, 6, 'Overflow', 'please clean the rubbish bin.', 'Assigned', '2026-09-11 23:29:40', '2026-09-11 23:54:56', NULL),
 (11, 3, 9, 'Damaged Bin', 'please replace the bin', 'Assigned', '2026-09-12 00:04:07', '2026-09-12 00:05:00', NULL),
-(12, 4, 8, 'Damaged Bin', 'please replace a new bin, the current bin is broken', 'New', '2026-09-12 00:08:39', '2026-09-12 00:08:39', NULL);
+(12, 4, 8, 'Damaged Bin', 'please replace a new bin, the current bin is broken', 'New', '2026-09-12 00:08:39', '2026-09-12 00:08:39', '2026-09-12 01:16:26'),
+(13, 3, 7, 'Overflow', 'Please ask a cleaner to clear the bin', 'Resolved', '2026-09-12 01:27:47', '2026-09-12 01:31:56', NULL),
+(14, 3, 7, 'Dirty Area', 'the surrounding of the bin is too dirty', 'Resolved', '2026-09-12 01:40:23', '2026-09-12 02:09:34', '2026-09-12 02:09:42'),
+(15, 3, 2, 'Damaged Bin', 'the bin already damage please replace it', 'Assigned', '2026-09-12 01:55:11', '2026-09-12 01:58:04', NULL),
+(16, 3, 5, 'Overflow', 'please clean the bin', 'New', '2026-09-12 02:23:12', '2026-09-12 02:23:12', NULL),
+(17, 3, 1, 'Overflow', 'Please clean this bin', 'New', '2026-09-12 03:10:45', '2026-09-12 03:10:45', NULL);
 
 -- --------------------------------------------------------
 
@@ -292,7 +305,22 @@ INSERT INTO `complaint_notifications` (`notification_id`, `complaint_id`, `recip
 (9, 10, 'Reporter', 'Complaint CMP-2026-0010 is being dealt with', 'Your report about BIN-B-002 has been accepted and work is being arranged. Collection scheduled (schedule #2).', 0, '2026-09-11 23:54:56'),
 (10, 11, 'Administrator', 'New complaint CMP-2026-0011 - Damaged Bin', 'A new Damaged Bin issue was reported for BIN-P-001.', 0, '2026-09-12 00:04:07'),
 (11, 11, 'Reporter', 'Complaint CMP-2026-0011 is being dealt with', 'Your report about BIN-P-001 has been accepted and work is being arranged. Collection scheduled (schedule #3).', 0, '2026-09-12 00:05:00'),
-(12, 12, 'Administrator', 'New complaint CMP-2026-0012 - Damaged Bin', 'A new Damaged Bin issue was reported for BIN-C-001.', 0, '2026-09-12 00:08:39');
+(12, 12, 'Administrator', 'New complaint CMP-2026-0012 - Damaged Bin', 'A new Damaged Bin issue was reported for BIN-C-001.', 0, '2026-09-12 00:08:39'),
+(13, 12, 'Administrator', 'Complaint CMP-2026-0012 withdrawn', 'Admin withdrew the Damaged Bin report about BIN-C-001.', 0, '2026-09-12 01:16:26'),
+(14, 13, 'Administrator', 'New complaint CMP-2026-0013 - Overflow', 'A new Overflow issue was reported for BIN-B-003.', 0, '2026-09-12 01:27:47'),
+(15, 13, 'Reporter', 'Complaint CMP-2026-0013 is being dealt with', 'Your report about BIN-B-003 has been accepted and work is being arranged. The administrator says: we already assign cleaner to do cleaning', 0, '2026-09-12 01:29:24'),
+(16, 13, 'Reporter', 'Complaint CMP-2026-0013 resolved', 'Your report about BIN-B-003 was marked Resolved.', 0, '2026-09-12 01:31:56'),
+(17, 14, 'Administrator', 'New complaint CMP-2026-0014 - Dirty Area', 'A new Dirty Area issue was reported for BIN-B-003.', 0, '2026-09-12 01:40:23'),
+(18, 15, 'Administrator', 'New complaint CMP-2026-0015 - Dirty Area', 'A new Dirty Area issue was reported for BIN-A-002.', 0, '2026-09-12 01:55:11'),
+(19, 15, 'Reporter', 'Complaint CMP-2026-0015 is being dealt with', 'Your report about BIN-A-002 has been accepted and work is being arranged.', 0, '2026-09-12 01:56:38'),
+(20, 15, 'Reporter', 'Complaint CMP-2026-0015 is waiting again', 'The collection arranged for BIN-A-002 is no longer going ahead, so your report is waiting to be dealt with again.', 0, '2026-09-12 01:57:45'),
+(21, 15, 'Reporter', 'Complaint CMP-2026-0015 is being dealt with', 'Your report about BIN-A-002 has been accepted and work is being arranged.', 0, '2026-09-12 01:58:04'),
+(22, 6, 'Reporter', 'Complaint CMP-2026-0006 is being dealt with', 'Your report about BIN-A-003 has been accepted and work is being arranged. The administrator says: we will clean it ASAP', 0, '2026-09-12 01:58:46'),
+(23, 14, 'Reporter', 'Complaint CMP-2026-0014 is being dealt with', 'Your report about BIN-B-003 has been accepted and work is being arranged.', 0, '2026-09-12 02:09:29'),
+(24, 14, 'Reporter', 'Complaint CMP-2026-0014 resolved', 'Your report about BIN-B-003 was marked Resolved.', 0, '2026-09-12 02:09:34'),
+(25, 14, 'Administrator', 'Complaint CMP-2026-0014 withdrawn', 'Admin withdrew the Dirty Area report about BIN-B-003.', 0, '2026-09-12 02:09:42'),
+(26, 16, 'Administrator', 'New complaint CMP-2026-0016 - Overflow', 'A new Overflow issue was reported for BIN-B-001.', 0, '2026-09-12 02:23:12'),
+(27, 17, 'Administrator', 'New complaint CMP-2026-0017 - Overflow', 'A new Overflow issue was reported for BIN-A-001.', 0, '2026-09-12 03:10:45');
 
 -- --------------------------------------------------------
 
@@ -318,7 +346,10 @@ CREATE TABLE `complaint_revisions` (
 INSERT INTO `complaint_revisions` (`revision_id`, `complaint_id`, `edited_by`, `bin_id`, `complaint_type`, `description`, `attachment_id`, `edited_at`) VALUES
 (1, 9, 3, 6, 'Overflow', 'Please clean the bin ASAP', 1, '2026-09-11 17:55:21'),
 (2, 9, 3, 6, 'Overflow', 'Please clean the bin ASAP', 2, '2026-09-11 21:20:02'),
-(3, 10, 3, 6, 'Overflow', 'please clean the rubbish bin', NULL, '2026-09-11 23:29:50');
+(3, 10, 3, 6, 'Overflow', 'please clean the rubbish bin', NULL, '2026-09-11 23:29:50'),
+(4, 14, 3, 7, 'Dirty Area', 'the surrounding of the bin is too dirty', NULL, '2026-09-12 01:41:23'),
+(5, 14, 3, 7, 'Damaged Bin', 'the surrounding of the bin is too dirty', NULL, '2026-09-12 01:41:58'),
+(6, 15, 3, 2, 'Dirty Area', 'please clean the bin area', NULL, '2026-09-12 01:55:59');
 
 -- --------------------------------------------------------
 
@@ -359,7 +390,25 @@ INSERT INTO `complaint_status_history` (`history_id`, `complaint_id`, `updated_b
 (15, 10, 1, 'New', 'Assigned', 'Status', 'Collection scheduled (schedule #2).', '2026-09-11 23:54:56'),
 (16, 11, 3, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-12 00:04:07'),
 (17, 11, 1, 'New', 'Assigned', 'Status', 'Collection scheduled (schedule #3).', '2026-09-12 00:05:00'),
-(18, 12, 4, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-12 00:08:39');
+(18, 12, 4, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-12 00:08:39'),
+(19, 12, 1, 'New', 'New', 'Withdrawn', 'Withdrawn by Admin.', '2026-09-12 01:16:26'),
+(20, 13, 3, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-12 01:27:47'),
+(21, 13, 1, 'New', 'Assigned', 'Status', 'Collection scheduled (schedule #4).', '2026-09-12 01:29:24'),
+(22, 13, 1, 'Assigned', 'Resolved', 'Status', NULL, '2026-09-12 01:31:56'),
+(23, 14, 3, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-12 01:40:23'),
+(24, 14, 3, 'New', 'New', 'Details', 'Edited: issue type.', '2026-09-12 01:41:23'),
+(25, 14, 3, 'New', 'New', 'Details', 'Edited: issue type.', '2026-09-12 01:41:58'),
+(26, 15, 3, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-12 01:55:11'),
+(27, 15, 3, 'New', 'New', 'Details', 'Edited: issue type, description.', '2026-09-12 01:55:59'),
+(28, 15, 1, 'New', 'Assigned', 'Status', 'we will send people to replace the bin', '2026-09-12 01:56:38'),
+(29, 15, 1, 'Assigned', 'New', 'Status', NULL, '2026-09-12 01:57:45'),
+(30, 15, 1, 'New', 'Assigned', 'Status', NULL, '2026-09-12 01:58:04'),
+(31, 6, 1, 'New', 'Assigned', 'Status', 'we will clean it ASAP', '2026-09-12 01:58:46'),
+(32, 14, 1, 'New', 'Assigned', 'Status', NULL, '2026-09-12 02:09:29'),
+(33, 14, 1, 'Assigned', 'Resolved', 'Status', NULL, '2026-09-12 02:09:34'),
+(34, 14, 1, 'Resolved', 'Resolved', 'Withdrawn', 'Withdrawn by Admin.', '2026-09-12 02:09:42'),
+(35, 16, 3, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-12 02:23:12'),
+(36, 17, 3, NULL, 'New', 'Status', 'Complaint submitted.', '2026-09-12 03:10:45');
 
 -- --------------------------------------------------------
 
@@ -617,13 +666,13 @@ ALTER TABLE `bins`
 -- AUTO_INCREMENT for table `bin_status_updates`
 --
 ALTER TABLE `bin_status_updates`
-  MODIFY `update_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `update_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `collection_assignments`
 --
 ALTER TABLE `collection_assignments`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `collection_records`
@@ -635,13 +684,13 @@ ALTER TABLE `collection_records`
 -- AUTO_INCREMENT for table `collection_schedules`
 --
 ALTER TABLE `collection_schedules`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `complaints`
 --
 ALTER TABLE `complaints`
-  MODIFY `complaint_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `complaint_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `complaint_attachments`
@@ -653,19 +702,19 @@ ALTER TABLE `complaint_attachments`
 -- AUTO_INCREMENT for table `complaint_notifications`
 --
 ALTER TABLE `complaint_notifications`
-  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `complaint_revisions`
 --
 ALTER TABLE `complaint_revisions`
-  MODIFY `revision_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `revision_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `complaint_status_history`
 --
 ALTER TABLE `complaint_status_history`
-  MODIFY `history_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `history_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `complaint_types`
