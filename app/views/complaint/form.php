@@ -484,14 +484,33 @@
     cross.setAttribute('aria-hidden', 'true');
     cross.textContent = '\u00d7';
 
+    /*
+     * Choosing a replacement answers the same question this button asks, so
+     * while one is chosen the button is out of the way. Two controls both
+     * labelled Remove, one acting on the saved photograph and one on the file
+     * just picked, is a choice nobody should have to read twice.
+     */
+    const replacement = document.getElementById('attachment');
+
     const render = () => {
-        const removing = box.checked;
+        const replacing = replacement !== null && replacement.files.length > 0;
+        const removing = box.checked && !replacing;
+
+        if (replacing && box.checked) {
+            box.checked = false;   // the replacement supersedes it anyway
+        }
+
+        field.hidden = replacing;
         button.textContent = removing ? 'Keep this photo' : 'Remove';
         if (!removing) {
             button.append(cross);
         }
-        note.textContent = removing ? 'This photo will be removed when you save.' : '';
-        photo.classList.toggle('is-removing', removing);
+
+        note.textContent = replacing
+            ? 'This photo will be replaced when you save.'
+            : (removing ? 'This photo will be removed when you save.' : '');
+
+        photo.classList.toggle('is-removing', removing || replacing);
     };
 
     button.addEventListener('click', () => {
@@ -503,6 +522,9 @@
 
     // Clear fields resets the checkbox; the button has to follow it.
     box.addEventListener('change', render);
+
+    // And the card has to follow whatever the drop zone is holding.
+    replacement?.addEventListener('change', render);
 
     field.append(button);
     render();
