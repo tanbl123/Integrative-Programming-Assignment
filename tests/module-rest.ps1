@@ -35,7 +35,11 @@ function Api($identity, [string]$method, [string]$path, $body, [int]$expected = 
     $identity.Session.Headers.Remove('X-CSRF-Token') | Out-Null
     $headers = @{}
     if ($csrf) { $headers['X-CSRF-Token'] = $identity.Token }
-    $parameters = @{Uri="$BaseUrl/$path";Method=$method;WebSession=$identity.Session;Headers=$headers;SkipHttpErrorCheck=$true}
+    $requestId = "TEST-$([guid]::NewGuid().ToString('N'))"
+    $timeStamp = [uri]::EscapeDataString((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))
+    $separator = if ($path.Contains('?')) { '&' } else { '?' }
+    $trackedPath = "$path${separator}requestID=$requestId&requestId=$requestId&timeStamp=$timeStamp"
+    $parameters = @{Uri="$BaseUrl/$trackedPath";Method=$method;WebSession=$identity.Session;Headers=$headers;SkipHttpErrorCheck=$true}
     if ($null -ne $body) { $parameters.Body = ConvertTo-Json $body -Depth 8 -Compress; $parameters.ContentType = 'application/json' }
     $reply = Invoke-WebRequest @parameters
     Check ([int]$reply.StatusCode -eq $expected) "$method $path returns $expected (actual $($reply.StatusCode))"
@@ -67,9 +71,11 @@ try {
     $null = Api $reporter DELETE "complaint-api/$cid" $null 422
     $null = Api $reporter PATCH "complaint-api/$cid" @{description='Assigned complaint should not change.'} 422
     $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Resolved'}
-    $null = Api $reporter DELETE "complaint-api/$cid" $null
+    $null = Api $admin DELETE "complaint-api/$cid" $null
     $null = Api $reporter GET "complaint-api/$cid" $null 404
-    Check ([int](Sql "SELECT COUNT(*) FROM complaint_status_history WHERE complaint_id=$cid;") -eq 3) 'Soft-deleted complaint retains three Observer history entries'
+    $historyCount = [int](Sql "SELECT COUNT(*) FROM complaint_status_history WHERE complaint_id=$cid;")
+    Check ($historyCount -eq 5) "Soft-deleted complaint retains five Observer history entries (actual $historyCount)"
+    Check ([int](Sql "SELECT COUNT(*) FROM complaint_status_history WHERE complaint_id=$cid AND change_type='Withdrawn';") -eq 1) 'Complaint deletion records one Withdrawn Observer event'
     Check ([int](Sql "SELECT COUNT(*) FROM complaints WHERE complaint_id=$cid AND deleted_at IS NOT NULL;") -eq 1) 'Complaint row soft-deleted in MySQL'
     $cleaners = Api $admin GET 'user-api/cleaners' $null
     $cleanerId = [int]($cleaners.data | Where-Object { $_.email -eq 'zaki@cleaner.ecocampus.my' } | Select-Object -First 1).id

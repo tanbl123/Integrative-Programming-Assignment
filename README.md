@@ -152,6 +152,12 @@ Authenticated JSON endpoints are available at:
 - `POST /EcoCampus/bin-api/update-status/{id}` (Cleaner + CSRF token)
 - `GET /EcoCampus/location-api`
 
+The Bin details page consumes Scheduling's
+`GET /EcoCampus/schedule-api/bin-status/{binId}` REST endpoint through
+`ScheduleServiceClient::getBinScheduleStatus()`. This keeps Scheduling's table
+access inside its own module and displays the next planned collection on the
+Bin page.
+
 ### Remaining design patterns and web services
 
 - **Observer:** `ComplaintStatusSubject` notifies `ComplaintHistoryObserver`
@@ -166,6 +172,7 @@ Additional authenticated JSON endpoints:
 - `GET /EcoCampus/complaint-api/unresolved`
 - `GET /EcoCampus/user-api/cleaners`
 - `GET /EcoCampus/schedule-api/mine`
+- `GET /EcoCampus/schedule-api/bin-status/{binId}`
 
 The schedule generation screen consumes the Bin, Complaint, and User JSON
 services to preview eligible work and active cleaners before submission.
@@ -188,6 +195,10 @@ Writes require an authenticated session, the correct role permission, JSON
 input, and the session CSRF token in the `X-CSRF-Token` header. The existing
 `/bin-api`, `/complaint-api/unresolved`, and `/user-api/cleaners` calls in the
 schedule form demonstrate service consumption between modules.
+
+Bin, Location, and Bin Scheduling-status requests also follow the Interface
+Agreement: send `requestID` or `timeStamp` (`YYYY-MM-DD HH:MM:SS`). Responses
+echo `requestID` and include `status` (`S`, `F`, or `E`) and `timeStamp`.
 
 To repeat the local MySQL/HTTP regression checks from PowerShell:
 

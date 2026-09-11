@@ -31,6 +31,41 @@
     <div><span>Last updated</span><strong><?= e($bin->getLastUpdated()) ?></strong></div>
 </section>
 
+<section class="content-card">
+    <h2>Collection schedule</h2>
+    <?php if ($scheduleStatus !== null): ?>
+        <?php $nextCollection = $scheduleStatus['nextCollection'] ?? null; ?>
+        <div class="detail-grid">
+            <div>
+                <span>Scheduling status</span>
+                <strong><?= e((string) ($scheduleStatus['scheduleStatus'] ?? 'Not Scheduled')) ?></strong>
+            </div>
+            <div>
+                <span>Open assignments</span>
+                <strong><?= (int) ($scheduleStatus['openAssignmentCount'] ?? 0) ?></strong>
+            </div>
+            <div>
+                <span>Next collection</span>
+                <strong>
+                    <?= $nextCollection === null
+                        ? 'No collection assigned'
+                        : e((string) ($nextCollection['date'] ?? 'Unknown date') . ' · ' . (string) ($nextCollection['timeSlot'] ?? 'Unknown time')) ?>
+                </strong>
+            </div>
+            <div>
+                <span>Assigned cleaner</span>
+                <strong><?= e((string) ($nextCollection['cleaner']['name'] ?? 'Not assigned')) ?></strong>
+            </div>
+        </div>
+        <p class="muted">Loaded from the Scheduling REST service · Request <?= e((string) $scheduleServiceRequestId) ?></p>
+    <?php else: ?>
+        <p>The Scheduling service is currently unavailable. Bin details are still available.</p>
+        <?php if ($scheduleServiceError !== null): ?>
+            <p class="muted"><?= e($scheduleServiceError) ?> · Request <?= e((string) $scheduleServiceRequestId) ?></p>
+        <?php endif; ?>
+    <?php endif; ?>
+</section>
+
 <?php if ($user->isAdmin() && $bin->isActive()): ?>
     <form method="post" action="<?= url('bin/deactivate/' . $bin->getKey()) ?>" class="danger-zone" onsubmit="return confirm('Deactivate this bin? Historical records will be retained.');">
         <?= csrfField() ?>

@@ -6,6 +6,44 @@
  */
 class ScheduleApiController extends ApiController
 {
+    /**
+     * REST service consumed by Bin & Location Management.
+     * GET /schedule-api/bin-status/{binId}?requestID=...&timeStamp=...
+     */
+    public function binStatus(int $binId): void
+    {
+        $this->apiAllow(['GET']);
+        try {
+            $this->apiRequireTracking();
+            UserPermissions::require('bin.view');
+            $bin = Bin::find($binId);
+            if ($bin === null || !$bin->isActive()) {
+                throw new OutOfBoundsException('Bin not found.');
+            }
+
+            $assignments = CollectionAssignment::openForBin($binId);
+            $next = $assignments[0] ?? null;
+            $schedule = $next?->getSchedule();
+            $cleaner = $next?->getCleaner();
+
+            $this->apiRespond([
+                'binId' => $binId,
+                'hasOpenAssignment' => $next !== null,
+                'openAssignmentCount' => count($assignments),
+                'scheduleStatus' => $schedule?->getStatus() ?? 'Not Scheduled',
+                'nextCollection' => $schedule === null ? null : [
+                    'scheduleId' => $schedule->getKey(),
+                    'date' => $schedule->getDate(),
+                    'timeSlot' => $schedule->getTimeSlot(),
+                    'cleaner' => $cleaner === null ? null : [
+                        'id' => $cleaner->getKey(),
+                        'name' => $cleaner->getFullName(),
+                    ],
+                ],
+            ]);
+        } catch (Throwable $error) { $this->apiFailure($error); }
+    }
+
     public function resource(?int $id = null): void
     {
         try {

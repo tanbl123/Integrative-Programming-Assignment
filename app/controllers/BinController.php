@@ -46,16 +46,22 @@ class BinController extends Controller
     public function show(int $id): void
     {
         try {
+            $user = Auth::requireLogin();
             $bin = $this->service->findBin($id);
             if ($bin === null) {
                 $this->entityNotFound('Bin');
                 return;
             }
+            $scheduleClient = new ScheduleServiceClient();
+            $scheduleStatus = $scheduleClient->getBinScheduleStatus($id);
             $this->view('bin/show', [
                 'title' => $bin->getBinCode(),
                 'bin' => $bin,
                 'updates' => $bin->getStatusUpdates(),
-                'user' => Auth::requireLogin(),
+                'user' => $user,
+                'scheduleStatus' => $scheduleStatus,
+                'scheduleServiceRequestId' => $scheduleClient->getLastRequestId(),
+                'scheduleServiceError' => $scheduleClient->getLastError(),
             ]);
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);

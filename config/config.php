@@ -31,6 +31,8 @@ defined('DB_CHARSET') or define('DB_CHARSET', 'utf8mb4');
 defined('BASE_URL')    or define('BASE_URL', '/EcoCampus');
 defined('APP_ROOT')    or define('APP_ROOT', dirname(__DIR__));
 defined('UPLOAD_PATH') or define('UPLOAD_PATH', APP_ROOT . '/uploads');
+defined('APP_TIMEZONE') or define('APP_TIMEZONE', 'Asia/Kuala_Lumpur');
+date_default_timezone_set(APP_TIMEZONE);
 
 // Set to false before the demo so visitors never see raw error text.
 defined('DEBUG') or define('DEBUG', true);

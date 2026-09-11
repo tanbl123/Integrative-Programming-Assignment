@@ -218,6 +218,20 @@ class UserService {
             $errors['postcode'] = 'Postcode must be 5 digits.';
         }
 
+        $submittedBirthDate = $values['birth_date'];
+        if ($submittedBirthDate !== '') {
+            $date = DateTimeImmutable::createFromFormat('!Y-m-d', $submittedBirthDate);
+
+            if (
+                    !$date ||
+                    $date->format('Y-m-d') !== $submittedBirthDate ||
+                    $date > new DateTimeImmutable('today') ||
+                    $date < new DateTimeImmutable('1900-01-01')
+            ) {
+                $errors['birth_date'] = 'Enter a valid birth date between 1900 and today.';
+            }
+        }
+
         if ($values['ic_no'] !== '') {
             $ic = str_replace('-', '', $values['ic_no']);
 
@@ -245,21 +259,11 @@ class UserService {
                 ) {
                     $errors['ic_no'] = 'IC number contains an invalid birth date.';
                 } else {
+                    if ($submittedBirthDate !== '' && $submittedBirthDate !== $icBirthDate) {
+                        $errors['birth_date'] = 'Birth date must match the date encoded in the IC number.';
+                    }
                     $values['birth_date'] = $icBirthDate;
                 }
-            }
-        }
-
-        if ($values['birth_date'] !== '') {
-            $date = DateTimeImmutable::createFromFormat('!Y-m-d', $values['birth_date']);
-
-            if (
-                    !$date ||
-                    $date->format('Y-m-d') !== $values['birth_date'] ||
-                    $date > new DateTimeImmutable('today') ||
-                    $date < new DateTimeImmutable('1900-01-01')
-            ) {
-                $errors['birth_date'] = 'Enter a valid birth date between 1900 and today.';
             }
         }
 

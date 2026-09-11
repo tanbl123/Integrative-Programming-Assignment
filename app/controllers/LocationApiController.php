@@ -18,10 +18,10 @@ class LocationApiController extends ApiController
     {
         $this->apiAllow(['GET']);
         try {
+            $this->apiRequireTracking();
             $locations = $this->service->searchLocations(trim((string) ($_GET['q'] ?? '')));
-            $this->json([
-                'success' => true,
-                'data' => array_map(static fn(Location $location): array => [
+            $this->apiRespond(
+                array_map(static fn(Location $location): array => [
                     'id' => $location->getKey(),
                     'name' => $location->getLocationName(),
                     'building' => $location->getBuildingName(),
@@ -29,41 +29,31 @@ class LocationApiController extends ApiController
                     'description' => $location->getDescription(),
                     'label' => $location->getFullLabel(),
                 ], $locations),
-                'meta' => ['count' => count($locations)],
-                'message' => null,
-            ]);
-        } catch (AuthenticationException $error) {
-            $this->json(['success' => false, 'data' => null, 'message' => $error->getMessage()], 401);
-        } catch (AuthorizationException $error) {
-            $this->json(['success' => false, 'data' => null, 'message' => $error->getMessage()], 403);
-        }
+                200,
+                null,
+                ['meta' => ['count' => count($locations)]]
+            );
+        } catch (Throwable $error) { $this->apiFailure($error); }
     }
 
     public function show(int $id): void
     {
         $this->apiAllow(['GET']);
         try {
+            $this->apiRequireTracking();
             $location = $this->service->findLocation($id);
             if ($location === null) {
-                $this->json(['success' => false, 'data' => null, 'message' => 'Location not found.'], 404);
+                throw new OutOfBoundsException('Location not found.');
             }
-            $this->json([
-                'success' => true,
-                'data' => [
+            $this->apiRespond([
                     'id' => $location->getKey(),
                     'name' => $location->getLocationName(),
                     'building' => $location->getBuildingName(),
                     'floor' => $location->getFloorNo(),
                     'description' => $location->getDescription(),
                     'label' => $location->getFullLabel(),
-                ],
-                'message' => null,
             ]);
-        } catch (AuthenticationException $error) {
-            $this->json(['success' => false, 'data' => null, 'message' => $error->getMessage()], 401);
-        } catch (AuthorizationException $error) {
-            $this->json(['success' => false, 'data' => null, 'message' => $error->getMessage()], 403);
-        }
+        } catch (Throwable $error) { $this->apiFailure($error); }
     }
 
     public function resource(?int $id = null): void
@@ -75,6 +65,7 @@ class LocationApiController extends ApiController
                 return;
             }
             $payload = $this->apiPayload();
+            $this->apiRequireTracking($payload);
             $this->apiWriteGuard($payload);
             $this->service->authorizeAdministrator();
             if ($this->apiMethod() === 'DELETE') {
