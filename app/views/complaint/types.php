@@ -109,8 +109,20 @@
 
                             <?php /* Withdrawing is the counterpart to deleting, and for a
                                      type anyone has used it is the only option: the row has
-                                     to stay for those complaints to remain valid. */ ?>
-                            <form method="post" action="<?= url('complaint-type/toggle/' . $type->getKey()) ?>">
+                                     to stay for those complaints to remain valid.
+
+                                     Only making a type available asks first. It is the step
+                                     that lets the type be used, and the first complaint filed
+                                     under it makes the type permanent - so the spelling is
+                                     worth a second look here and nowhere else. Withdrawing
+                                     costs nothing and is undone by this same button. */ ?>
+                            <form
+                                method="post"
+                                action="<?= url('complaint-type/toggle/' . $type->getKey()) ?>"
+                                <?php if (!$type->isActive()): ?>
+                                    data-confirm="Make &quot;<?= e($type->getName()) ?>&quot; available to reporters? Check the spelling now: once a complaint is filed under a type, that type can no longer be deleted."
+                                <?php endif; ?>
+                            >
                                 <?= csrfField() ?>
                                 <input type="hidden" name="is_active" value="<?= $type->isActive() ? '0' : '1' ?>">
                                 <button class="button button-secondary" type="submit">
