@@ -17,11 +17,13 @@ class ComplaintService
     {
         $this->subject = new ComplaintStatusSubject();
 
-        // Three independent reactions to one complaint event. The service
+        // Four independent reactions to one complaint event. The service
         // knows only that it must notify - not what any observer does.
         $this->subject->attach(new ComplaintHistoryObserver());
         $this->subject->attach(new ComplaintNotificationObserver());
-        $this->subject->attach(new ComplaintBinFlagObserver());
+        // Given the Bin module's own service, so a complaint's claim about a
+        // bin is validated and recorded by the module that owns the record.
+        $this->subject->attach(new ComplaintBinFlagObserver(new BinLocationService()));
         // Added last, and needing no change to this service beyond this line.
         $this->subject->attach(new ComplaintRevisionObserver());
     }
@@ -58,15 +60,18 @@ class ComplaintService
         }
     }
 
+    /**
+     * The complaints this user may see.
+     *
+     * Which complaints those are is the user's own business, so the question is
+     * put to them: a Reporter answers with theirs, an Administrator with all of
+     * them, a Cleaner by refusing. This method used to test the permissions and
+     * branch on the answer, which meant every role's rule lived here rather
+     * than with the role.
+     */
     public function searchVisible(User $user, string $query, string $status, ?int $locationId): array
     {
-        if (UserPermissions::can($user, 'complaint.manage')) {
-            return Complaint::search(null, trim($query), $status, $locationId);
-        }
-        if (UserPermissions::can($user, 'complaint.view_own')) {
-            return Complaint::search($user->getKey(), trim($query), $status, $locationId);
-        }
-        throw new AuthorizationException('Your role does not have complaint access.');
+        return $user->visibleComplaints($query, $status, $locationId);
     }
 
     public function findVisible(User $user, int $id): ?Complaint
@@ -75,8 +80,7 @@ class ComplaintService
         if ($complaint === null || $complaint->isDeleted()) {
             return null;
         }
-        if (UserPermissions::can($user, 'complaint.manage')
-            || (UserPermissions::can($user, 'complaint.view_own') && $complaint->getReporterId() === $user->getKey())) {
+        if ($user->maySee($complaint)) {
             return $complaint;
         }
         throw new AuthorizationException('You cannot access another reporter’s complaint.');
@@ -91,20 +95,45 @@ class ComplaintService
         }
         $old = $complaint->getStatus();
         $errors = [];
-        if (!in_array($status, Complaint::allowedNextStatuses($old), true)) {
-            $errors['complaint_status'] = Complaint::allowedNextStatuses($old) === []
-                ? 'This complaint is already in a final state.'
-                : 'Select a valid next status in the complaint lifecycle.';
+        if (!in_array($status, $this->nextStatusesFor($complaint), true)) {
+            $errors['complaint_status'] = match (true) {
+                Complaint::allowedNextStatuses($old) === []
+                    => 'This complaint is already in a final state.',
+                // Named separately from "not a valid next status", because the
+                // step is valid and the reason it is refused is fixable.
+                $status === Complaint::STATUS_ASSIGNED
+                    => 'No cleaner is booked to visit this bin, so this complaint cannot be '
+                     . 'marked Assigned. Generate a collection schedule for the bin first; '
+                     . 'that moves the complaint here on its own.',
+                default => 'Select a valid next status in the complaint lifecycle.',
+            };
         }
         if (mb_strlen($remarks) > 255) {
             $errors['remarks'] = 'Remarks cannot exceed 255 characters.';
+        }
+        // Required for a rejection and optional everywhere else. Resolved and
+        // Assigned are good news and say what happened on their own; Rejected
+        // tells a reporter their report was turned down, and "Your report was
+        // marked Rejected" with nothing after it is the one message in this
+        // system that leaves somebody worse informed than before they read it.
+        if ($status === Complaint::STATUS_REJECTED && trim($remarks) === '') {
+            $errors['remarks'] = 'Say why this report is being rejected. The reporter is '
+                               . 'told the outcome, so they should be told the reason.';
         }
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
 
+        // A caller may already be inside a transaction - the Scheduling module
+        // moves a complaint to Assigned from inside its own - and PDO refuses
+        // a nested beginTransaction(). Joining the caller's transaction rather
+        // than opening one means the complaint, its history and the caller's
+        // own work commit or roll back together.
         $pdo = Database::getInstance()->pdo();
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) {
+            $pdo->beginTransaction();
+        }
         try {
             $complaint->setStatus($status);
             $complaint->save();
@@ -115,14 +144,46 @@ class ComplaintService
                 $administrator,
                 $remarks === '' ? null : $remarks
             );
-            $pdo->commit();
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
             return $complaint;
         } catch (Throwable $error) {
-            if ($pdo->inTransaction()) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             throw $error;
         }
+    }
+
+    /**
+     * The statuses this complaint may actually be moved to right now.
+     *
+     * The lifecycle says which steps exist; this says which of them are open,
+     * and Assigned has a condition attached. Assigned means a cleaner is
+     * coming, so it is refused until one is: an Administrator who sets it
+     * without scheduling anything leaves a complaint that reads as being
+     * dealt with while nobody has been sent, and a reporter who has been told
+     * so. The Scheduling module saves the assignment before asking for this
+     * move, so its own call passes.
+     *
+     * Both the form and updateStatus() read this, so what an Administrator is
+     * offered and what the service accepts cannot drift apart.
+     *
+     * @return list<string>
+     */
+    public function nextStatusesFor(Complaint $complaint): array
+    {
+        $allowed = Complaint::allowedNextStatuses($complaint->getStatus());
+
+        if ($complaint->binHasOpenCollection()) {
+            return $allowed;
+        }
+
+        return array_values(array_filter(
+            $allowed,
+            static fn(string $status): bool => $status !== Complaint::STATUS_ASSIGNED
+        ));
     }
 
     /**
@@ -137,9 +198,13 @@ class ComplaintService
      * New and Assigned both permit a transition to Rejected, so no complaint
      * in the group can be left stranded.
      *
-     * Each rejection commits on its own - updateStatus() opens its own
-     * transaction and PDO will not nest them - so a failure part way through
-     * leaves the earlier rejections recorded rather than rolling them back.
+     * The whole group commits or none of it does. This used to be impossible:
+     * updateStatus() opened a transaction unconditionally and PDO refuses a
+     * nested one, so each rejection had to commit on its own and a failure
+     * part way through left some reporters told and others not. Now that
+     * updateStatus() joins a transaction already in progress, the loop can own
+     * one - so an administrator closing a group of four either closes all
+     * four or changes nothing.
      *
      * @return int how many duplicates were rejected
      */
@@ -166,20 +231,35 @@ class ComplaintService
             }
         }
 
-        $rejected = 0;
-        foreach ($group as $complaint) {
-            if ((int) $complaint->getKey() === $keepId) {
-                continue;
-            }
-            $this->updateStatus(
-                (int) $complaint->getKey(),
-                Complaint::STATUS_REJECTED,
-                'Duplicate of complaint ' . $keptNumber . '.',
-                $administrator
-            );
-            $rejected++;
+        $pdo = Database::getInstance()->pdo();
+        $ownsTransaction = !$pdo->inTransaction();
+        if ($ownsTransaction) {
+            $pdo->beginTransaction();
         }
-        return $rejected;
+        try {
+            $rejected = 0;
+            foreach ($group as $complaint) {
+                if ((int) $complaint->getKey() === $keepId) {
+                    continue;
+                }
+                $this->updateStatus(
+                    (int) $complaint->getKey(),
+                    Complaint::STATUS_REJECTED,
+                    'Duplicate of complaint ' . $keptNumber . '.',
+                    $administrator
+                );
+                $rejected++;
+            }
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
+            return $rejected;
+        } catch (Throwable $error) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $error;
+        }
     }
 
     /**
@@ -302,6 +382,108 @@ class ComplaintService
     private const WITHDRAWABLE_BY_REPORTER = [Complaint::STATUS_NEW];
 
     /**
+     * Adds an issue type, or renames one.
+     *
+     * The name is the whole of it, and a new type is NOT offered to reporters
+     * until someone says so. A type is permanent the moment a complaint names
+     * it - the foreign key sees to that - so a misspelling that a reporter
+     * files against in the seconds after it is created can never be deleted
+     * afterwards. Adding it unavailable leaves a gap in which the spelling can
+     * be checked. Making it available is a separate, deliberate act.
+     *
+     * Its place in the dropdown is not an Administrator's decision: the six
+     * seeded types keep Other last, and anything added goes after them.
+     *
+     * Only an Administrator, because this list governs what every reporter may
+     * file. The name must be unique, which the database enforces as well.
+     *
+     * @throws ValidationException
+     */
+    public function saveType(?int $id, array $data, User $user): ComplaintType
+    {
+        UserPermissions::require('complaint.manage');
+
+        $name = trim((string) ($data['type_name'] ?? ''));
+
+        $errors = [];
+        if ($name === '' || mb_strlen($name) > 50) {
+            $errors['type_name'] = 'Give the issue type a name of 1-50 characters.';
+        }
+
+        $type = $id === null ? new ComplaintType() : ComplaintType::find($id);
+        if ($id !== null && $type === null) {
+            throw new OutOfBoundsException('Issue type not found.');
+        }
+
+        foreach (ComplaintType::allOrdered() as $existing) {
+            if (mb_strtolower($existing->getName()) === mb_strtolower($name)
+                && $existing->getKey() !== $type?->getKey()) {
+                $errors['type_name'] = 'That issue type already exists.';
+            }
+        }
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
+
+        $type->setDetails(
+            $name,
+            ($data['marks_bin_full'] ?? '') === '1',
+            $id === null ? false : $type->isActive(),
+            $id === null ? ComplaintType::nextSortOrder() : $type->getSortOrder()
+        );
+        $type->save();
+
+        return $type;
+    }
+
+    /**
+     * Withdraws an issue type from use, or brings it back.
+     *
+     * Withdrawing is not deleting. Complaints already filed under the type
+     * keep naming it, and the row has to stay for them to remain valid; what
+     * changes is that no new complaint can choose it.
+     */
+    public function setTypeActive(int $id, bool $active, User $user): ComplaintType
+    {
+        UserPermissions::require('complaint.manage');
+
+        $type = ComplaintType::find($id);
+        if ($type === null) {
+            throw new OutOfBoundsException('Issue type not found.');
+        }
+        $type->setDetails($type->getName(), $type->marksBinFull(), $active, $type->getSortOrder());
+        $type->save();
+
+        return $type;
+    }
+
+    /**
+     * Deletes an issue type nobody has used.
+     *
+     * A type complaints were filed under is never deleted: the complaints
+     * name it, and removing it would leave them naming something that does
+     * not exist. The database refuses it too, through ON DELETE RESTRICT;
+     * this check exists so the refusal arrives as a sentence rather than as
+     * a foreign key error.
+     */
+    public function deleteType(int $id, User $user): void
+    {
+        UserPermissions::require('complaint.manage');
+
+        $type = ComplaintType::find($id);
+        if ($type === null) {
+            throw new OutOfBoundsException('Issue type not found.');
+        }
+        $used = $type->complaintCount();
+        if ($used > 0) {
+            throw new ValidationException(['type' => $used . ' complaint'
+                . ($used === 1 ? ' was' : 's were') . ' filed under "' . $type->getName()
+                . '", so it cannot be deleted. Withdraw it from use instead.']);
+        }
+        $type->delete();
+    }
+
+    /**
      * True when this user may change this complaint's own details right now.
      *
      * The reporter who wrote it, or an Administrator. Editing stays shut once a
@@ -357,7 +539,33 @@ class ComplaintService
                     . 'outcome is recorded and the reporter is notified.'
                     : 'You can only withdraw a complaint that has not been acted on yet.']);
         }
-        $complaint->delete();
+
+        $status = $complaint->getStatus();
+        $pdo = Database::getInstance()->pdo();
+        $pdo->beginTransaction();
+        try {
+            $complaint->delete();
+
+            // Raised AFTER the soft delete, so that an observer asking what is
+            // still open for this bin gets an answer that already excludes
+            // this complaint. Withdrawing used to raise nothing at all, which
+            // left the history with no record of who removed the complaint
+            // and left a bin marked Full by a report that no longer existed.
+            $this->subject->notify(
+                $complaint,
+                $status,
+                $status,
+                $user,
+                'Withdrawn by ' . $user->getFullName() . '.',
+                ComplaintObserver::EVENT_WITHDRAWN
+            );
+            $pdo->commit();
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $error;
+        }
     }
 
     private function validateComplaint(array $data): array
@@ -377,6 +585,9 @@ class ComplaintService
         if ($bin === null || !$bin->isActive()) {
             $errors['bin_id'] = 'Select an active campus bin.';
         }
+        // Checked against the types currently in use. The database refuses
+        // an unknown one as well, through the foreign key, so a type deleted
+        // between this check and the insert cannot slip through.
         if (!in_array($type, Complaint::types(), true)) {
             $errors['complaint_type'] = 'Select a valid issue type.';
         }

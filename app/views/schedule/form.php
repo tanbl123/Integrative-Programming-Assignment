@@ -51,21 +51,40 @@ $action = $isEdit ? url('schedule/update/' . $schedule->getKey()) : url('schedul
             <?php endif; ?>
         </label>
 
-        <label>
-            Time slot
-            <input 
-                name="time_slot" 
-                required 
-                maxlength="50" 
-                pattern="^([01][0-9]|2[0-3]):[0-5][0-9][–-]([01][0-9]|2[0-3]):[0-5][0-9]$"
-                title="Use format like 09:00-12:00"
-                placeholder="09:00-12:00"
-                value="<?= e((string) $values['time_slot']) ?>"
-                >
-                <?php if (!empty($errors['time_slot'])): ?>
+        <?php $slot = CollectionSchedule::splitTimeSlot((string) ($values['time_slot'] ?? '')); ?>
+        <?php /* Two time inputs rather than one text box. The column is free
+                 text and has already collected the same three hours written
+                 two ways; a picker cannot produce either mistake, and the
+                 browser shows the reader whichever notation they expect while
+                 posting an unambiguous 24 hour value. */ ?>
+        <div class="time-range-field">
+            <span class="time-range-legend">Time slot</span>
+            <div class="time-range">
+                <label>
+                    From
+                    <input
+                        type="time"
+                        name="time_from"
+                        required
+                        value="<?= e((string) ($values['time_from'] ?? $slot['from'])) ?>"
+                        data-message-required="Choose a start time."
+                    >
+                </label>
+                <label>
+                    To
+                    <input
+                        type="time"
+                        name="time_to"
+                        required
+                        value="<?= e((string) ($values['time_to'] ?? $slot['to'])) ?>"
+                        data-message-required="Choose an end time."
+                    >
+                </label>
+            </div>
+            <?php if (!empty($errors['time_slot'])): ?>
                 <span class="field-error"><?= e($errors['time_slot']) ?></span>
             <?php endif; ?>
-        </label>
+        </div>
 
         <label>
             Selection strategy

@@ -34,8 +34,61 @@ class Complaint extends Model
 
     public function hasOpenAssignments(): bool
     {
+        return $this->assignmentCounts()['open'] > 0;
+    }
+
+    /**
+     * How much collection work the Scheduling module has raised from this
+     * complaint, and how much of it is still outstanding.
+     *
+     * The two numbers say different things and the complaint page needs both.
+     * No assignment at all, on a complaint an Administrator has marked
+     * Assigned, means somebody moved the status by hand and never scheduled
+     * the collection - nobody is coming. Assignments that all closed means the
+     * cleaner has been and the complaint is waiting to be resolved. Only the
+     * open count tells you work is still pending.
+     *
+     * Completed and skipped are counted apart because they are opposite
+     * outcomes: a cleaner went, or the round was called off. Collapsing both
+     * into "not open" would report a cancelled schedule as a finished one.
+     *
+     * @return array{open:int,completed:int,total:int}
+     */
+    public function assignmentCounts(): array
+    {
+        $open = 0;
+        $completed = 0;
+        $total = 0;
+
         foreach (CollectionAssignment::where('source_complaint_id', $this->getKey()) as $assignment) {
-            if ($assignment->getStatus() === 'Assigned') { return true; }
+            $total++;
+            match ($assignment->getStatus()) {
+                'Assigned'  => $open++,
+                'Completed' => $completed++,
+                default     => null,
+            };
+        }
+
+        return ['open' => $open, 'completed' => $completed, 'total' => $total];
+    }
+
+    /**
+     * True when a cleaner is currently booked to visit this complaint's bin.
+     *
+     * Asked of the BIN rather than of this complaint, and that is deliberate.
+     * ComplaintPrioritySelectionStrategy raises one task per bin, so where two
+     * people report the same bin only the first carries a source_complaint_id
+     * - a per-complaint test would leave the second permanently unable to
+     * reach Assigned. A routine or full-bin round carries no complaint at all
+     * and still sends somebody to that bin. What matters for the status is
+     * that a visit is booked, not which report is written on the docket.
+     */
+    public function binHasOpenCollection(): bool
+    {
+        foreach (CollectionAssignment::where('bin_id', $this->getBinId()) as $assignment) {
+            if ($assignment->getStatus() === 'Assigned') {
+                return true;
+            }
         }
         return false;
     }
@@ -53,9 +106,17 @@ class Complaint extends Model
         };
     }
 
+    /**
+     * The issue types a reporter may choose right now.
+     *
+     * Read from complaint_types, which an Administrator maintains, rather
+     * than fixed here. A type withdrawn from use disappears from this list
+     * while every complaint already filed under it stays readable, because
+     * complaints store the name and the withdrawn row is still there.
+     */
     public static function types(): array
     {
-        return ['Full Bin', 'Overflow', 'Damaged Bin', 'Dirty Area', 'Wrong Waste Disposal', 'Other'];
+        return ComplaintType::activeNames();
     }
 
     public function setDetails(int $reporterId, int $binId, string $type, string $description): void
@@ -111,6 +172,19 @@ class Complaint extends Model
         $year = $created !== '' ? substr($created, 0, 4) : date('Y');
 
         return sprintf('CMP-%s-%04d', $year, $id);
+    }
+
+    /**
+     * A date a person would say out loud: "10 Sep 2026" rather than
+     * "2026-09-10 20:12:31". The seconds are precise and tell a reporter
+     * nothing.
+     */
+    public static function friendlyDate(string $timestamp): string
+    {
+        $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $timestamp)
+            ?: DateTimeImmutable::createFromFormat('Y-m-d', substr($timestamp, 0, 10));
+
+        return $date === false ? $timestamp : $date->format('j M Y');
     }
 
     public function getReporterId(): int { return (int) $this->get('reporter_id'); }
@@ -218,13 +292,21 @@ class Complaint extends Model
 
         $rows = Database::getInstance()->selectAll($sql, $params);
 
+        // Phrased here rather than in the browser, because the raw values are
+        // the system's vocabulary and not the reporter's. A complaint id, the
+        // word "Assigned" and a timestamp to the second all mean something to
+        // whoever built this; to somebody standing next to a full bin they are
+        // noise between them and the one question being asked, which is
+        // whether their issue is one of these already.
         $byBin = [];
         foreach ($rows as $row) {
+            $created = (string) $row['created_at'];
             $byBin[(int) $row['bin_id']][] = [
-                'id'         => (int) $row['complaint_id'],
-                'type'       => (string) $row['complaint_type'],
-                'status'     => (string) $row['complaint_status'],
-                'created_at' => (string) $row['created_at'],
+                'type'     => (string) $row['complaint_type'],
+                'reported' => self::friendlyDate($created),
+                'state'    => $row['complaint_status'] === self::STATUS_ASSIGNED
+                    ? 'already being dealt with'
+                    : 'waiting to be looked at',
             ];
         }
         return $byBin;
@@ -245,14 +327,31 @@ class Complaint extends Model
      */
     public static function duplicateGroups(): array
     {
+        // Which one to keep by default. Assigned means an Administrator has
+        // triaged this report and moved it on - it carries their remarks and
+        // its history, and it is the one any collection assignment raised from
+        // the group was raised against. Rejecting it in favour of an untouched
+        // New report throws that away. Where none is assigned the oldest wins,
+        // as the first person to report it.
+        //
+        // Note that the status is a lifecycle step, not proof that a cleaner
+        // holds a task: collection_assignments is the Scheduling module's
+        // record and is set independently. canEdit() checks both separately
+        // for that reason.
+        //
+        // It is only the default. The administrator chooses from the group.
         $rows = Database::getInstance()->selectAll(
-            'SELECT bin_id, complaint_type, COUNT(*) AS total, MIN(complaint_id) AS keep_id'
+            'SELECT bin_id, complaint_type, COUNT(*) AS total,'
+            . ' COALESCE('
+            . '   MIN(CASE WHEN complaint_status = ? THEN complaint_id END),'
+            . '   MIN(complaint_id)'
+            . ' ) AS keep_id'
             . ' FROM complaints'
             . ' WHERE deleted_at IS NULL AND complaint_status IN (?, ?)'
             . ' GROUP BY bin_id, complaint_type'
             . ' HAVING COUNT(*) > 1'
             . ' ORDER BY total DESC, bin_id ASC',
-            [self::STATUS_NEW, self::STATUS_ASSIGNED]
+            [self::STATUS_ASSIGNED, self::STATUS_NEW, self::STATUS_ASSIGNED]
         );
 
         $groups = [];
@@ -281,6 +380,28 @@ class Complaint extends Model
             . ' ORDER BY complaint_id ASC',
             [$binId, $type, self::STATUS_NEW, self::STATUS_ASSIGNED]
         );
+        return self::hydrateAll($rows);
+    }
+
+    /**
+     * Every open report against one bin, whatever issue type it names.
+     *
+     * A collection is booked for a BIN, and it answers every report of that
+     * bin at once. openForBinAndType() is the narrower question the duplicates
+     * panel asks; this is the one the scheduler asks.
+     *
+     * @return list<Complaint>
+     */
+    public static function openForBin(int $binId): array
+    {
+        $rows = Database::getInstance()->selectAll(
+            'SELECT * FROM complaints'
+            . ' WHERE deleted_at IS NULL AND bin_id = ?'
+            . ' AND complaint_status IN (?, ?)'
+            . ' ORDER BY complaint_id ASC',
+            [$binId, self::STATUS_NEW, self::STATUS_ASSIGNED]
+        );
+
         return self::hydrateAll($rows);
     }
 

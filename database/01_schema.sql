@@ -61,6 +61,8 @@ CREATE TABLE locations (
     building_name VARCHAR(100) NULL,
     floor_no      VARCHAR(20)  NULL,
     description   VARCHAR(255) NULL,
+    latitude      DECIMAL(10, 7) NULL,
+    longitude     DECIMAL(10, 7) NULL,
     deleted_at    DATETIME NULL DEFAULT NULL,
     INDEX idx_locations_deleted (deleted_at)
 ) ENGINE=InnoDB;
@@ -125,6 +127,31 @@ CREATE TABLE bin_status_updates (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
+-- complaint_types - the issue types a reporter may choose
+-- Owner: Tan Boon Leong (Complaint / Report Management)
+--
+-- Maintained by an Administrator rather than fixed in code. Complaints
+-- reference the UNIQUE type_name rather than this table's id, so they
+-- store the readable value and the database still refuses one that does
+-- not exist - what the ENUM used to do, without the schema change every
+-- new type would have needed.
+-- ---------------------------------------------------------------------
+CREATE TABLE complaint_types (
+    type_id    INT AUTO_INCREMENT PRIMARY KEY,
+    type_name  VARCHAR(50) NOT NULL UNIQUE,
+    -- What the type means, as opposed to what it is called. A complaint of
+    -- a type marked here records that the bin needs collecting, so that
+    -- ComplaintBinFlagObserver asks the type rather than comparing the
+    -- name against a list it would have to be kept in step with.
+    marks_bin_full TINYINT(1) NOT NULL DEFAULT 0,
+    is_active  TINYINT(1) NOT NULL DEFAULT 1,
+    -- Where the type sits in the reporter's dropdown. Seeded so that Other
+    -- stays last; a type added later is appended after it.
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
 -- complaints - a waste issue reported against a bin
 -- Owner: Tan Boon Leong (Complaint / Report Management)
 -- ---------------------------------------------------------------------
@@ -132,9 +159,7 @@ CREATE TABLE complaints (
     complaint_id     INT AUTO_INCREMENT PRIMARY KEY,
     reporter_id      INT NOT NULL,
     bin_id           INT NOT NULL,
-    complaint_type   ENUM('Full Bin', 'Overflow', 'Damaged Bin',
-                          'Dirty Area', 'Wrong Waste Disposal', 'Other')
-                         NOT NULL,
+    complaint_type   VARCHAR(50) NOT NULL,
     description      TEXT NOT NULL,
     complaint_status ENUM('New', 'Assigned', 'Resolved', 'Rejected')
                          NOT NULL DEFAULT 'New',
@@ -148,6 +173,11 @@ CREATE TABLE complaints (
     CONSTRAINT fk_complaints_bin
         FOREIGN KEY (bin_id) REFERENCES bins(bin_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
+    -- Correcting a label corrects it everywhere; a type complaints were
+    -- filed under cannot be deleted out from under them.
+    CONSTRAINT fk_complaints_type
+        FOREIGN KEY (complaint_type) REFERENCES complaint_types(type_name)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
     INDEX idx_complaints_status (complaint_status),
     INDEX idx_complaints_reporter (reporter_id)
 ) ENGINE=InnoDB;
@@ -189,8 +219,9 @@ CREATE TABLE complaint_status_history (
     old_status   VARCHAR(50) NULL,
     new_status   VARCHAR(50) NOT NULL,
     -- Status for a lifecycle transition, Details when a complaint's own
-    -- fields were edited. Both are written by the observers.
-    change_type  ENUM('Status', 'Details') NOT NULL DEFAULT 'Status',
+    -- fields were edited, Withdrawn when it was withdrawn or deleted.
+    -- All three are written by the observers.
+    change_type  ENUM('Status', 'Details', 'Withdrawn') NOT NULL DEFAULT 'Status',
     remarks      VARCHAR(255) NULL,
     updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_history_complaint

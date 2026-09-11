@@ -27,7 +27,7 @@ $action = $isEdit ? url('bin/update/' . $bin->getKey()) : url('bin/store');
     <div class="form-grid">
         <label>
             Bin code
-            <input name="bin_code" value="<?= e((string) ($values['bin_code'] ?? '')) ?>" required minlength="3" maxlength="50" pattern="[A-Za-z0-9-]{3,50}" title="Use 3-50 uppercase letters, numbers, or hyphens." placeholder="BIN-A-001">
+            <input name="bin_code" value="<?= e((string) ($values['bin_code'] ?? '')) ?>" required minlength="3" maxlength="50" pattern="[A-Za-z0-9-]{3,50}" title="Use 3-50 uppercase letters, numbers, or hyphens." placeholder="e.g. BIN-A-001">
             <?php if (!empty($errors['bin_code'])): ?><span class="field-error"><?= e($errors['bin_code']) ?></span><?php endif; ?>
         </label>
         <label>

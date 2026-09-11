@@ -16,6 +16,15 @@ USE ecocampus;
 -- ---------------------------------------------------------------------
 -- Users - one of each role, plus extra reporters and cleaners
 -- ---------------------------------------------------------------------
+-- ---------------------------------------------------------------------
+-- Issue types - maintained by an Administrator, seeded with the six the
+-- Initial Deliverable identified.
+-- ---------------------------------------------------------------------
+-- marks_bin_full says which of these mean "this bin needs collecting".
+INSERT INTO complaint_types (type_name, marks_bin_full, sort_order) VALUES
+('Full Bin', 1, 10), ('Overflow', 1, 20), ('Damaged Bin', 0, 30),
+('Dirty Area', 0, 40), ('Wrong Waste Disposal', 0, 50), ('Other', 0, 60);
+
 INSERT INTO users (full_name, email, password_hash, phone_no, role) VALUES
 ('Admin',  'admin@ecocampus.my',    '$2y$12$S2ADOnIbQkqYaQ0Z2unGO.0IygbU3ytlX/sFN0KdkAuWgpmngM4g6', '012-3456789', 'Administrator'),
 ('Ng Zi Zhang',     'zizhang@ecocampus.my',  '$2y$12$S2ADOnIbQkqYaQ0Z2unGO.0IygbU3ytlX/sFN0KdkAuWgpmngM4g6', '012-3456790', 'Administrator'),

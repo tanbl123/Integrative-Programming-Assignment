@@ -10,6 +10,21 @@
     if (!form || !strategy || !preview) return;
 
     let requestNumber = 0;
+
+    function ifaTimestamp() {
+        const now = new Date();
+        const part = value => String(value).padStart(2, '0');
+        return `${now.getFullYear()}-${part(now.getMonth() + 1)}-${part(now.getDate())} `
+            + `${part(now.getHours())}:${part(now.getMinutes())}:${part(now.getSeconds())}`;
+    }
+
+    function trackedUrl(rawUrl, prefix) {
+        const target = new URL(rawUrl, window.location.href);
+        target.searchParams.set('requestID', `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`);
+        target.searchParams.set('timeStamp', ifaTimestamp());
+        return target.toString();
+    }
+
     async function refresh() {
         const currentRequest = ++requestNumber;
         if (!strategy.value) {
@@ -18,13 +33,17 @@
         }
         preview.textContent = 'Checking module web services…';
         try {
-            const cleanersRequest = fetch(form.dataset.userApi, {credentials: 'same-origin'});
+            const cleanersRequest = fetch(trackedUrl(form.dataset.userApi, 'SCH-USR'), {credentials: 'same-origin'});
             let workUrl = form.dataset.binApi;
-            if (strategy.value === 'Full Bins') workUrl += '?status=Full';
+            if (strategy.value === 'Full Bins') {
+                const fullBinsUrl = new URL(workUrl, window.location.href);
+                fullBinsUrl.searchParams.set('status', 'Full');
+                workUrl = fullBinsUrl.toString();
+            }
             if (strategy.value === 'Complaint Priority') workUrl = form.dataset.complaintApi;
             const [cleanersResponse, workResponse] = await Promise.all([
                 cleanersRequest,
-                fetch(workUrl, {credentials: 'same-origin'}),
+                fetch(trackedUrl(workUrl, 'SCH-WRK'), {credentials: 'same-origin'}),
             ]);
             const cleaners = await cleanersResponse.json();
             const work = await workResponse.json();

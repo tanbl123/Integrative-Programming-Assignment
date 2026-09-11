@@ -220,17 +220,21 @@
     const describe = (list) => {
         const heading = document.createElement('strong');
         heading.textContent = list.length === 1
-            ? '1 issue is already open for this bin:'
-            : list.length + ' issues are already open for this bin:';
+            ? 'Someone has already reported this bin'
+            : list.length + ' people have already reported this bin';
         const ul = document.createElement('ul');
         list.forEach(item => {
             const li = document.createElement('li');
-            li.textContent = `#${item.id} — ${item.type} (${item.status}), reported ${item.created_at}`;
+            // The wording comes from openSummaryByBin(), so a reporter reads
+            // "Overflow, reported 10 Sep 2026 - waiting to be looked at"
+            // rather than a complaint id, a lifecycle word and a timestamp.
+            li.textContent = `${item.type}, reported ${item.reported} — ${item.state}`;
             ul.append(li);
         });
         const note = document.createElement('p');
-        note.textContent = 'Please check whether yours is the same issue. '
-                         + 'You can still submit if it is different.';
+        note.textContent = 'If yours is the same problem, it is already on its way '
+                         + 'and you do not need to report it again. If it is something '
+                         + 'different, please carry on.';
         box.replaceChildren(heading, ul, note);
     };
 

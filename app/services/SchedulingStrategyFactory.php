@@ -34,7 +34,11 @@ class ComplaintPrioritySelectionStrategy implements BinSelectionStrategy
                     'bin' => $bin,
                     'complaint_id' => $complaint->getKey(),
                     'priority' => 'Urgent',
-                    'reason' => 'Unresolved complaint #' . $complaint->getKey() . ': ' . $complaint->getType(),
+                    // getNumber() rather than the key: CMP-2026-0009 is how the
+                    // complaint is named on every other screen and in every message
+                    // sent about it, and this docket is the one a cleaner reads.
+                    // SchedulingService::createForComplaint() writes the same shape.
+                    'reason' => 'Complaint ' . $complaint->getNumber() . ': ' . $complaint->getType(),
                 ];
             }
         }

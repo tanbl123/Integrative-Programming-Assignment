@@ -9,6 +9,9 @@
 $uiVersion = filemtime(APP_ROOT . '/public/js/ui.js');
 $validateVersion = filemtime(APP_ROOT . '/public/js/validate.js');
 $unsavedVersion  = filemtime(APP_ROOT . '/public/js/unsaved.js');
+$locationMapVersion = file_exists(APP_ROOT . '/public/js/location-map.js')
+    ? filemtime(APP_ROOT . '/public/js/location-map.js')
+    : null;
 ?>
 </main>
 <footer class="site-footer">
@@ -23,5 +26,14 @@ $unsavedVersion  = filemtime(APP_ROOT . '/public/js/unsaved.js');
 <script src="<?= url('public/js/validate.js') ?>?v=<?= (int) $validateVersion ?>" defer></script>
 <?php /* Warns before a form with unsaved changes is abandoned. */ ?>
 <script src="<?= url('public/js/unsaved.js') ?>?v=<?= (int) $unsavedVersion ?>" defer></script>
+<?php if (!empty($useLeaflet)): ?>
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+        defer
+    ></script>
+    <script src="<?= url('public/js/location-map.js') ?>?v=<?= (int) $locationMapVersion ?>" defer></script>
+<?php endif; ?>
 </body>
 </html>

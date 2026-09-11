@@ -82,4 +82,27 @@ class CollectionAssignment extends Model
         );
         return (int) ($row['total'] ?? 0);
     }
+
+    /**
+     * Open collection work for one bin, ordered by the next planned visit.
+     * Used by Scheduling's REST endpoint; callers outside this module do not
+     * need to read the scheduling tables themselves.
+     *
+     * @return CollectionAssignment[]
+     */
+    public static function openForBin(int $binId): array
+    {
+        $rows = Database::getInstance()->selectAll(
+            'SELECT a.*
+             FROM collection_assignments a
+             INNER JOIN collection_schedules s ON s.schedule_id = a.schedule_id
+             WHERE a.bin_id = ?
+               AND a.assignment_status = ?
+               AND s.schedule_status = ?
+               AND s.deleted_at IS NULL
+             ORDER BY s.schedule_date ASC, s.time_slot ASC, a.assignment_id ASC',
+            [$binId, 'Assigned', 'Planned']
+        );
+        return self::hydrateAll($rows);
+    }
 }

@@ -20,9 +20,12 @@ class LocationController extends Controller
         try {
             $this->view('location/index', [
                 'title' => 'Locations',
-                'locations' => $this->service->searchLocations($query),
+                // Load the full directory once so Clear and map filters can
+                // restore every location without another page request.
+                'locations' => $this->service->searchLocations(''),
                 'query' => $query,
                 'user' => Auth::requireLogin(),
+                'useLeaflet' => true,
             ]);
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);
@@ -122,6 +125,8 @@ class LocationController extends Controller
             'building_name' => $location?->getBuildingName() ?? '',
             'floor_no' => $location?->getFloorNo() ?? '',
             'description' => $location?->getDescription() ?? '',
+            'latitude' => $location?->getLatitude() ?? '',
+            'longitude' => $location?->getLongitude() ?? '',
         ];
 
         $this->view('location/form', [
@@ -130,6 +135,7 @@ class LocationController extends Controller
             'location' => $location,
             'values' => $values,
             'errors' => $errors,
+            'useLeaflet' => true,
         ]);
     }
 }

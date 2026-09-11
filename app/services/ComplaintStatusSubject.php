@@ -44,6 +44,9 @@ interface ComplaintObserver
     /** An edit to the complaint's own fields, with the status unchanged. */
     public const EVENT_DETAILS = 'Details';
 
+    /** The complaint was withdrawn by its reporter, or deleted by an admin. */
+    public const EVENT_WITHDRAWN = 'Withdrawn';
+
     /**
      * @param array{bin:int,type:string,description:string}|null $previous
      *        What the complaint said before an EVENT_DETAILS edit. Only the
@@ -76,9 +79,9 @@ class ComplaintHistoryObserver implements ComplaintObserver
         string $event = self::EVENT_STATUS,
         ?array $previous = null
     ): void {
-        // Both kinds of event are recorded. An edit carries the same status on
-        // each side, and change_type is what tells the two apart when the
-        // history is read back.
+        // All three kinds of event are recorded. An edit and a withdrawal both
+        // carry the same status on each side, and change_type is what tells
+        // them apart from a transition when the history is read back.
         $history = new ComplaintStatusHistory();
         $history->setDetails(
             $complaint->getKey(), $actor?->getKey(), $oldStatus, $newStatus, $remarks, $event);
@@ -105,6 +108,24 @@ class ComplaintNotificationObserver implements ComplaintObserver
     ): void {
         $binCode = $complaint->getBin()?->getBinCode() ?? 'an unknown bin';
 
+        if ($event === self::EVENT_WITHDRAWN) {
+            // Administrators are told, because a report they may already have
+            // read and planned around has just left their list. The reporter
+            // is not: either they withdrew it themselves, or an Administrator
+            // removed a complaint that had already been resolved or rejected,
+            // which notified them at the time.
+            $notification = new ComplaintNotification();
+            $notification->setDetails(
+                $complaint->getKey(),
+                User::ROLE_ADMIN,
+                'Complaint ' . $complaint->getNumber() . ' withdrawn',
+                ($actor?->getFullName() ?? 'Someone') . ' withdrew the ' . $complaint->getType()
+                    . ' report about ' . $binCode . '.'
+            );
+            $notification->save();
+            return;
+        }
+
         if ($event === self::EVENT_DETAILS) {
             // A reporter revising their own wording needs no telling. Somebody
             // else changing it is the case this notification exists for: the
@@ -129,6 +150,16 @@ class ComplaintNotificationObserver implements ComplaintObserver
             $role  = User::ROLE_ADMIN;
             $title = 'New complaint ' . $complaint->getNumber() . ' - ' . $complaint->getType();
             $body  = 'A new ' . $complaint->getType() . ' issue was reported for ' . $binCode . '.';
+        } elseif ($newStatus === Complaint::STATUS_ASSIGNED) {
+            // The reporter, not the administrators. Whoever moved it here
+            // knows they did; the person waiting to hear does not, and this
+            // is the first sign their report has been acted on at all. It
+            // arrives whether an administrator triaged it by hand or the
+            // Scheduling module raised a collection against it.
+            $role  = User::ROLE_REPORTER;
+            $title = 'Complaint ' . $complaint->getNumber() . ' is being dealt with';
+            $body  = 'Your report about ' . $binCode . ' has been accepted and work is being arranged.'
+                   . ($remarks !== null && $remarks !== '' ? ' ' . $remarks : '');
         } elseif (in_array($newStatus, [Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED], true)) {
             $role  = User::ROLE_REPORTER;
             $title = 'Complaint ' . $complaint->getNumber() . ' ' . strtolower($newStatus);
@@ -147,18 +178,59 @@ class ComplaintNotificationObserver implements ComplaintObserver
 }
 
 /**
- * Observer 3 - keeps the affected bin's fill status honest.
+ * Observer 3 - tells the Bin module what a complaint reported.
  *
- * A newly reported overflow or full bin means the bin really is full, so the
- * Bin module's record is corrected. Once every complaint against that bin is
- * closed, and nothing else is outstanding, the bin is recorded as emptied.
+ * A complaint cannot establish that a bin is full. Nobody measured it: a
+ * reporter looked at a bin and said so, and they may be mistaken. This
+ * observer therefore records a CLAIM, attributed to the complaint that made
+ * it, rather than asserting a fact.
+ *
+ * That distinction is the whole design here, and it was got wrong twice.
+ *
+ * The first attempt decided which complaints meant "full" by comparing the
+ * issue type against the literal strings 'Overflow' and 'Full Bin'. That was
+ * sound while the types were a fixed ENUM and stopped being sound the moment
+ * an Administrator could maintain them - a rename cascades into every
+ * complaint and the comparison then matches nothing, silently. Which types
+ * carry the meaning is now marks_bin_full, a column a rename cannot reach.
+ *
+ * The second was worse and is what this class now fixes. It wrote
+ * bins.fill_status directly - $bin->setFillStatus(); $bin->save() - which
+ * reaches into another module's table behind that module's back. The Bin
+ * module keeps every status change in bin_status_updates, with who made it
+ * and why; a complaint-driven change appeared in none of them, so a bin
+ * could turn Full with nothing anywhere to say what did it. It also skipped
+ * that service's own checks, so a complaint could mark an inactive bin Full.
+ *
+ * Going through updateBinStatus() means the claim arrives the same way a
+ * cleaner's does: validated, and recorded with its reason. An unreliable
+ * claim is then merely wrong and visible, and anyone can correct it from the
+ * bin's own screen - rather than silently corrupting a record whose owner
+ * never heard about the change.
+ *
+ * Note that a complaint is not the only route from a report to a cleaner,
+ * and not the important one. ComplaintPrioritySelectionStrategy schedules
+ * straight off Complaint::unresolved(), needing no type, no flag and no
+ * judgement from anybody. That path is exact. This one exists so that a bin
+ * a reporter says is full looks full on the bin board too.
+ *
+ * A withdrawal is treated as a closure, not as a separate case: the claim
+ * that marked the bin Full has been taken back, so the bin is released on
+ * exactly the same condition as a resolution - nothing else open against it.
  *
  * Bins under maintenance are never touched - that status is owned by the Bin
  * module and must not be overwritten by a complaint.
  */
 class ComplaintBinFlagObserver implements ComplaintObserver
 {
-    private const FULL_TYPES = ['Overflow', 'Full Bin'];
+    /**
+     * The Bin module's own service, so its rules and its audit trail apply.
+     * Injected so a test can watch what this observer asks for.
+     */
+    public function __construct(private ?BinLocationServiceInterface $bins = null)
+    {
+    }
+
 
     public function changed(
         Complaint $complaint,
@@ -169,31 +241,59 @@ class ComplaintBinFlagObserver implements ComplaintObserver
         string $event = self::EVENT_STATUS,
         ?array $previous = null
     ): void {
-        // Rewording a report says nothing about how full the bin is.
-        if ($event !== self::EVENT_STATUS) {
+        // Rewording a report says nothing about how full the bin is. A
+        // withdrawal does: the claim that marked the bin Full has been taken
+        // back, and is handled below alongside a resolution.
+        if ($event !== self::EVENT_STATUS && $event !== self::EVENT_WITHDRAWN) {
             return;
         }
         $bin = $complaint->getBin();
 
-        if ($bin === null || $bin->getFillStatus() === Bin::STATUS_MAINTENANCE) {
+        // An inactive bin is checked here as well as inside the Bin service,
+        // because there it is a ValidationException - correct for a cleaner
+        // filling in a form, and no way to answer a reporter who has just
+        // submitted an unrelated complaint.
+        if ($bin === null
+            || !$bin->isActive()
+            || $bin->getFillStatus() === Bin::STATUS_MAINTENANCE) {
             return;
         }
 
-        // A fresh overflow report means the bin needs collecting.
-        if ($oldStatus === null && in_array($complaint->getType(), self::FULL_TYPES, true)) {
+        $bins = $this->bins ?? new BinLocationService();
+
+        // A fresh report of a type that means "full". The type says so, this
+        // observer does not decide; and the Bin module records who said it.
+        if ($oldStatus === null && ComplaintType::marksBinFullByName($complaint->getType())) {
             if ($bin->getFillStatus() !== Bin::STATUS_FULL) {
-                $bin->setFillStatus(Bin::STATUS_FULL);
-                $bin->save();
+                $bins->updateBinStatus(
+                    (int) $bin->getKey(),
+                    Bin::STATUS_FULL,
+                    'Reported full by complaint ' . $complaint->getNumber() . '.',
+                    $complaint->getReporterId()
+                );
             }
             return;
         }
 
-        // Resolved, and nothing else outstanding for this bin: it has been emptied.
-        if ($newStatus === Complaint::STATUS_RESOLVED
+        // The bin is released when the last thing keeping it Full goes away,
+        // whether that is the complaint being resolved or being withdrawn.
+        // A withdrawal is the case this observer used to miss entirely: the
+        // complaint vanished, nothing ran, and the bin stayed Full with
+        // nothing open to account for it.
+        $closed = $event === self::EVENT_WITHDRAWN
+            || $newStatus === Complaint::STATUS_RESOLVED;
+
+        if ($closed
             && Complaint::countUnresolvedForBin((int) $bin->getKey()) === 0
             && $bin->getFillStatus() === Bin::STATUS_FULL) {
-            $bin->setFillStatus(Bin::STATUS_EMPTY);
-            $bin->save();
+            $bins->updateBinStatus(
+                (int) $bin->getKey(),
+                Bin::STATUS_EMPTY,
+                $event === self::EVENT_WITHDRAWN
+                    ? 'Complaint ' . $complaint->getNumber() . ' withdrawn; no reports left open.'
+                    : 'Complaint ' . $complaint->getNumber() . ' resolved; no reports left open.',
+                $actor?->getKey() ?? $complaint->getReporterId()
+            );
         }
     }
 }

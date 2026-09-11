@@ -11,7 +11,7 @@ class UserService {
         [$name, $email, $phone] = $this->validateIdentity($data);
         $password = $this->validateNewPassword($data);
 
-        $user = new User();
+        $user = User::forRole(User::ROLE_REPORTER);
         $user->setIdentity($name, $email, $phone);
         $user->setDemographics($this->validateDemographics($data));
         $user->setAccess(User::ROLE_REPORTER, 'Active');
@@ -29,7 +29,7 @@ class UserService {
 
         $temporaryPassword = $this->generateTemporaryPassword();
 
-        $user = new User();
+        $user = User::forRole($role);
         $user->setIdentity($name, $email, $phone);
         $user->setDemographics($this->validateDemographics($data));
         $user->setAccess($role, $status);

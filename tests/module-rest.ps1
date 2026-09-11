@@ -35,7 +35,11 @@ function Api($identity, [string]$method, [string]$path, $body, [int]$expected = 
     $identity.Session.Headers.Remove('X-CSRF-Token') | Out-Null
     $headers = @{}
     if ($csrf) { $headers['X-CSRF-Token'] = $identity.Token }
-    $parameters = @{Uri="$BaseUrl/$path";Method=$method;WebSession=$identity.Session;Headers=$headers;SkipHttpErrorCheck=$true}
+    $requestId = "TEST-$([guid]::NewGuid().ToString('N'))"
+    $timeStamp = [uri]::EscapeDataString((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))
+    $separator = if ($path.Contains('?')) { '&' } else { '?' }
+    $trackedPath = "$path${separator}requestID=$requestId&requestId=$requestId&timeStamp=$timeStamp"
+    $parameters = @{Uri="$BaseUrl/$trackedPath";Method=$method;WebSession=$identity.Session;Headers=$headers;SkipHttpErrorCheck=$true}
     if ($null -ne $body) { $parameters.Body = ConvertTo-Json $body -Depth 8 -Compress; $parameters.ContentType = 'application/json' }
     $reply = Invoke-WebRequest @parameters
     Check ([int]$reply.StatusCode -eq $expected) "$method $path returns $expected (actual $($reply.StatusCode))"
@@ -63,13 +67,32 @@ try {
     $null = Api $cleaner PATCH "complaint-api/$cid" @{description='Unauthorized mutation is forbidden.'} 403
     $null = Api $cleaner DELETE "complaint-api/$cid" $null 403
     $null = Api $reporter PATCH "complaint-api/$cid" @{complaint_status='Assigned'} 403
+    # Assigned now means a cleaner is booked to visit the bin, so it is refused
+    # until one is. Booked here with direct SQL rather than through the
+    # scheduling API because the strategies pick their own bins and this
+    # fixture needs this one; the schedule id joins $scheduleIds so the finally
+    # block removes it with the rest.
+    $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Assigned'} 422
+    $gateCleanerId = [int](Sql "SELECT user_id FROM users WHERE role='Cleaner' AND deleted_at IS NULL ORDER BY user_id LIMIT 1;")
+    $gateAdminId = [int](Sql "SELECT user_id FROM users WHERE role='Administrator' AND deleted_at IS NULL ORDER BY user_id LIMIT 1;")
+    Sql ("INSERT INTO collection_schedules (admin_id, schedule_date, time_slot, strategy, notes) " +
+         "VALUES ($gateAdminId, CURDATE(), '09:00-12:00', 'Complaint Priority', 'Synthetic REST regression booking'); " +
+         "INSERT INTO collection_assignments (schedule_id, cleaner_id, bin_id, source_complaint_id, priority, assignment_status, reason) " +
+         "VALUES (LAST_INSERT_ID(), $gateCleanerId, $binId, NULL, 'Urgent', 'Assigned', 'Synthetic REST regression booking');") | Out-Null
+    $gateScheduleId = [int](Sql "SELECT schedule_id FROM collection_schedules WHERE notes='Synthetic REST regression booking' ORDER BY schedule_id DESC LIMIT 1;")
+    $scheduleIds.Add($gateScheduleId)
+    Check ($gateScheduleId -gt 0) 'Collection booked against the complaint bin'
     $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Assigned'}
+    Check ([int](Sql "SELECT COUNT(*) FROM complaints WHERE complaint_id=$cid AND complaint_status='Assigned';") -eq 1) 'Assigned is accepted once a cleaner is booked'
     $null = Api $reporter DELETE "complaint-api/$cid" $null 422
     $null = Api $reporter PATCH "complaint-api/$cid" @{description='Assigned complaint should not change.'} 422
+    $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Rejected'} 422
     $null = Api $admin PATCH "complaint-api/$cid" @{complaint_status='Resolved'}
-    $null = Api $reporter DELETE "complaint-api/$cid" $null
+    $null = Api $admin DELETE "complaint-api/$cid" $null
     $null = Api $reporter GET "complaint-api/$cid" $null 404
-    Check ([int](Sql "SELECT COUNT(*) FROM complaint_status_history WHERE complaint_id=$cid;") -eq 3) 'Soft-deleted complaint retains three Observer history entries'
+    $historyCount = [int](Sql "SELECT COUNT(*) FROM complaint_status_history WHERE complaint_id=$cid;")
+    Check ($historyCount -eq 5) "Soft-deleted complaint retains five Observer history entries (actual $historyCount)"
+    Check ([int](Sql "SELECT COUNT(*) FROM complaint_status_history WHERE complaint_id=$cid AND change_type='Withdrawn';") -eq 1) 'Complaint deletion records one Withdrawn Observer event'
     Check ([int](Sql "SELECT COUNT(*) FROM complaints WHERE complaint_id=$cid AND deleted_at IS NOT NULL;") -eq 1) 'Complaint row soft-deleted in MySQL'
     $cleaners = Api $admin GET 'user-api/cleaners' $null
     $cleanerId = [int]($cleaners.data | Where-Object { $_.email -eq 'zaki@cleaner.ecocampus.my' } | Select-Object -First 1).id

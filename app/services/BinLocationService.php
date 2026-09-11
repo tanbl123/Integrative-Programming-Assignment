@@ -212,12 +212,19 @@ class BinLocationService implements BinLocationServiceInterface
     }
 
     private function validateLocation(array $data): array {
-        $this->requireScalarFields($data, ['location_name', 'building_name', 'floor_no', 'description']);
+        $this->requireScalarFields($data, [
+            'location_name', 'building_name', 'floor_no', 'description',
+            'latitude', 'longitude',
+        ]);
 
         $name = trim((string) ($data['location_name'] ?? ''));
         $building = trim((string) ($data['building_name'] ?? ''));
         $floor = trim((string) ($data['floor_no'] ?? ''));
         $description = trim((string) ($data['description'] ?? ''));
+        $latitudeRaw = trim((string) ($data['latitude'] ?? ''));
+        $longitudeRaw = trim((string) ($data['longitude'] ?? ''));
+        $latitude = $latitudeRaw === '' ? null : filter_var($latitudeRaw, FILTER_VALIDATE_FLOAT);
+        $longitude = $longitudeRaw === '' ? null : filter_var($longitudeRaw, FILTER_VALIDATE_FLOAT);
 
         $errors = [];
 
@@ -245,6 +252,17 @@ class BinLocationService implements BinLocationServiceInterface
             $errors['description'] = 'Description cannot exceed 255 characters.';
         }
 
+        if (($latitudeRaw === '') !== ($longitudeRaw === '')) {
+            $errors['coordinates'] = 'Set both latitude and longitude, or leave both blank.';
+        } else {
+            if ($latitudeRaw !== '' && ($latitude === false || $latitude < -90 || $latitude > 90)) {
+                $errors['latitude'] = 'Latitude must be between -90 and 90.';
+            }
+            if ($longitudeRaw !== '' && ($longitude === false || $longitude < -180 || $longitude > 180)) {
+                $errors['longitude'] = 'Longitude must be between -180 and 180.';
+            }
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -254,6 +272,8 @@ class BinLocationService implements BinLocationServiceInterface
             $building,
             $floor === '' ? null : $floor,
             $description === '' ? null : $description,
+            $latitude === false ? null : $latitude,
+            $longitude === false ? null : $longitude,
         ];
     }
 

@@ -10,6 +10,8 @@ class SchedulingService {
     public function create(User $administrator, array $data): CollectionSchedule {
         UserPermissions::require('schedule.manage');
 
+        $data['time_slot'] = $this->composeTimeSlot($data);
+
         [$date, $timeSlot, $strategyName, $cleaner, $notes] = $this->validateSchedule($data);
 
         $selections = SchedulingStrategyFactory::make($strategyName)->select();
@@ -28,6 +30,8 @@ class SchedulingService {
             $schedule->setDetails($administrator->getKey(), $date, $timeSlot, $strategyName, $notes);
             $schedule->save();
 
+            $complaints = new ComplaintService();
+
             foreach ($selections as $selection) {
                 $assignment = new CollectionAssignment();
 
@@ -41,6 +45,13 @@ class SchedulingService {
                 );
 
                 $assignment->save();
+
+                $this->markComplaintsAssigned(
+                        $complaints,
+                        (int) $selection['bin']->getKey(),
+                        (int) $schedule->getKey(),
+                        $administrator
+                );
             }
 
             $pdo->commit();
@@ -55,6 +66,151 @@ class SchedulingService {
         }
     }
 
+    /**
+     * Books one cleaner for one bin, raised from one complaint.
+     *
+     * Author : Tan Boon Leong (2402865)
+     * Module : Complaint / Report Management - cross-module integration
+     *
+     * create() generates a round: a strategy chooses the bins and the
+     * administrator schedules whatever it found. That is the right shape for
+     * planning a day's work and the wrong one for answering a single report,
+     * which is what an administrator is doing when they have a complaint open
+     * in front of them. This books the one bin that complaint names.
+     *
+     * The stored strategy is still Complaint Priority, because that is
+     * truthfully why the collection exists, and it keeps the row inside the
+     * schedules enum rather than needing a fourth value for what is really the
+     * same reason with a narrower selection.
+     *
+     * The complaint moves to Assigned through the same private helper the
+     * generated rounds use, so a booking made here is recorded and notified
+     * exactly as one made there.
+     */
+    public function createForComplaint(
+            User $administrator,
+            Complaint $complaint,
+            array $data
+    ): CollectionSchedule {
+        UserPermissions::require('schedule.manage');
+
+        $bin = $complaint->getBin();
+
+        if ($bin === null || !$bin->isActive()) {
+            throw new ValidationException([
+                        'schedule' => 'This complaint\'s bin is no longer active, so no collection can be booked for it.'
+            ]);
+        }
+
+        // The form withdraws once a collection exists, but the form is not the
+        // guarantee: two tabs, a double submit or a posted request would
+        // otherwise send a second cleaner to a bin somebody is already on
+        // their way to. Duplicate reports make this likely rather than
+        // theoretical - three people report one bin, and each of their
+        // complaints offers to book somebody.
+        if ($complaint->binHasOpenCollection()) {
+            throw new ValidationException([
+                        'schedule' => 'A cleaner is already booked to visit this bin. '
+                                    . 'Mark this complaint Assigned instead of booking a second visit.'
+            ]);
+        }
+
+        $data['time_slot'] = $this->composeTimeSlot($data);
+
+        [$date, $timeSlot, , $cleaner, $notes] = $this->validateSchedule(
+                $data + ['strategy' => 'Complaint Priority']
+        );
+
+        $pdo = Database::getInstance()->pdo();
+        $pdo->beginTransaction();
+
+        try {
+            $schedule = new CollectionSchedule();
+            $schedule->setDetails(
+                    $administrator->getKey(),
+                    $date,
+                    $timeSlot,
+                    'Complaint Priority',
+                    $notes ?? ('Raised from complaint ' . $complaint->getNumber() . '.')
+            );
+            $schedule->save();
+
+            $assignment = new CollectionAssignment();
+            $assignment->setDetails(
+                    $schedule->getKey(),
+                    $cleaner->getKey(),
+                    $bin->getKey(),
+                    $complaint->getKey(),
+                    'Urgent',
+                    'Complaint ' . $complaint->getNumber() . ': ' . $complaint->getType()
+            );
+            $assignment->save();
+
+            $this->markComplaintsAssigned(
+                    new ComplaintService(),
+                    (int) $bin->getKey(),
+                    (int) $schedule->getKey(),
+                    $administrator
+            );
+
+            $pdo->commit();
+
+            return $schedule;
+        } catch (Throwable $error) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            throw $error;
+        }
+    }
+
+    /**
+     * Builds a time slot from a start and an end time.
+     *
+     * Author : Tan Boon Leong (2402865)
+     * Module : Complaint / Report Management
+     *
+     * time_slot is a free-text column, and free text is where inconsistent
+     * data comes from: the same three hours have already been written into it
+     * as "09:00-12:00" and as "09:00–:12:00" with an en dash, which no
+     * report could group and no person would think to search for twice. Two
+     * time inputs cannot produce either mistake, and the browser shows them in
+     * whatever notation the reader expects while posting an unambiguous 24
+     * hour value.
+     *
+     * A caller that already has a composed slot - anything posting time_slot
+     * directly rather than the pair - keeps working unchanged.
+     */
+    private function composeTimeSlot(array $data): string {
+        $existing = trim((string) ($data['time_slot'] ?? ''));
+
+        if (!isset($data['time_from'], $data['time_to']) && $existing !== '') {
+            return $existing;
+        }
+
+        $from = is_scalar($data['time_from'] ?? null) ? trim((string) $data['time_from']) : '';
+        $to = is_scalar($data['time_to'] ?? null) ? trim((string) $data['time_to']) : '';
+
+        $isTime = static fn(string $value): bool
+                => (bool) preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $value);
+
+        if (!$isTime($from) || !$isTime($to)) {
+            throw new ValidationException([
+                        'time_slot' => 'Choose a start time and an end time.'
+            ]);
+        }
+
+        // Zero-padded 24 hour times compare correctly as strings.
+        if ($to <= $from) {
+            throw new ValidationException([
+                        'time_slot' => 'The end time must be later than the start time.'
+            ]);
+        }
+
+        return $from . '-' . $to;
+    }
+
     public function update(int $id, array $data): CollectionSchedule {
         UserPermissions::require('schedule.manage');
 
@@ -65,6 +221,8 @@ class SchedulingService {
                         'schedule' => 'Only planned schedules can be modified.'
             ]);
         }
+
+        $data['time_slot'] = $this->composeTimeSlot($data);
 
         [$date, $timeSlot, $strategyName, $cleaner, $notes] = $this->validateSchedule($data);
 
@@ -273,6 +431,59 @@ class SchedulingService {
         }
 
         $schedule->delete();
+    }
+
+    /**
+     * Moves every open complaint against a booked bin to Assigned.
+     *
+     * Author : Tan Boon Leong (2402865)
+     * Module : Complaint / Report Management - cross-module integration
+     *
+     * Every open report of that bin, not only the one the task was raised
+     * from. A strategy picks one complaint per bin, so booking a bin that
+     * three people had reported used to move one of them and leave the other
+     * two reading New while a cleaner was on the way to the very bin they
+     * wrote about - the reporters heard nothing, and an administrator looking
+     * at one of those reports saw no sign the work existed. The collection
+     * answers the bin, so it answers all of them.
+     *
+     * It goes through ComplaintService rather than writing complaint_status,
+     * so the complaint module's own rules apply and its observers run: each
+     * change is recorded in the history against this administrator, and each
+     * reporter is notified separately.
+     *
+     * Only a New complaint is moved. Assigned, Resolved and Rejected are all
+     * refused by the lifecycle, and a refusal here would throw and take the
+     * whole schedule down with it - so the check happens before the call
+     * rather than as an exception afterwards. A complaint can legitimately
+     * already be Assigned: an administrator may have triaged it by hand, or
+     * an earlier schedule may have covered the same bin.
+     *
+     * There is no matching step when a schedule is cancelled. The lifecycle
+     * has no route from Assigned back to New, and it should not: the
+     * administrator's triage decision still stands even if this particular
+     * round was called off. What disappears is the "a cleaner has been
+     * scheduled" note on the complaint, which is read from the assignments
+     * themselves and so corrects itself.
+     */
+    private function markComplaintsAssigned(
+            ComplaintService $complaints,
+            int $binId,
+            int $scheduleId,
+            User $administrator
+    ): void {
+        foreach (Complaint::openForBin($binId) as $complaint) {
+            if ($complaint->getStatus() !== Complaint::STATUS_NEW) {
+                continue;
+            }
+
+            $complaints->updateStatus(
+                    (int) $complaint->getKey(),
+                    Complaint::STATUS_ASSIGNED,
+                    'Collection scheduled (schedule #' . $scheduleId . ').',
+                    $administrator
+            );
+        }
     }
 
     private function validateSchedule(array $data): array {
