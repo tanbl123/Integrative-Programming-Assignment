@@ -99,6 +99,8 @@
                      only open while a complaint is New and unassigned, so nobody
                      has acted on that photograph yet. */ ?>
             <?php if ($attachments !== []): ?>
+                <span class="field-help">Current photo</span>
+
                 <?php foreach ($attachments as $current): ?>
                     <span class="current-photo">
                         <img src="<?= url('complaint/attachment/' . $current->getKey()) ?>" alt="">
@@ -126,8 +128,10 @@
                 >
 
                 <p class="dropzone-hint" id="attachment-hint">
-                    <strong>Drag a photo here</strong>
-                    <span><?= $attachments !== [] ? 'or click to choose a replacement' : 'or click to choose one' ?></span>
+                    <strong><?= $attachments !== [] ? 'Drag a new photo here' : 'Drag a photo here' ?></strong>
+                    <span><?= $attachments !== []
+                        ? 'or click to choose one. It replaces the photo above.'
+                        : 'or click to choose one' ?></span>
                 </p>
 
                 <div class="dropzone-preview" id="attachment-preview" hidden>
@@ -142,10 +146,7 @@
                 </div>
             </div>
 
-            <span class="field-help">
-                JPEG, PNG, or WebP; maximum 5 MB.
-                <?= $attachments !== [] ? 'Uploading a photo replaces the one above.' : '' ?>
-            </span>
+            <span class="field-help">JPEG, PNG, or WebP; maximum 5 MB.</span>
 
             <?php if (!empty($errors['attachment'])): ?>
                 <span class="field-error"><?= e($errors['attachment']) ?></span>
