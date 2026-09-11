@@ -1,3 +1,41 @@
+-- =====================================================================
+-- EcoCampus - complete database, exported from a working installation
+--
+-- Exported by : Tan Boon Leong (2402865)
+-- Module      : Whole system
+--
+-- WHAT THIS IS
+-- A phpMyAdmin dump of the whole database: every table, and the rows in
+-- it at the time of export. It is a REPLACEMENT for 01_schema.sql and
+-- 02_seed.sql, not something to run after them.
+--
+-- HOW TO IMPORT
+--   phpMyAdmin -> Import -> choose this file -> Go
+--
+-- The database must be EMPTY. The dump creates the tables and has no
+-- DROP TABLE statements, so importing it over an existing ecocampus
+-- stops at the first table with "Table already exists". To start again,
+-- drop the ecocampus database first and import this on its own.
+--
+-- DO NOT ALSO RUN 01 to 13. Everything they build is already here,
+-- including change_type, complaint_revisions and superseded_at, which
+-- were added by migrations 11, 12 and 13.
+--
+-- The numbered files are still the record of how the schema was designed
+-- and who owns each table; this file is the quickest way to a working
+-- copy for a demonstration.
+--
+-- The CREATE DATABASE and USE lines below are not part of the phpMyAdmin
+-- export. They were added so the file can be imported without a database
+-- having been selected first, which is the commonest way this import
+-- fails.
+-- =====================================================================
+
+CREATE DATABASE IF NOT EXISTS `ecocampus`
+    DEFAULT CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+USE `ecocampus`;
+
 -- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
