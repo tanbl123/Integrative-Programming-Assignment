@@ -201,8 +201,7 @@ class ComplaintService
         int $id,
         array $data,
         User $user,
-        ?array $upload = null,
-        bool $removePhoto = false
+        ?array $upload = null
     ): Complaint {
         $complaint = $this->findVisible($user, $id);
         if ($complaint === null) { throw new OutOfBoundsException('Complaint not found.'); }
@@ -214,14 +213,15 @@ class ComplaintService
 
         // What the complaint said before: the audit row names which fields
         // moved, and ComplaintRevisionObserver keeps the wording itself.
+        $existing = $complaint->getAttachments()[0] ?? null;
         $before = [
             'bin' => $complaint->getBinId(),
             'type' => $complaint->getType(),
             'description' => $complaint->getDescription(),
+            'attachment' => $existing?->getKey(),
         ];
 
         $stored = (new ComplaintUploadService())->validateAndStore($upload);
-        $superseded = [];
 
         $pdo = Database::getInstance()->pdo();
         $pdo->beginTransaction();
@@ -229,14 +229,12 @@ class ComplaintService
             $complaint->setDetails($complaint->getReporterId(), $binId, $type, $description);
             $complaint->save();
 
-            if ($stored !== null || $removePhoto) {
-                foreach ($complaint->getAttachments() as $existing) {
-                    $superseded[] = UPLOAD_PATH . DIRECTORY_SEPARATOR
-                                  . basename($existing->getStoredName());
-                    $existing->delete();
-                }
-            }
             if ($stored !== null) {
+                // Marked as replaced, never deleted. The revision written below
+                // points at it, so the photograph an edit replaced can still be
+                // seen beside the wording it replaced.
+                $existing?->supersede();
+
                 $attachment = new ComplaintAttachment();
                 $attachment->setDetails($complaint->getKey(), $stored);
                 $attachment->save();
@@ -249,8 +247,6 @@ class ComplaintService
             ));
             if ($stored !== null) {
                 $changed[] = 'photo';
-            } elseif ($superseded !== []) {
-                $changed[] = 'photo removed';
             }
 
             // Saving without changing anything is not an event worth recording.
@@ -274,13 +270,6 @@ class ComplaintService
                 unlink($stored['path']);
             }
             throw $error;
-        }
-
-        // Past the point of no return, so the old files can go.
-        foreach ($superseded as $path) {
-            if (is_file($path)) {
-                unlink($path);
-            }
         }
         return $complaint;
     }

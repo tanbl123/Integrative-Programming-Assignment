@@ -139,13 +139,7 @@ class ComplaintController extends Controller
         $this->requirePost();
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
-            $this->service->update(
-                $id,
-                $_POST,
-                Auth::requireLogin(),
-                $_FILES['attachment'] ?? null,
-                ($_POST['remove_attachment'] ?? '') === '1'
-            );
+            $this->service->update($id, $_POST, Auth::requireLogin(), $_FILES['attachment'] ?? null);
             Flash::set('success', 'Complaint details updated.');
             $this->redirect('complaint/show/' . $id);
         } catch (ValidationException $error) {

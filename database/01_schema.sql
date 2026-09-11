@@ -168,6 +168,9 @@ CREATE TABLE complaint_attachments (
     mime_type     VARCHAR(100) NOT NULL,
     file_size     INT NOT NULL,
     uploaded_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Set when an edit replaced this photo. The row and the file are both
+    -- kept, so the photograph an edit replaced can still be read back.
+    superseded_at DATETIME NULL DEFAULT NULL,
     CONSTRAINT fk_attachments_complaint
         FOREIGN KEY (complaint_id) REFERENCES complaints(complaint_id)
         ON DELETE CASCADE ON UPDATE CASCADE
@@ -213,7 +216,12 @@ CREATE TABLE complaint_revisions (
     bin_id         INT NULL,
     complaint_type VARCHAR(50) NOT NULL,
     description    TEXT NOT NULL,
+    -- The photograph this edit replaced, where it replaced one.
+    attachment_id  INT NULL,
     edited_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_revisions_attachment
+        FOREIGN KEY (attachment_id) REFERENCES complaint_attachments(attachment_id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT fk_revisions_complaint
         FOREIGN KEY (complaint_id) REFERENCES complaints(complaint_id)
         ON DELETE CASCADE ON UPDATE CASCADE,

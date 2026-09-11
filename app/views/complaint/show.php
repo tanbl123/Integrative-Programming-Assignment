@@ -128,6 +128,24 @@ $removeConfirm = $isAdmin
                     </p>
 
                     <p class="pre-wrap"><?= e($revision->getDescription()) ?></p>
+
+                    <?php /* The photograph this edit replaced. It is marked
+                             superseded rather than deleted, so swapping a
+                             damning photo for an innocuous one is as visible as
+                             rewriting the words. */ ?>
+                    <?php if ($revision->getAttachment() !== null): ?>
+                        <a
+                            class="current-photo"
+                            href="<?= url('complaint/attachment/' . $revision->getAttachment()->getKey()) ?>"
+                            target="_blank"
+                        >
+                            <img src="<?= url('complaint/attachment/' . $revision->getAttachment()->getKey()) ?>" alt="">
+                            <span>
+                                <strong>Photo replaced by this edit</strong>
+                                <small><?= e($revision->getAttachment()->getReadableSize()) ?></small>
+                            </span>
+                        </a>
+                    <?php endif; ?>
                 </article>
             <?php endforeach; ?>
         </details>

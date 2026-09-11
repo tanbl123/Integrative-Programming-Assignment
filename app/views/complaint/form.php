@@ -152,14 +152,6 @@
             <?php endif; ?>
         </label>
 
-    <?php /* Outside the label above: a <label> cannot contain another one, and
-             a click here would otherwise reopen the file picker. */ ?>
-    <?php if ($attachments !== []): ?>
-        <label class="checkbox-label">
-            <input type="checkbox" name="remove_attachment" value="1">
-            Remove this photo without replacing it
-        </label>
-    <?php endif; ?>
 
     <?php if (!empty($errors['complaint'])): ?>
         <div class="alert alert-error">

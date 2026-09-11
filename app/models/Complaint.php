@@ -122,7 +122,14 @@ class Complaint extends Model
     public function getUpdatedAt(): string { return (string) $this->get('updated_at'); }
     public function getReporter(): ?User { return $this->belongsTo(User::class, 'reporter_id'); }
     public function getBin(): ?Bin { return $this->belongsTo(Bin::class, 'bin_id'); }
-    public function getAttachments(): array { return $this->hasMany(ComplaintAttachment::class, 'complaint_id'); }
+    /** The photo evidence as it stands now - replaced ones are excluded. */
+    public function getAttachments(): array
+    {
+        return array_values(array_filter(
+            $this->hasMany(ComplaintAttachment::class, 'complaint_id'),
+            static fn(ComplaintAttachment $a): bool => !$a->isSuperseded()
+        ));
+    }
     public function getHistory(): array { return $this->hasMany(ComplaintStatusHistory::class, 'complaint_id'); }
 
     /** Earlier versions of this complaint, newest first. */

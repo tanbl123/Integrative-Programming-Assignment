@@ -5,7 +5,8 @@ class ComplaintAttachment extends Model
     protected static string $table = 'complaint_attachments';
     protected static string $primaryKey = 'attachment_id';
     protected static array $columns = [
-        'complaint_id', 'original_name', 'stored_name', 'mime_type', 'file_size', 'uploaded_at',
+        'complaint_id', 'original_name', 'stored_name', 'mime_type', 'file_size',
+        'uploaded_at', 'superseded_at',
     ];
 
     public function setDetails(int $complaintId, array $file): void
@@ -23,6 +24,22 @@ class ComplaintAttachment extends Model
     public function getMimeType(): string { return (string) $this->get('mime_type'); }
     public function getFileSize(): int { return (int) $this->get('file_size'); }
     public function getUploadedAt(): string { return (string) $this->get('uploaded_at'); }
+
+    /** True once an edit replaced this photo with another. */
+    public function isSuperseded(): bool { return $this->get('superseded_at') !== null; }
+
+    /**
+     * Marks this photo as replaced without removing it.
+     *
+     * The file stays on disk and the row stays in the table, so the revision
+     * that replaced it can still show what it was. Deleting it would leave the
+     * wording of an edit on the record while the picture it replaced was gone.
+     */
+    public function supersede(): void
+    {
+        $this->set('superseded_at', ifaTimestamp());
+        $this->save();
+    }
 
     /**
      * The name shown to a user and offered when the file is downloaded.
