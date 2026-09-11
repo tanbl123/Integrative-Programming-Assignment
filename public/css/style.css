@@ -102,6 +102,13 @@ body {
     align-items: center;
     gap: 0.75rem;
     font-size: 0.82rem;
+    /* The header row is brand + nav + account, and for an Administrator the
+       seven nav links alone leave too little room, so the account block wraps
+       onto a second row. justify-content on a wrapped flex line does not
+       reach it, and it used to land under the brand looking like a mistake.
+       This keeps it under the right-hand end of the nav, where it belongs,
+       at any width and whatever length the signed-in person's name is. */
+    margin-left: auto;
 }
 
 .account-nav form {
@@ -1522,23 +1529,40 @@ td.duplicate-reason {
  * Author : Tan Boon Leong (2402865)
  * Module : Complaint / Report Management
  */
-.notification-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
+/* The bell is square, so the account row keeps its width. The count sits on
+   the bell rather than beside it, which is why the link is a positioning
+   context and the badge is pulled outside its corner. */
+.site-header .account-nav .notification-link {
+    position: relative;
+    padding: 0.45rem 0.55rem;
+}
+
+.notification-link svg {
+    display: block;
 }
 
 .notification-count {
-    display: inline-block;
-    min-width: 1.35rem;
-    padding: 0 0.35rem;
+    position: absolute;
+    top: -0.45rem;
+    right: -0.45rem;
+    min-width: 1.15rem;
+    height: 1.15rem;
+    padding: 0 0.25rem;
     border-radius: 999px;
     background: var(--warn);
+    /* Against the green header the badge needs its own edge to read as a
+       badge rather than as part of the bell. */
+    border: 1px solid var(--green);
     color: #fff;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
-    line-height: 1.35rem;
+    line-height: 1.05rem;
     text-align: center;
+}
+
+/* "Mark all as read" broke onto two lines inside the heading row. */
+.page-heading .button {
+    white-space: nowrap;
 }
 
 .notification-list {

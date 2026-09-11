@@ -49,12 +49,32 @@ $styleVersion = filemtime(APP_ROOT . '/public/css/style.css');
         <div class="account-nav">
             <?php if ($currentUser !== null): ?>
                 <?php /* Shown only to roles that can receive complaint notices, so a
-                         Cleaner is not given a link that is always empty. */ ?>
+                         Cleaner is not given a link that is always empty.
+
+                         A bell rather than the word: this row already carries the
+                         name, the role and Sign out, and at 1080px a fourth text
+                         button pushed the whole account block onto a second line.
+                         The count rides the bell, so an unread item is still the
+                         first thing seen. */ ?>
                 <?php if ($currentUser->isReporter() || $currentUser->isAdmin()): ?>
-                    <a class="button nav-button notification-link" href="<?= url('complaint-notification') ?>">
-                        Notifications
+                    <a
+                        class="button nav-button notification-link"
+                        href="<?= url('complaint-notification') ?>"
+                        title="Notifications"
+                        <?php /* The icon carries no text, so the label has to. */ ?>
+                        aria-label="Notifications<?= $unreadNotifications > 0
+                            ? ', ' . (int) $unreadNotifications . ' unread' : '' ?>"
+                    >
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                             stroke-linejoin="round" aria-hidden="true" focusable="false">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
                         <?php if ($unreadNotifications > 0): ?>
-                            <span class="notification-count"><?= (int) $unreadNotifications ?></span>
+                            <span class="notification-count" aria-hidden="true">
+                                <?= $unreadNotifications > 9 ? '9+' : (int) $unreadNotifications ?>
+                            </span>
                         <?php endif; ?>
                     </a>
                 <?php endif; ?>
