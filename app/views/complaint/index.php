@@ -23,8 +23,9 @@
     <section class="content-card duplicate-groups">
         <h2>Duplicate reports</h2>
         <p class="lead">
-            These bins have more than one open report of the same issue.
-            Keep one and reject the rest; every reporter is told the outcome.
+            These bins have more than one open report of the same issue. One
+            collection answers all of them, so close them together and every
+            reporter is told the same thing.
         </p>
 
         <?php foreach ($duplicateGroups as $group): ?>
@@ -42,8 +43,8 @@
                          on the first click. */ ?>
                 <form
                     method="post"
-                    action="<?= url('complaint/reject-duplicates') ?>"
-                    data-confirm="Reject the other <?= count($group['complaints']) - 1 ?> report(s) as duplicates? Each reporter will be notified."
+                    action="<?= url('complaint/resolve-duplicates') ?>"
+                    data-confirm="Resolve all <?= count($group['complaints']) ?> reports of this issue? Each reporter is told separately, and none of it can be undone."
                 >
                     <?= csrfField() ?>
                     <input type="hidden" name="bin_id" value="<?= (int) ($group['bin']?->getKey() ?? 0) ?>">
@@ -53,26 +54,18 @@
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th>Keep</th><th>Complaint ID</th><th>Reporter</th>
+                                    <th>Complaint ID</th><th>Reporter</th>
                                     <th>Reason given</th><th>Status</th><th>Submitted</th><th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                             <?php foreach ($group['complaints'] as $item): ?>
                                 <tr>
-                                    <td>
-                                        <input
-                                            type="radio"
-                                            name="keep_id"
-                                            value="<?= (int) $item->getKey() ?>"
-                                            <?= (int) $item->getKey() === $group['keepId'] ? 'checked' : '' ?>
-                                            aria-label="Keep complaint #<?= (int) $item->getKey() ?>">
-                                    </td>
                                     <td><?= e($item->getNumber()) ?></td>
                                     <td><?= e($item->getReporter()?->getFullName() ?? 'Unknown') ?></td>
                                     <?php /* Each reporter described the issue in their own words. The
-                                            administrator needs them side by side to judge which report
-                                            to keep, and whether they really are the same issue. */ ?>
+                                            administrator needs them side by side to judge whether
+                                            they really are the same issue. */ ?>
                                     <td class="duplicate-reason"><?= e($item->getDescription()) ?></td>
                                     <td><span class="badge badge-status"><?= e($item->getStatus()) ?></span></td>
                                     <td><?= e($item->getCreatedAt()) ?></td>
@@ -83,10 +76,22 @@
                         </table>
                     </div>
 
-                    <button
-                        class="button button-danger"
-                        type="submit">
-                        Keep selected &middot; reject the other <?= count($group['complaints']) - 1 ?>
+                    <label>
+                        What was done
+                        <input
+                            name="remarks"
+                            required
+                            maxlength="255"
+                            placeholder="e.g. Bin emptied and the area around it cleaned."
+                            data-message-required="Say what was done; every reporter is told this."
+                        >
+                        <span class="field-help">
+                            Sent to all <?= count($group['complaints']) ?> reporters with the outcome.
+                        </span>
+                    </label>
+
+                    <button class="button" type="submit">
+                        Resolve all <?= count($group['complaints']) ?> reports
                     </button>
                 </form>
             </details>

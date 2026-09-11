@@ -187,28 +187,37 @@ class ComplaintService
     }
 
     /**
-     * Closes a set of duplicate reports, keeping one as the live complaint.
+     * Closes a whole group of reports of the same issue together.
      *
-     * Every other open complaint of the same issue type on the same bin is
-     * rejected with a remark naming the one that was kept. Each rejection goes
-     * through updateStatus(), so the observers run once per complaint: every
-     * reporter is notified individually and every complaint keeps its own
-     * history. One administrator action, one outcome per person.
+     * The group used to be closed by keeping one report and rejecting the
+     * rest. That is the wrong word for what happened to them. Rejected is the
+     * outcome for a report the campus is not going to act on, and it is the
+     * outcome the reporter is told: somebody who saw a genuine overflow and
+     * took the trouble to report it was told their report was rejected,
+     * because a colleague had happened to report the same bin first. The
+     * issue then got dealt with and they never heard so.
      *
-     * New and Assigned both permit a transition to Rejected, so no complaint
-     * in the group can be left stranded.
+     * Being second is not a reason to be turned down. One collection answers
+     * every report of that bin, so every one of those reports is resolved by
+     * it, and every reporter is told the same true thing.
      *
-     * The whole group commits or none of it does. This used to be impossible:
-     * updateStatus() opened a transaction unconditionally and PDO refuses a
-     * nested one, so each rejection had to commit on its own and a failure
-     * part way through left some reporters told and others not. Now that
-     * updateStatus() joins a transaction already in progress, the loop can own
-     * one - so an administrator closing a group of four either closes all
-     * four or changes nothing.
+     * Rejecting stays available on each complaint on its own, for a report
+     * that is genuinely not going to be acted on.
      *
-     * @return int how many duplicates were rejected
+     * A report still waiting on a cleaner cannot be resolved - the lifecycle
+     * refuses it and so does this. Where the bin already has a collection
+     * booked, one filed after that booking is moved along to Assigned first,
+     * which is what would have happened had it arrived a minute earlier.
+     *
+     * Each complaint goes through updateStatus(), so the observers run once
+     * per report: every reporter is notified individually and every complaint
+     * keeps its own history. One administrator action, one outcome each.
+     *
+     * The whole group commits or none of it does.
+     *
+     * @return array{resolved:int,waiting:list<string>}
      */
-    public function rejectDuplicates(int $binId, string $type, int $keepId, User $administrator): int
+    public function resolveDuplicates(int $binId, string $type, string $remarks, User $administrator): array
     {
         UserPermissions::require('complaint.manage');
 
@@ -217,18 +226,9 @@ class ComplaintService
             throw new ValidationException([
                 'complaint' => 'There are no longer multiple open reports for this bin.']);
         }
-
-        $ids = array_map(static fn(Complaint $c): int => (int) $c->getKey(), $group);
-        if (!in_array($keepId, $ids, true)) {
+        if (trim($remarks) === '') {
             throw new ValidationException([
-                'complaint' => 'Choose which report to keep from this group.']);
-        }
-
-        $keptNumber = '#' . $keepId;
-        foreach ($group as $complaint) {
-            if ((int) $complaint->getKey() === $keepId) {
-                $keptNumber = $complaint->getNumber();
-            }
+                'remarks' => 'Say what was done. Every reporter in this group is told the same thing.']);
         }
 
         $pdo = Database::getInstance()->pdo();
@@ -237,23 +237,35 @@ class ComplaintService
             $pdo->beginTransaction();
         }
         try {
-            $rejected = 0;
+            $resolved = 0;
+            $waiting = [];
+
             foreach ($group as $complaint) {
-                if ((int) $complaint->getKey() === $keepId) {
-                    continue;
+                $id = (int) $complaint->getKey();
+
+                if ($complaint->getStatus() === Complaint::STATUS_NEW) {
+                    if (!$complaint->binHasOpenCollection()) {
+                        $waiting[] = $complaint->getNumber();
+                        continue;
+                    }
+                    $this->updateStatus($id, Complaint::STATUS_ASSIGNED, $remarks, $administrator);
                 }
-                $this->updateStatus(
-                    (int) $complaint->getKey(),
-                    Complaint::STATUS_REJECTED,
-                    'Duplicate of complaint ' . $keptNumber . '.',
-                    $administrator
-                );
-                $rejected++;
+
+                $this->updateStatus($id, Complaint::STATUS_RESOLVED, $remarks, $administrator);
+                $resolved++;
             }
+
+            if ($resolved === 0) {
+                throw new ValidationException([
+                    'complaint' => 'No cleaner has been sent to this bin yet, so none of these '
+                                 . 'reports can be resolved. Book a collection first.']);
+            }
+
             if ($ownsTransaction) {
                 $pdo->commit();
             }
-            return $rejected;
+
+            return ['resolved' => $resolved, 'waiting' => $waiting];
         } catch (Throwable $error) {
             if ($ownsTransaction && $pdo->inTransaction()) {
                 $pdo->rollBack();

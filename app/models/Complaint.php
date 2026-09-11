@@ -338,35 +338,22 @@ class Complaint extends Model
      * Only groups of two or more are returned; a lone complaint is not a
      * duplicate of anything.
      *
-     * @return list<array{bin:?Bin,type:string,keepId:int,complaints:list<Complaint>}>
+     * @return list<array{bin:?Bin,type:string,complaints:list<Complaint>}>
      */
     public static function duplicateGroups(): array
     {
-        // Which one to keep by default. Assigned means an Administrator has
-        // triaged this report and moved it on - it carries their remarks and
-        // its history, and it is the one any collection assignment raised from
-        // the group was raised against. Rejecting it in favour of an untouched
-        // New report throws that away. Where none is assigned the oldest wins,
-        // as the first person to report it.
-        //
-        // Note that the status is a lifecycle step, not proof that a cleaner
-        // holds a task: collection_assignments is the Scheduling module's
-        // record and is set independently. canEdit() checks both separately
-        // for that reason.
-        //
-        // It is only the default. The administrator chooses from the group.
+        // No report is singled out any more. The group used to nominate one
+        // to keep while the rest were rejected, which needed a rule for
+        // choosing it; they are closed together now, so there is nothing to
+        // choose between them.
         $rows = Database::getInstance()->selectAll(
-            'SELECT bin_id, complaint_type, COUNT(*) AS total,'
-            . ' COALESCE('
-            . '   MIN(CASE WHEN complaint_status = ? THEN complaint_id END),'
-            . '   MIN(complaint_id)'
-            . ' ) AS keep_id'
+            'SELECT bin_id, complaint_type, COUNT(*) AS total'
             . ' FROM complaints'
             . ' WHERE deleted_at IS NULL AND complaint_status IN (?, ?)'
             . ' GROUP BY bin_id, complaint_type'
             . ' HAVING COUNT(*) > 1'
             . ' ORDER BY total DESC, bin_id ASC',
-            [self::STATUS_ASSIGNED, self::STATUS_NEW, self::STATUS_ASSIGNED]
+            [self::STATUS_NEW, self::STATUS_ASSIGNED]
         );
 
         $groups = [];
@@ -374,7 +361,6 @@ class Complaint extends Model
             $groups[] = [
                 'bin'        => Bin::find((int) $row['bin_id']),
                 'type'       => (string) $row['complaint_type'],
-                'keepId'     => (int) $row['keep_id'],
                 'complaints' => self::openForBinAndType((int) $row['bin_id'], (string) $row['complaint_type']),
             ];
         }
