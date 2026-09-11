@@ -91,7 +91,11 @@ class ComplaintTypeController extends Controller
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
             $type = $this->service->saveType($id, $_POST, Auth::requireLogin());
-            Flash::set('success', 'Issue type "' . $type->getName() . '" saved.');
+            Flash::set('success', $id === null
+                ? 'Issue type "' . $type->getName() . '" added. Check the spelling, then '
+                . 'make it available - reporters cannot choose it until you do.'
+                : 'Issue type renamed to "' . $type->getName() . '". Complaints filed under the '
+                . 'old name now show the new one.');
             $this->redirect('complaint-type');
         } catch (ValidationException $error) {
             http_response_code(422);

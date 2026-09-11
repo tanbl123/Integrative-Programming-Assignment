@@ -304,11 +304,15 @@ class ComplaintService
     /**
      * Adds an issue type, or renames one.
      *
-     * The name is the whole of it. A type is available to reporters the moment
-     * it exists - creating one nobody may choose would be pointless - and
-     * withdrawing it later is what setTypeActive() is for. Its place in the
-     * dropdown is not an Administrator's decision either: the six seeded types
-     * keep Other last, and anything added goes after them.
+     * The name is the whole of it, and a new type is NOT offered to reporters
+     * until someone says so. A type is permanent the moment a complaint names
+     * it - the foreign key sees to that - so a misspelling that a reporter
+     * files against in the seconds after it is created can never be deleted
+     * afterwards. Adding it unavailable leaves a gap in which the spelling can
+     * be checked. Making it available is a separate, deliberate act.
+     *
+     * Its place in the dropdown is not an Administrator's decision: the six
+     * seeded types keep Other last, and anything added goes after them.
      *
      * Only an Administrator, because this list governs what every reporter may
      * file. The name must be unique, which the database enforces as well.
@@ -343,7 +347,7 @@ class ComplaintService
 
         $type->setDetails(
             $name,
-            $id === null ? true : $type->isActive(),
+            $id === null ? false : $type->isActive(),
             $id === null ? ComplaintType::nextSortOrder() : $type->getSortOrder()
         );
         $type->save();

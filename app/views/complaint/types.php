@@ -25,10 +25,16 @@
         <div class="alert alert-error"><?= e($errors['type']) ?></div>
     <?php endif; ?>
 
-    <?php /* The name is the whole of it. A new type is available to reporters
-             at once - one nobody may choose would be pointless - and where it
-             sits in the dropdown is decided for it, after the types already
-             there. */ ?>
+    <?php /* A new type is added unavailable on purpose. A type becomes
+             permanent the moment a complaint names it, so a misspelling a
+             reporter files against straight away could never be deleted. This
+             leaves a gap in which to check it. */ ?>
+    <p class="field-help">
+        <?= $editing
+            ? 'Renaming updates every complaint filed under the old name.'
+            : 'Added as not available, so no reporter can choose it yet. '
+            . 'Check the spelling, then make it available from the table below.' ?>
+    </p>
     <label>
         Name
         <input
@@ -61,7 +67,7 @@
         <select id="typeAvailability">
             <option value="">All</option>
             <option value="Available">Available</option>
-            <option value="Withdrawn">Withdrawn</option>
+            <option value="Not available">Not available</option>
         </select>
     </div>
 
@@ -87,12 +93,12 @@
                 <tr
                     class="type-row"
                     data-search="<?= e(mb_strtolower($type->getName())) ?>"
-                    data-available="<?= $type->isActive() ? 'Available' : 'Withdrawn' ?>"
+                    data-available="<?= $type->isActive() ? 'Available' : 'Not available' ?>"
                 >
                     <td><strong><?= e($type->getName()) ?></strong></td>
                     <td>
                         <span class="badge badge-status">
-                            <?= $type->isActive() ? 'Available' : 'Withdrawn' ?>
+                            <?= $type->isActive() ? 'Available' : 'Not available' ?>
                         </span>
                     </td>
                     <td><?= $used ?></td>
