@@ -15,6 +15,9 @@ class AuthController extends Controller {
         $this->view('auth/login', [
             'title' => 'Sign In',
             'errors' => [],
+            'values' => [
+                'email' => '',
+            ],
             'email' => '',
         ]);
     }
@@ -59,26 +62,66 @@ class AuthController extends Controller {
     public function login(): void {
         $this->requirePost();
 
-        $email = mb_strtolower($this->input('email'));
+        $email = mb_strtolower(trim((string) ($_POST['email'] ?? '')));
         $password = (string) ($_POST['password'] ?? '');
         $errors = [];
+        $user = null;
 
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
         } catch (AuthorizationException $error) {
-            $errors['form'] = $error->getMessage();
+            $errors['password'] = 'Unable to verify the login request. Please try again.';
         }
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        /*
+         * Validate email format first.
+         */
+        if ($email === '') {
+            $errors['email'] = 'Email is required.';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'Enter a valid email address.';
+        } else {
+            /*
+             * Check database even if password is empty.
+             * This allows "Email address is not registered" to show together with
+             * "Password is required."
+             */
+            $user = User::findByEmail($email);
+
+            if ($user === null || $user->isDeleted()) {
+                $errors['email'] = 'Email address is not registered.';
+            } elseif (!$user->isActive()) {
+                $errors['email'] = 'This account is inactive. Please contact an Administrator.';
+            }
         }
 
+        /*
+         * Validate password separately.
+         */
         if ($password === '') {
-            $errors['password'] = 'Enter your password.';
+            $errors['password'] = 'Password is required.';
         }
 
+        /*
+         * Only check password correctness when:
+         * - email is valid
+         * - user exists
+         * - user is active
+         * - password is not empty
+         */
+        if (
+                $errors === [] &&
+                $user instanceof User &&
+                !password_verify($password, $user->getPasswordHash())
+        ) {
+            $errors['password'] = 'Password is incorrect.';
+        }
+
+        /*
+         * Login only when all validation passed.
+         */
         if ($errors === [] && !Auth::attempt($email, $password)) {
-            $errors['form'] = 'The email or password is incorrect, or the account is inactive.';
+            $errors['password'] = 'Unable to sign in. Please try again.';
         }
 
         if ($errors !== []) {

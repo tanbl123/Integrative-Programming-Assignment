@@ -242,6 +242,11 @@ h2 {
     font-size: 0.82rem;
 }
 
+.button-full {
+    width: 100%;
+    text-align: center;
+}
+
 .button:disabled {
     opacity: 1;
     background: #dde3e0;
@@ -276,14 +281,17 @@ button:focus-visible {
     border-color: #e8cb9f;
     color: #7a4a12;
 }
+
 .alert-warning ul {
     margin: .4rem 0 .4rem 1.1rem;
     padding: 0;
 }
+
 .alert-warning p {
     margin: .4rem 0 0;
     font-size: .9rem;
 }
+
 .alert-error {
     background: #fff0ed;
     border-color: #efc2b8;
@@ -466,6 +474,15 @@ button:focus-visible {
     margin-bottom: 1rem;
 }
 
+.form-field {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.form-full {
+    grid-column: 1 / -1;
+}
+
 .form-stack {
     display: grid;
     gap: 1rem;
@@ -526,13 +543,13 @@ textarea::placeholder {
 
 .field-error {
     display: block;
-    margin-top: 0.25rem;
+    width: 100%;
+    margin-top: 0.35rem;
     color: #9d332b;
     font-size: 0.8rem;
     font-weight: 500;
 }
 
-/* display:block above would otherwise defeat [hidden] on a cleared message. */
 .field-error[hidden] {
     display: none;
 }
@@ -746,6 +763,14 @@ textarea::placeholder {
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--line);
+}
+
+.detail-grid-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail-full {
+    grid-column: 1 / -1;
 }
 
 .detail-grid div {
@@ -1158,13 +1183,13 @@ textarea::placeholder {
    Duplicate reports panel (Complaint / Report Management)
    Author: Tan Boon Leong (2402865)
    --------------------------------------------------------------------- */
-
 .duplicate-group {
     border: 1px solid var(--line);
     border-radius: 8px;
     margin: .6rem 0;
     background: #fff;
 }
+
 .duplicate-group > summary {
     cursor: pointer;
     padding: .7rem .9rem;
@@ -1173,12 +1198,32 @@ textarea::placeholder {
     gap: .55rem;
     flex-wrap: wrap;
 }
-.duplicate-group > summary:hover { background: #f1f4f2; }
-.duplicate-group > summary small { color: var(--muted); }
-.duplicate-group[open] > summary { border-bottom: 1px solid var(--line); }
-.duplicate-group form { padding: .9rem; }
-.duplicate-group .table { margin-bottom: .8rem; }
-.duplicate-group input[type="radio"] { width: 1.05rem; height: 1.05rem; }
+
+.duplicate-group > summary:hover {
+    background: #f1f4f2;
+}
+
+.duplicate-group > summary small {
+    color: var(--muted);
+}
+
+.duplicate-group[open] > summary {
+    border-bottom: 1px solid var(--line);
+}
+
+.duplicate-group form {
+    padding: .9rem;
+}
+
+.duplicate-group .table {
+    margin-bottom: .8rem;
+}
+
+.duplicate-group input[type="radio"] {
+    width: 1.05rem;
+    height: 1.05rem;
+}
+
 td.duplicate-reason {
     color: var(--muted);
     font-size: .88rem;
@@ -1187,12 +1232,10 @@ td.duplicate-reason {
     max-width: 28rem;
 }
 
-
 /* ---------------------------------------------------------------------
    Pagination: one joined control, centred, with a caption beneath.
    Author: Tan Boon Leong (2402865)
    --------------------------------------------------------------------- */
-
 .list-pager {
     display: flex;
     flex-direction: column;
@@ -1200,6 +1243,7 @@ td.duplicate-reason {
     gap: .5rem;
     margin: 1.25rem 0 1.75rem;
 }
+
 .pager-group {
     display: inline-flex;
     align-items: stretch;
@@ -1208,6 +1252,7 @@ td.duplicate-reason {
     overflow: hidden;
     background: #fff;
 }
+
 .pager-step,
 .pager-page,
 .pager-ellipsis {
@@ -1221,28 +1266,61 @@ td.duplicate-reason {
     border-right: 1px solid var(--line);
     cursor: pointer;
 }
-.pager-group > *:last-child { border-right: 0; }
-.pager-step { background: #f1f4f2; font-weight: 500; }
-.pager-page { min-width: 2.4rem; text-align: center; }
+
+.pager-group > *:last-child {
+    border-right: 0;
+}
+
+.pager-step {
+    background: #f1f4f2;
+    font-weight: 500;
+}
+
+.pager-page {
+    min-width: 2.4rem;
+    text-align: center;
+}
+
 .pager-step:hover:not(:disabled),
-.pager-page:hover:not([aria-current]) { background: #e8eeeb; }
+.pager-page:hover:not([aria-current]) {
+    background: #e8eeeb;
+}
+
 .pager-step:focus-visible,
-.pager-page:focus-visible { outline: 2px solid var(--green-dark); outline-offset: -2px; }
-.pager-step:disabled { color: var(--muted); cursor: default; opacity: .65; }
+.pager-page:focus-visible {
+    outline: 2px solid var(--green-dark);
+    outline-offset: -2px;
+}
+
+.pager-step:disabled {
+    color: var(--muted);
+    cursor: default;
+    opacity: .65;
+}
+
 .pager-page[aria-current="page"] {
     background: var(--green);
     color: #fff;
     font-weight: 600;
     cursor: default;
 }
-.pager-ellipsis { cursor: default; color: var(--muted); }
-.pager-summary { margin: 0; font-size: .85rem; color: var(--muted); }
+
+.pager-ellipsis {
+    cursor: default;
+    color: var(--muted);
+}
+
+.pager-summary {
+    margin: 0;
+    font-size: .85rem;
+    color: var(--muted);
+}
 
 /* Sort direction indicator on clickable table headers. */
-/* The button fills its header cell so the whole cell is the click target,
-   not just the width of the label. The cell gives up its padding to the
-   button, which reproduces it exactly, so nothing shifts visually. */
-.table th.th-sortable { padding: 0; }
+.table th.th-sortable {
+    padding: 0;
+}
+
 .sort-header {
     font: inherit;
     font-weight: 600;
@@ -1257,23 +1335,42 @@ td.duplicate-reason {
     align-items: center;
     gap: .35rem;
 }
-.sort-header:hover { color: var(--green-dark); background: #e3ebe6; text-decoration: none; }
-.sort-header:focus-visible { outline: 2px solid var(--green-dark); outline-offset: -2px; }
-.sort-header .sort-arrow { font-size: .78em; color: var(--muted); opacity: .55; }
-.table th[aria-sort] { background: #e3ebe6; }
-.table th[aria-sort] .sort-arrow { color: var(--green-dark); opacity: 1; }
 
-/* Emphasised field label, used when Other needs the reporter to say more.
-   Author: Tan Boon Leong (2402865) */
-.label-emphasis { color: var(--warn); font-weight: 600; }
+.sort-header:hover {
+    color: var(--green-dark);
+    background: #e3ebe6;
+    text-decoration: none;
+}
+
+.sort-header:focus-visible {
+    outline: 2px solid var(--green-dark);
+    outline-offset: -2px;
+}
+
+.sort-header .sort-arrow {
+    font-size: .78em;
+    color: var(--muted);
+    opacity: .55;
+}
+
+.table th[aria-sort] {
+    background: #e3ebe6;
+}
+
+.table th[aria-sort] .sort-arrow {
+    color: var(--green-dark);
+    opacity: 1;
+}
+
+.label-emphasis {
+    color: var(--warn);
+    font-weight: 600;
+}
 
 /* ---------------------------------------------------------------------
  * Drag-and-drop photo evidence.
  * Author : Tan Boon Leong (2402865)
  * Module : Complaint / Report Management
- *
- * .is-enhanced is added by the script in complaint/form.php, so the plain
- * file input is only hidden once there is something to replace it with.
  * ------------------------------------------------------------------ */
 .dropzone {
     margin-top: 0.35rem;
@@ -1289,8 +1386,6 @@ td.duplicate-reason {
     text-align: center;
 }
 
-/* Hidden from view but still focusable, so the field stays reachable by
-   keyboard and the wrapping <label> still opens the picker. */
 .dropzone.is-enhanced input[type="file"] {
     position: absolute;
     width: 1px;
@@ -1360,8 +1455,6 @@ td.duplicate-reason {
     }
 }
 
-/* The photo already on file, shown on the edit form above the drop zone.
- * Author : Tan Boon Leong (2402865) · Module : Complaint / Report Management */
 .field-block {
     margin-top: 0.85rem;
 }
@@ -1378,8 +1471,6 @@ td.duplicate-reason {
     flex-wrap: wrap;
 }
 
-/* The link half of the card: the thumbnail and the filename. It must stay
-   outside the file field's <label>, or a click opens the file picker. */
 .current-photo-link {
     display: flex;
     align-items: center;
@@ -1407,8 +1498,6 @@ td.duplicate-reason {
     color: var(--muted);
 }
 
-/* Earlier versions of a complaint, collapsed under the current description.
- * Author : Tan Boon Leong (2402865) · Module : Complaint / Report Management */
 .revisions {
     margin-top: 1rem;
     border-top: 1px solid var(--line);
@@ -1451,8 +1540,6 @@ td.duplicate-reason {
     margin-bottom: 0.35rem;
 }
 
-/* The wording that was replaced is the point of the panel, so it is set as
-   quoted text rather than as another grey line among the labels. */
 .revision .pre-wrap {
     margin: 0.35rem 0 0.5rem;
     padding-left: 0.7rem;
@@ -1460,11 +1547,6 @@ td.duplicate-reason {
     color: var(--ink);
 }
 
-/* Removing the photo already on a complaint.
- * Author : Tan Boon Leong (2402865) · Module : Complaint / Report Management */
-/* The Remove button lives inside the photo card, at its far end, so it plainly
-   acts on the photograph it shares a border with. The card is the flex row;
-   the link takes the space that is left. */
 .remove-photo {
     display: flex;
     align-items: center;
@@ -1487,13 +1569,6 @@ td.duplicate-reason {
     margin-top: 0.4rem;
 }
 
-/* The checkbox is the baseline and only hides once the button replaces it.
-   Hidden outright rather than clipped: the button does the same job, and two
-   controls for one choice is worse for a keyboard or screen reader than one.
-   A checkbox hidden by CSS still posts its value when ticked.
-
-   !important only because the shared .checkbox-label rule above declares
-   display: flex !important, which a more specific selector cannot outrank. */
 .remove-photo.is-enhanced .checkbox-label {
     display: none !important;
 }
@@ -1503,17 +1578,61 @@ td.duplicate-reason {
     border-color: var(--danger);
 }
 
-/* Only the photograph fades. Dimming the card would fade the button that
-   undoes this, which is the one control that must stay easy to read. */
 .current-photo.is-removing .current-photo-link {
     opacity: 0.45;
 }
 
-/* The chosen photo's thumbnail opens full size, so it reads as clickable. */
 #attachment-thumb {
     cursor: zoom-in;
 }
 
 #attachment-thumb:hover {
     border-color: var(--green);
+}
+
+/* ---------- Password visibility toggle ---------- */
+.password-field {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+
+.password-field input {
+    width: 100%;
+    padding-right: 3.1rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.55rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: #111111;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.password-toggle:hover {
+    opacity: 0.7;
+}
+
+.password-toggle:focus-visible {
+    outline: 2px solid var(--green-dark);
+    border-radius: 6px;
+}
+
+.password-icon {
+    font-size: 22px;
+    line-height: 1;
+    font-variation-settings:
+        'FILL' 1,
+        'wght' 500,
+        'GRAD' 0,
+        'opsz' 24;
 }

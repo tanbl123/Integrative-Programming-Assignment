@@ -147,6 +147,10 @@ class UserController extends Controller {
         }
     }
 
+    /**
+     * View-only profile page.
+     * URL: /user/profile
+     */
     public function profile(): void {
         try {
             $user = Auth::requireLogin();
@@ -154,8 +158,6 @@ class UserController extends Controller {
             $this->view('user/profile', [
                 'title' => 'My Profile',
                 'user' => $user,
-                'errors' => [],
-                'values' => [],
                 'permissions' => UserPermissions::for($user)->permissions(),
             ]);
         } catch (AuthenticationException $error) {
@@ -163,13 +165,44 @@ class UserController extends Controller {
         }
     }
 
+    /**
+     * Edit profile page.
+     * URL: /user/editProfile
+     */
+    public function editProfile(): void {
+        try {
+            $user = Auth::requireLogin();
+
+            $values = [
+                'full_name' => $user->getFullName(),
+                'email' => $user->getEmail(),
+                'phone_no' => $user->getPhoneNo() ?? '',
+            ];
+
+            $values += $user->demographics();
+
+            $this->view('user/editProfile', [
+                'title' => 'Edit Profile',
+                'user' => $user,
+                'errors' => [],
+                'values' => $values,
+            ]);
+        } catch (AuthenticationException $error) {
+            $this->handleAccessFailure($error);
+        }
+    }
+
+    /**
+     * Save edit profile form.
+     * URL: /user/updateProfile
+     */
     public function updateProfile(): void {
         $this->requirePost();
 
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
 
-            $user = $this->service->updateOwnProfile(Auth::requireLogin(), $_POST);
+            $this->service->updateOwnProfile(Auth::requireLogin(), $_POST);
 
             Flash::set('success', 'Your profile was updated.');
             $this->redirect('user/profile');
@@ -178,12 +211,58 @@ class UserController extends Controller {
 
             http_response_code(422);
 
-            $this->view('user/profile', [
-                'title' => 'My Profile',
+            $this->view('user/editProfile', [
+                'title' => 'Edit Profile',
                 'user' => $user,
                 'errors' => $error->getErrors(),
                 'values' => $_POST,
-                'permissions' => UserPermissions::for($user)->permissions(),
+            ]);
+        } catch (AuthenticationException | AuthorizationException $error) {
+            $this->handleAccessFailure($error);
+        }
+    }
+
+    /**
+     * Change password page.
+     * URL: /user/changePassword
+     */
+    public function changePassword(): void {
+        try {
+            $user = Auth::requireLogin();
+
+            $this->view('user/changePassword', [
+                'title' => 'Change Password',
+                'user' => $user,
+                'errors' => [],
+            ]);
+        } catch (AuthenticationException $error) {
+            $this->handleAccessFailure($error);
+        }
+    }
+
+    /**
+     * Save new password.
+     * URL: /user/updatePassword
+     */
+    public function updatePassword(): void {
+        $this->requirePost();
+
+        try {
+            Csrf::requireValid($_POST['_token'] ?? null);
+
+            $this->service->updateOwnPassword(Auth::requireLogin(), $_POST);
+
+            Flash::set('success', 'Your password was updated.');
+            $this->redirect('user/profile');
+        } catch (ValidationException $error) {
+            $user = Auth::requireLogin();
+
+            http_response_code(422);
+
+            $this->view('user/changePassword', [
+                'title' => 'Change Password',
+                'user' => $user,
+                'errors' => $error->getErrors(),
             ]);
         } catch (AuthenticationException | AuthorizationException $error) {
             $this->handleAccessFailure($error);

@@ -1,40 +1,30 @@
 <?php
 /**
- * Secure sign-in form.
+ * Login page.
  * Author : Phang Jun Hong (2406646)
  * Module : User & Access Management
  */
+$errors = $errors ?? [];
+$email = $email ?? '';
 ?>
 
-<section class="auth-card">
+<div class="auth-card">
     <h1>Sign in</h1>
-    <p class="lead">Use your EcoCampus account to manage or view campus bins.</p>
 
-    <?php if (!empty($errors['form'])): ?>
-        <div class="alert alert-error">
-            <?= e($errors['form']) ?>
-        </div>
-    <?php endif; ?>
+    <p class="lead">
+        Use your EcoCampus account to manage or view campus bins.
+    </p>
 
-    <?php /* data-no-guard: signing in is not work in progress, and a warning on
-         the way to the registration link would only be in the way. */ ?>
-<form
-    method="post"
-    action="<?= url('auth/login') ?>"
-    class="form-stack"
-    data-no-auto-clear="1"
-    data-no-guard="1"
->
+    <form method="post" action="<?= url('auth/login') ?>" data-no-auto-clear="1" novalidate>
         <?= csrfField() ?>
 
-        <label>
+        <label class="form-field">
             Email
-            <input 
-                type="email" 
-                name="email" 
-                value="<?= e($email) ?>" 
-                required 
-                autocomplete="username"
+            <input
+                type="email"
+                name="email"
+                maxlength="100"
+                value="<?= e((string) $email) ?>"
                 >
 
             <?php if (!empty($errors['email'])): ?>
@@ -42,37 +32,51 @@
             <?php endif; ?>
         </label>
 
-        <label>
+        <label class="form-field">
             Password
-            <input 
-                type="password" 
-                name="password" 
-                required 
-                autocomplete="current-password"
-                >
+            <div class="password-field">
+                <input
+                    type="password"
+                    name="password"
+                    id="login_password"
+                    >
+
+                <button
+                    type="button"
+                    class="password-toggle"
+                    data-password-toggle
+                    data-target="login_password"
+                    aria-label="Show password"
+                    title="Show password"
+                    >
+                    <span class="material-symbols-outlined password-icon" aria-hidden="true">visibility</span>
+                </button>
+            </div>
 
             <?php if (!empty($errors['password'])): ?>
                 <span class="field-error"><?= e($errors['password']) ?></span>
             <?php endif; ?>
         </label>
 
-        <p class="field-help">
+        <p class="muted">
             Forgot your password? Please contact an Administrator to reset your password.
         </p>
 
-        <button type="submit" class="button">
+        <button class="button button-full" type="submit">
             Sign in
         </button>
     </form>
 
-    <div class="demo-accounts">
-        <strong>Development accounts</strong>
+<!--    <section class="demo-accounts">
+        <h2>Development accounts</h2>
         <p>Administrator: admin@ecocampus.my</p>
         <p>Cleaner: zaki@cleaner.ecocampus.my</p>
         <p>Password: password123</p>
-    </div>
+    </section>-->
 
-    <p>
-        <a href="<?= url('auth/register') ?>">Create a Reporter account</a>
+    <p class="auth-switch-link">
+        <a href="<?= url('auth/register') ?>">
+            Create a Reporter account
+        </a>
     </p>
-</section>
+</div>

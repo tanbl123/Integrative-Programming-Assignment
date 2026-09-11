@@ -582,4 +582,31 @@
 
         render();
     });
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-password-toggle]');
+
+        if (!button) {
+            return;
+        }
+
+        const targetId = button.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        const icon = button.querySelector('.password-icon');
+
+        if (!input || !icon) {
+            return;
+        }
+
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = 'visibility_off';
+            button.setAttribute('aria-label', 'Hide password');
+            button.setAttribute('title', 'Hide password');
+        } else {
+            input.type = 'password';
+            icon.textContent = 'visibility';
+            button.setAttribute('aria-label', 'Show password');
+            button.setAttribute('title', 'Show password');
+        }
+    });
 })();

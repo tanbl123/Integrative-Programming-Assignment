@@ -67,27 +67,48 @@ class UserService {
             throw new AuthorizationException('You can only edit your own active profile.');
         }
 
+        [$name, $email, $phone] = $this->validateIdentity($data, $user->getKey());
+
+        $user->setIdentity($name, $email, $phone);
+        $user->setDemographics($this->validateDemographics($data));
+        $user->save();
+
+        return $user;
+    }
+
+    public function updateOwnPassword(User $user, array $data): User {
+        $signedIn = Auth::requireLogin();
+
+        if ($signedIn->getKey() !== $user->getKey() || !$user->isActive()) {
+            throw new AuthorizationException('You can only change your own active account password.');
+        }
+
         $this->validateTextFields($data, [
+            'current_password',
             'new_password',
             'new_password_confirmation'
         ]);
 
-        [$name, $email, $phone] = $this->validateIdentity($data, $user->getKey());
+        $currentPassword = (string) ($data['current_password'] ?? '');
 
-        $newPassword = (string) ($data['new_password'] ?? '');
-        $confirmPassword = (string) ($data['new_password_confirmation'] ?? '');
-
-        if ($newPassword !== '' || $confirmPassword !== '') {
-            $newPassword = $this->validateNewPassword([
-                'password' => $newPassword,
-                'password_confirmation' => $confirmPassword,
+        if ($currentPassword === '') {
+            throw new ValidationException([
+                        'current_password' => 'Current password is required.'
             ]);
-
-            $user->setPassword($newPassword);
         }
 
-        $user->setIdentity($name, $email, $phone);
-        $user->setDemographics($this->validateDemographics($data));
+        if (!password_verify($currentPassword, $user->getPasswordHash())) {
+            throw new ValidationException([
+                        'current_password' => 'Current password is incorrect.'
+            ]);
+        }
+
+        $newPassword = $this->validateNewPassword([
+            'password' => (string) ($data['new_password'] ?? ''),
+            'password_confirmation' => (string) ($data['new_password_confirmation'] ?? ''),
+        ]);
+
+        $user->setPassword($newPassword);
         $user->save();
 
         return $user;
@@ -355,16 +376,22 @@ class UserService {
 
         $errors = [];
 
-        if (
+        if ($password === '') {
+            $errors['password'] = 'New password is required.';
+        } elseif (
                 strlen($password) < 8 ||
                 strlen($password) > 72 ||
-                !preg_match('/[A-Za-z]/', $password) ||
-                !preg_match('/[0-9]/', $password)
+                !preg_match('/[A-Z]/', $password) ||
+                !preg_match('/[a-z]/', $password) ||
+                !preg_match('/[0-9]/', $password) ||
+                !preg_match('/[^A-Za-z0-9]/', $password)
         ) {
-            $errors['password'] = 'Password must be 8-72 characters and contain letters and numbers.';
+            $errors['password'] = 'Password must be 8-72 characters and include uppercase, lowercase, number, and special character.';
         }
 
-        if ($password !== $confirmation) {
+        if ($confirmation === '') {
+            $errors['password_confirmation'] = 'Confirm new password is required.';
+        } elseif ($password !== $confirmation) {
             $errors['password_confirmation'] = 'Password confirmation does not match.';
         }
 
