@@ -22,4 +22,15 @@ class ComplaintAttachment extends Model
     public function getStoredName(): string { return (string) $this->get('stored_name'); }
     public function getMimeType(): string { return (string) $this->get('mime_type'); }
     public function getFileSize(): int { return (int) $this->get('file_size'); }
+    public function getUploadedAt(): string { return (string) $this->get('uploaded_at'); }
+
+    /** The stored size written the way a person reads it, such as 284 KB. */
+    public function getReadableSize(): string
+    {
+        $bytes = $this->getFileSize();
+
+        return $bytes < 1048576
+            ? max(1, (int) round($bytes / 1024)) . ' KB'
+            : number_format($bytes / 1048576, 1) . ' MB';
+    }
 }
