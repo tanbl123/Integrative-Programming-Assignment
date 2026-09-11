@@ -122,9 +122,15 @@ class ComplaintController extends Controller
     public function edit(int $id): void
     {
         try {
-            $complaint = $this->service->findVisible(Auth::requireLogin(), $id);
+            $user = Auth::requireLogin();
+            $complaint = $this->service->findVisible($user, $id);
             if ($complaint === null) { $this->entityNotFound('Complaint'); return; }
-            $this->renderForm([], $complaint->toArray(), $id);
+            if (!$this->service->canEdit($complaint, $user)) {
+                Flash::set('error', 'Only new complaints without open assignments can be edited.');
+                $this->redirect('complaint/show/' . $id);
+                return;
+            }
+            $this->renderForm([], $complaint->toArray(), $id, $complaint->getAttachments());
         } catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
     }
 
@@ -133,12 +139,13 @@ class ComplaintController extends Controller
         $this->requirePost();
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
-            $this->service->update($id, $_POST, Auth::requireLogin());
+            $this->service->update($id, $_POST, Auth::requireLogin(), $_FILES['attachment'] ?? null);
             Flash::set('success', 'Complaint details updated.');
             $this->redirect('complaint/show/' . $id);
         } catch (ValidationException $error) {
             http_response_code(422);
-            $this->renderForm($error->getErrors(), $_POST, $id);
+            $existing = Complaint::find($id);
+            $this->renderForm($error->getErrors(), $_POST, $id, $existing?->getAttachments() ?? []);
         } catch (OutOfBoundsException $error) { $this->entityNotFound('Complaint'); }
         catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
     }
@@ -215,7 +222,10 @@ class ComplaintController extends Controller
                 $this->entityNotFound('Attachment');
                 return;
             }
-            $safeName = preg_replace('/[^A-Za-z0-9._-]/', '_', $attachment->getOriginalName());
+            // The neutral name the page shows, so a downloaded file matches
+            // its caption. It is built from the verified media type and needs
+            // no sanitising, but the guard stays in case that ever changes.
+            $safeName = preg_replace('/[^A-Za-z0-9._-]/', '_', $attachment->getDisplayName());
             header('Content-Type: ' . $attachment->getMimeType());
             header('Content-Length: ' . filesize($path));
             header('Content-Disposition: inline; filename="' . $safeName . '"');
@@ -253,9 +263,11 @@ class ComplaintController extends Controller
             'complaint'           => $complaint,
             'attachments'         => $complaint->getAttachments(),
             'history'             => $complaint->getHistory(),
+            'revisions'           => $complaint->getRevisions(),
             'statuses'            => Complaint::allowedNextStatuses($complaint->getStatus()),
             'errors'              => $errors,
             'user'                => $user,
+            'canEdit'             => $this->service->canEdit($complaint, $user),
             'canDelete'           => $this->service->canDelete($complaint, $user),
             'isAdmin'             => UserPermissions::can($user, 'complaint.manage'),
             'binInfo'             => $binInfo,
@@ -287,13 +299,20 @@ class ComplaintController extends Controller
         }
     }
 
-    private function renderForm(array $errors, array $values, ?int $editId = null): void
-    {
+    /** @param ComplaintAttachment[] $attachments */
+    private function renderForm(
+        array $errors,
+        array $values,
+        ?int $editId = null,
+        array $attachments = []
+    ): void {
         $this->view('complaint/form', [
             'title' => $editId === null ? 'Report Waste Issue' : 'Edit Complaint',
             'errors' => $errors,
             'values' => $values,
             'editId' => $editId,
+            // The photo already on file, so an edit can show what it replaces.
+            'attachments' => $attachments,
             'bins' => Bin::findActive(),
             'types' => Complaint::types(),
             // Lets the form warn about issues already open for the chosen bin.

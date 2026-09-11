@@ -1,9 +1,10 @@
 <?php /** Complaint details/history. Author: Tan Boon Leong (2402865). Module: Complaint / Report Management. */ ?>
 
 <?php
-$canEditComplaint =
-    $complaint->getStatus() === Complaint::STATUS_NEW &&
-    !$complaint->hasOpenAssignments();
+// Decided by ComplaintService::canEdit() so the button and the service agree:
+// only the reporter who wrote a complaint may change its details, and only
+// while nobody has acted on it.
+$canEditComplaint = $canEdit;
 
 // Decided by ComplaintService::canDelete() so the button and the service
 // agree: a Reporter may withdraw only an untouched complaint, an
@@ -17,7 +18,7 @@ $removeConfirm = $isAdmin
 
 <div class="page-heading">
     <div>
-        <p class="eyebrow">Complaint <?= e($complaint->getNumber()) ?></p>
+        <p class="eyebrow"><?= e($complaint->getNumber()) ?></p>
         <h1><?= e($complaint->getType()) ?></h1>
         <p class="lead">
             <?= e($complaint->getBin()?->getBinCode() ?? 'Unknown bin') ?>
@@ -98,21 +99,81 @@ $removeConfirm = $isAdmin
 <section class="content-card">
     <h2>Description</h2>
     <p class="pre-wrap"><?= e($complaint->getDescription()) ?></p>
+
+    <?php /* Earlier versions, collapsed. A complaint that was never edited
+             shows nothing at all, so the common case stays quiet; where one was
+             edited, both the reporter and the administrator can read what it
+             said before and see who changed it. The current wording above is
+             always the complaint as it stands now. */ ?>
+    <?php if ($revisions !== []): ?>
+        <details class="revisions">
+            <summary>
+                <?= count($revisions) === 1
+                    ? 'This complaint was edited once'
+                    : 'This complaint was edited ' . count($revisions) . ' times' ?>
+                &mdash; show what it said before
+            </summary>
+
+            <?php foreach ($revisions as $index => $revision): ?>
+                <article class="revision">
+                    <p class="field-help">
+                        Version <?= count($revisions) - $index ?>,
+                        replaced <?= e($revision->getEditedAt()) ?>
+                        by <?= e($revision->getEditedBy()?->getFullName() ?? 'a deleted account') ?>
+                    </p>
+
+                    <p class="field-help">
+                        <?= e($revision->getBin()?->getBinCode() ?? 'Bin no longer on record') ?>
+                        &middot; <?= e($revision->getType()) ?>
+                    </p>
+
+                    <p class="pre-wrap"><?= e($revision->getDescription()) ?></p>
+
+                    <?php /* The photograph this edit replaced. It is marked
+                             superseded rather than deleted, so swapping a
+                             damning photo for an innocuous one is as visible as
+                             rewriting the words. */ ?>
+                    <?php if ($revision->getAttachment() !== null): ?>
+                        <a
+                            class="current-photo"
+                            href="<?= url('complaint/attachment/' . $revision->getAttachment()->getKey()) ?>"
+                            target="_blank"
+                        >
+                            <img src="<?= url('complaint/attachment/' . $revision->getAttachment()->getKey()) ?>" alt="">
+                            <span>
+                                <strong>Photo replaced by this edit</strong>
+                                <small><?= e($revision->getAttachment()->getReadableSize()) ?></small>
+                            </span>
+                        </a>
+                    <?php endif; ?>
+                </article>
+            <?php endforeach; ?>
+        </details>
+    <?php endif; ?>
 </section>
 
 <?php if ($attachments !== []): ?>
     <section class="content-card">
         <h2>Photo evidence</h2>
 
+        <?php /* A neutral name is shown rather than the reporter's own filename,
+                 which says nothing about the evidence and is read by the
+                 administrator as well as the reporter. The original filename
+                 stays recorded in the attachment row. */ ?>
         <?php foreach ($attachments as $attachment): ?>
             <a href="<?= url('complaint/attachment/' . $attachment->getKey()) ?>" target="_blank">
                 <img 
                     class="complaint-photo" 
                     src="<?= url('complaint/attachment/' . $attachment->getKey()) ?>" 
-                    alt="Complaint evidence"
+                    alt="Photo submitted with this complaint"
                 >
             </a>
-            <p><?= e($attachment->getOriginalName()) ?></p>
+
+            <p class="field-help">
+                <strong><?= e($attachment->getDisplayName()) ?></strong>
+                &middot; <?= e($attachment->getReadableSize()) ?>
+                &middot; uploaded <?= e($attachment->getUploadedAt()) ?>
+            </p>
         <?php endforeach; ?>
     </section>
 <?php endif; ?>
@@ -191,9 +252,16 @@ $removeConfirm = $isAdmin
                         <td><?= e($entry->getUpdatedAt()) ?></td>
                         <td><?= e($entry->getUpdatedBy()?->getFullName() ?? 'System') ?></td>
                         <td>
-                            <?= e($entry->getOldStatus() ?? 'Created') ?>
-                            →
-                            <?= e($entry->getNewStatus()) ?>
+                            <?php /* An edit carries the same status on both sides, so the
+                                     arrow would read "New → New". change_type is what
+                                     separates the two kinds of row. */ ?>
+                            <?php if ($entry->isDetailsEdit()): ?>
+                                Details edited
+                            <?php else: ?>
+                                <?= e($entry->getOldStatus() ?? 'Created') ?>
+                                →
+                                <?= e($entry->getNewStatus()) ?>
+                            <?php endif; ?>
                         </td>
                         <td><?= e($entry->getRemarks() ?? '—') ?></td>
                     </tr>

@@ -23,7 +23,7 @@ function Api($account, $method, $path, $body, $expected=200, [bool]$csrf=$true) 
     Check ($result.Headers.'Content-Type' -match 'application/json') 'API did not return JSON'
     return ($result.Content | ConvertFrom-Json)
 }
-$admin=Login 'admin@ecocampus.edu.my'
+$admin=Login 'admin@ecocampus.my'
 $reporter=Login 'siti@student.ecocampus.my'
 $suffix=[guid]::NewGuid().ToString('N').Substring(0,10).ToUpperInvariant()
 $locationId=$null; $binId=$null

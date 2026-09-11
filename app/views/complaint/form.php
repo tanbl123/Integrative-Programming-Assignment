@@ -91,17 +91,65 @@
         <?php endif; ?>
     </label>
 
-    <?php if ($editId === null): ?>
-        <label>
-            Photo evidence (optional)
-            <input 
-                type="file" 
-                name="attachment" 
-                accept="image/jpeg,image/png,image/webp"
-                data-max-bytes="5242880"
-                data-message-accept="Only JPEG, PNG, or WebP images are allowed."
-                data-message-size="Photo must be no larger than 5 MB."
-            >
+    <?php /* The photo already on file, OUTSIDE the label below. Inside it, a
+             click anywhere here activates the file input and opens the picker
+             instead of the photograph the reporter meant to look at. */ ?>
+    <?php if ($attachments !== []): ?>
+        <div class="field-block">
+            <span class="field-help">Current photo</span>
+
+            <?php foreach ($attachments as $current): ?>
+                <a
+                    class="current-photo"
+                    href="<?= url('complaint/attachment/' . $current->getKey()) ?>"
+                    target="_blank"
+                >
+                    <img src="<?= url('complaint/attachment/' . $current->getKey()) ?>" alt="">
+                    <span>
+                        <strong><?= e($current->getDisplayName()) ?></strong>
+                        <small><?= e($current->getReadableSize()) ?> &middot; opens in a new tab</small>
+                    </span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
+    <label>
+            <?= $editId === null ? 'Photo evidence (optional)' : 'Replace this photo' ?>
+
+            <?php /* The plain file input is the baseline and is never removed.
+                     The script below only dresses this container: with scripting
+                     off the input renders as the browser's own control and the
+                     drop zone is simply a bordered box around it. */ ?>
+            <div class="dropzone" id="attachment-dropzone">
+                <input 
+                    type="file" 
+                    name="attachment" 
+                    id="attachment" 
+                    accept="image/jpeg,image/png,image/webp"
+                    data-max-bytes="5242880"
+                    data-message-accept="Only JPEG, PNG, or WebP images are allowed."
+                    data-message-size="Photo must be no larger than 5 MB."
+                >
+
+                <p class="dropzone-hint" id="attachment-hint">
+                    <strong><?= $attachments !== [] ? 'Drag a new photo here' : 'Drag a photo here' ?></strong>
+                    <span><?= $attachments !== []
+                        ? 'or click to choose one. It replaces the photo above.'
+                        : 'or click to choose one' ?></span>
+                </p>
+
+                <div class="dropzone-preview" id="attachment-preview" hidden>
+                    <img id="attachment-thumb" alt="" hidden>
+                    <span class="dropzone-file">
+                        <strong id="attachment-name"></strong>
+                        <small id="attachment-size"></small>
+                    </span>
+                    <button type="button" class="button button-secondary" id="attachment-remove">
+                        Remove
+                    </button>
+                </div>
+            </div>
 
             <span class="field-help">JPEG, PNG, or WebP; maximum 5 MB.</span>
 
@@ -109,7 +157,7 @@
                 <span class="field-error"><?= e($errors['attachment']) ?></span>
             <?php endif; ?>
         </label>
-    <?php endif; ?>
+
 
     <?php if (!empty($errors['complaint'])): ?>
         <div class="alert alert-error">
@@ -209,5 +257,144 @@
 
     type.addEventListener('change', update);
     update();   // a re-rendered form keeps its selection, so check on load too
+})();
+</script>
+
+<?php /*
+ * Drag-and-drop photo evidence with a preview.
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ *
+ * A reporter photographs an overflowing bin on their phone and then has to
+ * recognise it again in a file picker, from a name like IMG_20260911_0842.jpg.
+ * The preview is what tells them they attached the right photo, before it
+ * becomes evidence an administrator acts on.
+ *
+ * The <input type="file"> is never replaced, only hidden from view once this
+ * script runs, so the form still works with scripting disabled and the file
+ * still posts through the ordinary multipart field. A dropped file is written
+ * back into that input through a DataTransfer, which means the upload path,
+ * and the validation in public/js/validate.js, see a dropped file and a chosen
+ * file as exactly the same thing.
+ *
+ * A browser does not apply the accept attribute to a dropped file, so a
+ * reporter can drop anything at all here. That is the point at which the size
+ * and type rules matter, so the field is marked as touched and a change event
+ * raised, which makes validate.js report the problem immediately rather than
+ * at submission.
+ */ ?>
+<script>
+(() => {
+    'use strict';
+    const zone    = document.getElementById('attachment-dropzone');
+    const input   = document.getElementById('attachment');
+    const hint    = document.getElementById('attachment-hint');
+    const preview = document.getElementById('attachment-preview');
+    const thumb   = document.getElementById('attachment-thumb');
+    const name    = document.getElementById('attachment-name');
+    const size    = document.getElementById('attachment-size');
+    const remove  = document.getElementById('attachment-remove');
+    if (!zone || !input || !preview) return;
+
+    // Only now is the plain input hidden, so nothing is lost without scripting.
+    zone.classList.add('is-enhanced');
+
+    let objectUrl = null;
+    const releaseThumb = () => {
+        if (objectUrl !== null) {
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+        }
+    };
+
+    const readableSize = bytes => bytes < 1024 * 1024
+        ? Math.max(1, Math.round(bytes / 1024)) + ' KB'
+        : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+
+    const render = () => {
+        releaseThumb();
+        const file = input.files && input.files[0];
+
+        if (!file) {
+            preview.hidden = true;
+            hint.hidden = false;
+            thumb.hidden = true;
+            thumb.removeAttribute('src');
+            name.textContent = '';
+            size.textContent = '';
+            return;
+        }
+
+        name.textContent = file.name;
+        size.textContent = readableSize(file.size);
+
+        // A file that is not an image has nothing to show. Its name is still
+        // listed, and validate.js explains why it will not be accepted.
+        if (file.type.startsWith('image/')) {
+            objectUrl = URL.createObjectURL(file);
+            thumb.src = objectUrl;
+            thumb.hidden = false;
+        } else {
+            thumb.hidden = true;
+            thumb.removeAttribute('src');
+        }
+
+        hint.hidden = true;
+        preview.hidden = false;
+    };
+
+    /** Writes a dropped file into the real input, so one code path remains. */
+    const accept = file => {
+        const carrier = new DataTransfer();
+        if (file) {
+            carrier.items.add(file);
+        }
+        input.files = carrier.files;
+        // validate.js marks a field once the user has acted on it; dropping a
+        // file is acting on it, so a bad file is reported straight away.
+        input.dataset.touched = '1';
+        input.dispatchEvent(new Event('change', {bubbles: true}));
+    };
+
+    ['dragenter', 'dragover'].forEach(type => {
+        zone.addEventListener(type, event => {
+            event.preventDefault();
+            zone.classList.add('is-dragover');
+        });
+    });
+
+    ['dragleave', 'dragend'].forEach(type => {
+        zone.addEventListener(type, () => zone.classList.remove('is-dragover'));
+    });
+
+    zone.addEventListener('drop', event => {
+        event.preventDefault();
+        zone.classList.remove('is-dragover');
+        const dropped = event.dataTransfer && event.dataTransfer.files[0];
+        if (dropped) {
+            accept(dropped);
+        }
+    });
+
+    // A file can claim to be an image and not decode as one - a renamed
+    // upload, or a truncated photo. The name and size still describe it.
+    thumb.addEventListener('error', () => {
+        thumb.hidden = true;
+        thumb.removeAttribute('src');
+    });
+
+    input.addEventListener('change', render);
+
+    remove.addEventListener('click', event => {
+        // The zone sits inside the <label>, so without this the click would
+        // reopen the file picker the reporter is trying to back out of.
+        event.preventDefault();
+        event.stopPropagation();
+        accept(null);
+        input.focus();
+    });
+
+    render();   // a re-rendered form after a failed submit starts empty
 })();
 </script>

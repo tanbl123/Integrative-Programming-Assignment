@@ -23,17 +23,41 @@
  *        +--> ComplaintHistoryObserver      writes the audit trail
  *        +--> ComplaintNotificationObserver raises an administrator alert
  *        +--> ComplaintBinFlagObserver      updates the affected bin
+ *        +--> ComplaintRevisionObserver     keeps what an edit replaced
+ *
+ * TWO KINDS OF EVENT
+ * The subject broadcasts a status transition, and separately an edit to a
+ * complaint's own fields. Each observer decides for itself whether an event
+ * concerns it: the audit trail records both, the notification differs between
+ * them, and the bin observer ignores an edit outright, because changing the
+ * wording of a report says nothing about how full the bin is. Adding the
+ * second kind of event changed no observer that did not care about it, which
+ * is the loose coupling the pattern exists to provide.
  */
 
 /** Contract every complaint observer must satisfy. */
 interface ComplaintObserver
 {
+    /** A move through the complaint lifecycle. */
+    public const EVENT_STATUS = 'Status';
+
+    /** An edit to the complaint's own fields, with the status unchanged. */
+    public const EVENT_DETAILS = 'Details';
+
+    /**
+     * @param array{bin:int,type:string,description:string}|null $previous
+     *        What the complaint said before an EVENT_DETAILS edit. Only the
+     *        service holds this, because by the time an observer runs the
+     *        complaint has already been saved.
+     */
     public function changed(
         Complaint $complaint,
         ?string $oldStatus,
         string $newStatus,
         ?User $actor,
-        ?string $remarks
+        ?string $remarks,
+        string $event = self::EVENT_STATUS,
+        ?array $previous = null
     ): void;
 }
 
@@ -48,10 +72,16 @@ class ComplaintHistoryObserver implements ComplaintObserver
         ?string $oldStatus,
         string $newStatus,
         ?User $actor,
-        ?string $remarks
+        ?string $remarks,
+        string $event = self::EVENT_STATUS,
+        ?array $previous = null
     ): void {
+        // Both kinds of event are recorded. An edit carries the same status on
+        // each side, and change_type is what tells the two apart when the
+        // history is read back.
         $history = new ComplaintStatusHistory();
-        $history->setDetails($complaint->getKey(), $actor?->getKey(), $oldStatus, $newStatus, $remarks);
+        $history->setDetails(
+            $complaint->getKey(), $actor?->getKey(), $oldStatus, $newStatus, $remarks, $event);
         $history->save();
     }
 }
@@ -69,9 +99,31 @@ class ComplaintNotificationObserver implements ComplaintObserver
         ?string $oldStatus,
         string $newStatus,
         ?User $actor,
-        ?string $remarks
+        ?string $remarks,
+        string $event = self::EVENT_STATUS,
+        ?array $previous = null
     ): void {
         $binCode = $complaint->getBin()?->getBinCode() ?? 'an unknown bin';
+
+        if ($event === self::EVENT_DETAILS) {
+            // A reporter revising their own wording needs no telling. Somebody
+            // else changing it is the case this notification exists for: the
+            // reporter learns that their account of the issue was altered, and
+            // by whom.
+            if ($actor === null || $actor->getKey() === $complaint->getReporterId()) {
+                return;
+            }
+            $notification = new ComplaintNotification();
+            $notification->setDetails(
+                $complaint->getKey(),
+                User::ROLE_REPORTER,
+                'Complaint ' . $complaint->getNumber() . ' was edited',
+                $actor->getFullName() . ' changed the details of your report about ' . $binCode
+                    . '. What it said before is kept on the complaint page.'
+            );
+            $notification->save();
+            return;
+        }
 
         if ($oldStatus === null) {
             $role  = User::ROLE_ADMIN;
@@ -113,8 +165,14 @@ class ComplaintBinFlagObserver implements ComplaintObserver
         ?string $oldStatus,
         string $newStatus,
         ?User $actor,
-        ?string $remarks
+        ?string $remarks,
+        string $event = self::EVENT_STATUS,
+        ?array $previous = null
     ): void {
+        // Rewording a report says nothing about how full the bin is.
+        if ($event !== self::EVENT_STATUS) {
+            return;
+        }
         $bin = $complaint->getBin();
 
         if ($bin === null || $bin->getFillStatus() === Bin::STATUS_MAINTENANCE) {
@@ -137,6 +195,42 @@ class ComplaintBinFlagObserver implements ComplaintObserver
             $bin->setFillStatus(Bin::STATUS_EMPTY);
             $bin->save();
         }
+    }
+}
+
+/**
+ * Observer 4 - keeps what an edit replaced.
+ *
+ * The history records THAT a complaint was edited and which fields moved; it
+ * cannot hold what they said, because remarks is 255 characters and a
+ * description may run to 2,000. Without the wording itself a reporter has no
+ * way to show that their report once said something else, which is the whole
+ * reason an edit is recorded at all.
+ *
+ * This observer was written after the other three, and adding it changed
+ * neither ComplaintService nor ComplaintStatusSubject: one class, one
+ * attach() call.
+ */
+class ComplaintRevisionObserver implements ComplaintObserver
+{
+    public function changed(
+        Complaint $complaint,
+        ?string $oldStatus,
+        string $newStatus,
+        ?User $actor,
+        ?string $remarks,
+        string $event = self::EVENT_STATUS,
+        ?array $previous = null
+    ): void {
+        // Only an edit replaces anything. A status change leaves the
+        // complaint's own words exactly as they were.
+        if ($event !== self::EVENT_DETAILS || $previous === null) {
+            return;
+        }
+
+        $revision = new ComplaintRevision();
+        $revision->setDetails($complaint->getKey(), $actor?->getKey(), $previous);
+        $revision->save();
     }
 }
 
@@ -173,10 +267,13 @@ class ComplaintStatusSubject
         ?string $oldStatus,
         string $newStatus,
         ?User $actor,
-        ?string $remarks
+        ?string $remarks,
+        string $event = ComplaintObserver::EVENT_STATUS,
+        ?array $previous = null
     ): void {
         foreach ($this->observers as $observer) {
-            $observer->changed($complaint, $oldStatus, $newStatus, $actor, $remarks);
+            $observer->changed(
+                $complaint, $oldStatus, $newStatus, $actor, $remarks, $event, $previous);
         }
     }
 }
