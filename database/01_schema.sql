@@ -199,6 +199,34 @@ CREATE TABLE complaint_status_history (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
+-- complaint_revisions - what a complaint said before it was edited
+-- Owner: Tan Boon Leong (Complaint / Report Management)
+--
+-- Written by ComplaintRevisionObserver. complaint_status_history records
+-- that an edit happened; this holds the wording it replaced, which a
+-- 255-character remarks column cannot.
+-- ---------------------------------------------------------------------
+CREATE TABLE complaint_revisions (
+    revision_id    INT AUTO_INCREMENT PRIMARY KEY,
+    complaint_id   INT NOT NULL,
+    edited_by      INT NULL,
+    bin_id         INT NULL,
+    complaint_type VARCHAR(50) NOT NULL,
+    description    TEXT NOT NULL,
+    edited_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_revisions_complaint
+        FOREIGN KEY (complaint_id) REFERENCES complaints(complaint_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_revisions_user
+        FOREIGN KEY (edited_by) REFERENCES users(user_id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_revisions_bin
+        FOREIGN KEY (bin_id) REFERENCES bins(bin_id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_revisions_complaint (complaint_id, edited_at)
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
 -- complaint_notifications - dashboard alerts raised by complaint events
 -- Owner: Tan Boon Leong (Complaint / Report Management)
 --

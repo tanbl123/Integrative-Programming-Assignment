@@ -1385,3 +1385,38 @@ td.duplicate-reason {
     display: block;
     color: var(--muted);
 }
+
+/* Earlier versions of a complaint, collapsed under the current description.
+ * Author : Tan Boon Leong (2402865) · Module : Complaint / Report Management */
+.revisions {
+    margin-top: 1rem;
+    border-top: 1px solid var(--line);
+    padding-top: 0.75rem;
+}
+
+.revisions summary {
+    cursor: pointer;
+    color: var(--green-dark);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.revisions summary:hover {
+    text-decoration: underline;
+}
+
+.revision {
+    margin-top: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    border-left: 3px solid var(--line);
+    background: var(--bg);
+    border-radius: 0 8px 8px 0;
+}
+
+.revision p {
+    margin: 0 0 0.35rem;
+}
+
+.revision p:last-child {
+    margin-bottom: 0;
+}

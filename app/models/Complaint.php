@@ -125,6 +125,16 @@ class Complaint extends Model
     public function getAttachments(): array { return $this->hasMany(ComplaintAttachment::class, 'complaint_id'); }
     public function getHistory(): array { return $this->hasMany(ComplaintStatusHistory::class, 'complaint_id'); }
 
+    /** Earlier versions of this complaint, newest first. */
+    public function getRevisions(): array
+    {
+        $revisions = $this->hasMany(ComplaintRevision::class, 'complaint_id');
+        usort($revisions, static fn(ComplaintRevision $a, ComplaintRevision $b): int
+            => strcmp($b->getEditedAt(), $a->getEditedAt()));
+
+        return $revisions;
+    }
+
     public static function search(
         ?int $reporterId,
         string $query,

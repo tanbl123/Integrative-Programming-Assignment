@@ -269,6 +269,7 @@ class ComplaintController extends Controller
             'complaint'           => $complaint,
             'attachments'         => $complaint->getAttachments(),
             'history'             => $complaint->getHistory(),
+            'revisions'           => $complaint->getRevisions(),
             'statuses'            => Complaint::allowedNextStatuses($complaint->getStatus()),
             'errors'              => $errors,
             'user'                => $user,

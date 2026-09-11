@@ -99,6 +99,39 @@ $removeConfirm = $isAdmin
 <section class="content-card">
     <h2>Description</h2>
     <p class="pre-wrap"><?= e($complaint->getDescription()) ?></p>
+
+    <?php /* Earlier versions, collapsed. A complaint that was never edited
+             shows nothing at all, so the common case stays quiet; where one was
+             edited, both the reporter and the administrator can read what it
+             said before and see who changed it. The current wording above is
+             always the complaint as it stands now. */ ?>
+    <?php if ($revisions !== []): ?>
+        <details class="revisions">
+            <summary>
+                <?= count($revisions) === 1
+                    ? 'This complaint was edited once'
+                    : 'This complaint was edited ' . count($revisions) . ' times' ?>
+                &mdash; show what it said before
+            </summary>
+
+            <?php foreach ($revisions as $index => $revision): ?>
+                <article class="revision">
+                    <p class="field-help">
+                        Version <?= count($revisions) - $index ?>,
+                        replaced <?= e($revision->getEditedAt()) ?>
+                        by <?= e($revision->getEditedBy()?->getFullName() ?? 'a deleted account') ?>
+                    </p>
+
+                    <p class="field-help">
+                        <?= e($revision->getBin()?->getBinCode() ?? 'Bin no longer on record') ?>
+                        &middot; <?= e($revision->getType()) ?>
+                    </p>
+
+                    <p class="pre-wrap"><?= e($revision->getDescription()) ?></p>
+                </article>
+            <?php endforeach; ?>
+        </details>
+    <?php endif; ?>
 </section>
 
 <?php if ($attachments !== []): ?>

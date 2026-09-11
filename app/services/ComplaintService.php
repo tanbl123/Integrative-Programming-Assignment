@@ -22,6 +22,8 @@ class ComplaintService
         $this->subject->attach(new ComplaintHistoryObserver());
         $this->subject->attach(new ComplaintNotificationObserver());
         $this->subject->attach(new ComplaintBinFlagObserver());
+        // Added last, and needing no change to this service beyond this line.
+        $this->subject->attach(new ComplaintRevisionObserver());
     }
 
     public function create(User $reporter, array $data, ?array $upload): Complaint
@@ -210,10 +212,11 @@ class ComplaintService
         }
         [$binId, $type, $description] = $this->validateComplaint(array_replace($complaint->toArray(), $data));
 
-        // What the complaint said before, so the audit row can name what moved.
+        // What the complaint said before: the audit row names which fields
+        // moved, and ComplaintRevisionObserver keeps the wording itself.
         $before = [
             'bin' => $complaint->getBinId(),
-            'issue type' => $complaint->getType(),
+            'type' => $complaint->getType(),
             'description' => $complaint->getDescription(),
         ];
 
@@ -241,7 +244,8 @@ class ComplaintService
 
             $changed = array_keys(array_diff_assoc(
                 ['bin' => $binId, 'issue type' => $type, 'description' => $description],
-                $before
+                ['bin' => $before['bin'], 'issue type' => $before['type'],
+                 'description' => $before['description']]
             ));
             if ($stored !== null) {
                 $changed[] = 'photo';
@@ -257,7 +261,8 @@ class ComplaintService
                     $complaint->getStatus(),
                     $user,
                     'Edited: ' . implode(', ', $changed) . '.',
-                    ComplaintObserver::EVENT_DETAILS
+                    ComplaintObserver::EVENT_DETAILS,
+                    $before
                 );
             }
             $pdo->commit();
