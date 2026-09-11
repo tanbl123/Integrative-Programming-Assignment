@@ -771,6 +771,15 @@ textarea::placeholder {
     margin-top: 0.2rem;
 }
 
+/* A second fact under the status, not a second label - the plain span rule
+   above is the grid's label styling and would make it read as one. */
+.detail-grid .detail-note {
+    margin-top: 0.35rem;
+    color: var(--warn);
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
 .danger-zone {
     display: flex;
     align-items: center;

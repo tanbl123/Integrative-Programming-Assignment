@@ -121,6 +121,19 @@ class Complaint extends Model
         return sprintf('CMP-%s-%04d', $year, $id);
     }
 
+    /**
+     * A date a person would say out loud: "10 Sep 2026" rather than
+     * "2026-09-10 20:12:31". The seconds are precise and tell a reporter
+     * nothing.
+     */
+    public static function friendlyDate(string $timestamp): string
+    {
+        $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $timestamp)
+            ?: DateTimeImmutable::createFromFormat('Y-m-d', substr($timestamp, 0, 10));
+
+        return $date === false ? $timestamp : $date->format('j M Y');
+    }
+
     public function getReporterId(): int { return (int) $this->get('reporter_id'); }
     public function getBinId(): int { return (int) $this->get('bin_id'); }
     public function getType(): string { return (string) $this->get('complaint_type'); }
@@ -226,13 +239,21 @@ class Complaint extends Model
 
         $rows = Database::getInstance()->selectAll($sql, $params);
 
+        // Phrased here rather than in the browser, because the raw values are
+        // the system's vocabulary and not the reporter's. A complaint id, the
+        // word "Assigned" and a timestamp to the second all mean something to
+        // whoever built this; to somebody standing next to a full bin they are
+        // noise between them and the one question being asked, which is
+        // whether their issue is one of these already.
         $byBin = [];
         foreach ($rows as $row) {
+            $created = (string) $row['created_at'];
             $byBin[(int) $row['bin_id']][] = [
-                'id'         => (int) $row['complaint_id'],
-                'type'       => (string) $row['complaint_type'],
-                'status'     => (string) $row['complaint_status'],
-                'created_at' => (string) $row['created_at'],
+                'type'     => (string) $row['complaint_type'],
+                'reported' => self::friendlyDate($created),
+                'state'    => $row['complaint_status'] === self::STATUS_ASSIGNED
+                    ? 'already being dealt with'
+                    : 'waiting to be looked at',
             ];
         }
         return $byBin;

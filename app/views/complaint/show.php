@@ -57,6 +57,17 @@ $removeConfirm = $isAdmin
     <div>
         <span>Status</span>
         <strong><?= e($complaint->getStatus()) ?></strong>
+        <?php /* The lifecycle status is an Administrator's decision. Whether a
+                 cleaner is actually out on this report is the Scheduling
+                 module's record, and the two are set independently - a
+                 complaint can still read New while an assignment raised from
+                 it is open. Rather than overwrite one module's column from
+                 another, the two are simply both shown, which is also what
+                 ComplaintService::canEdit() tests before letting anyone
+                 change the complaint. */ ?>
+        <?php if ($complaint->hasOpenAssignments()): ?>
+            <span class="detail-note">A cleaner has been scheduled for this bin.</span>
+        <?php endif; ?>
     </div>
 
     <div>
