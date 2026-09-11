@@ -269,9 +269,10 @@
         addOpenStreetMapTiles(map);
         let marker = null;
 
-        function dispatchCoordinateChange(input) {
+        function dispatchCoordinateInput(input) {
+            // Notify form validation and unsaved-change tracking without firing
+            // the change listener below, which would call placeMarker again.
             input.dispatchEvent(new Event('input', {bubbles: true}));
-            input.dispatchEvent(new Event('change', {bubbles: true}));
         }
 
         function placeMarker(lat, lng, message, moveMap = true) {
@@ -287,8 +288,8 @@
             }
             latitude.value = Number(lat).toFixed(7);
             longitude.value = Number(lng).toFixed(7);
-            dispatchCoordinateChange(latitude);
-            dispatchCoordinateChange(longitude);
+            dispatchCoordinateInput(latitude);
+            dispatchCoordinateInput(longitude);
             status.textContent = message;
             if (moveMap) map.setView([lat, lng], Math.max(map.getZoom(), 18));
         }
@@ -313,8 +314,8 @@
         document.getElementById('clearLocationPin')?.addEventListener('click', () => {
             latitude.value = '';
             longitude.value = '';
-            dispatchCoordinateChange(latitude);
-            dispatchCoordinateChange(longitude);
+            dispatchCoordinateInput(latitude);
+            dispatchCoordinateInput(longitude);
             if (marker !== null) {
                 map.removeLayer(marker);
                 marker = null;
