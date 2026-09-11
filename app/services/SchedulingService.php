@@ -49,7 +49,6 @@ class SchedulingService {
                 $this->markComplaintsAssigned(
                         $complaints,
                         (int) $selection['bin']->getKey(),
-                        (int) $schedule->getKey(),
                         $administrator
                 );
             }
@@ -149,7 +148,6 @@ class SchedulingService {
             $this->markComplaintsAssigned(
                     new ComplaintService(),
                     (int) $bin->getKey(),
-                    (int) $schedule->getKey(),
                     $administrator,
                     $reporterMessage
             );
@@ -207,7 +205,6 @@ class SchedulingService {
     private function releaseComplaints(
             ComplaintService $complaints,
             array $binIds,
-            int $scheduleId,
             User $administrator
     ): void {
         foreach ($binIds as $binId) {
@@ -221,10 +218,13 @@ class SchedulingService {
                     continue;
                 }
 
+                // Plain English for the same reason as the booking remark
+                // above: the reporter reads this row on their own complaint,
+                // and a schedule number tells them nothing.
                 $complaints->updateStatus(
                         (int) $complaint->getKey(),
                         Complaint::STATUS_NEW,
-                        'Collection cancelled (schedule #' . $scheduleId . ').',
+                        'The collection booked for this bin was cancelled.',
                         $administrator
                 );
             }
@@ -353,7 +353,6 @@ class SchedulingService {
             $this->releaseComplaints(
                     new ComplaintService(),
                     array_keys($bins),
-                    (int) $schedule->getKey(),
                     Auth::requireLogin()
             );
 
@@ -528,7 +527,6 @@ class SchedulingService {
     private function markComplaintsAssigned(
             ComplaintService $complaints,
             int $binId,
-            int $scheduleId,
             User $administrator,
             ?string $reporterMessage = null
     ): void {
@@ -537,15 +535,28 @@ class SchedulingService {
                 continue;
             }
 
-            // The remark names the schedule, for the history; the message is
-            // whatever the administrator wrote for the person who reported
-            // this. Where several reports name the one bin they all receive
-            // it, which is the point: one answer, given to everybody who
-            // asked, rather than to whoever happened to report first.
+            // The remark used to read "Collection scheduled (schedule #5).",
+            // on the reasoning that a remark is written for the record. That
+            // was wrong about who reads the record: the Status history table
+            // on the complaint page has no administrator guard, so the
+            // reporter sees every remark on their own complaint. The schedule
+            // number was kept out of their notification for being meaningless
+            // to somebody who cannot open a schedule, and was then shown to
+            // them anyway on the page that notification links to.
+            //
+            // So the remark for this step is what the administrator wrote for
+            // them, and a plain sentence when they wrote nothing. The schedule
+            // itself is not lost by this: which cleaner is going, when, and
+            // under which schedule is held in collection_schedules and
+            // collection_assignments, where the Scheduling module owns it. A
+            // sentence in a remarks column was never the record of that.
+            //
+            // Where several reports name the one bin, all of them get the same
+            // remark - one answer, given to everybody who asked.
             $complaints->updateStatus(
                     (int) $complaint->getKey(),
                     Complaint::STATUS_ASSIGNED,
-                    'Collection scheduled (schedule #' . $scheduleId . ').',
+                    $reporterMessage ?? 'A cleaner has been booked for this bin.',
                     $administrator,
                     $reporterMessage
             );

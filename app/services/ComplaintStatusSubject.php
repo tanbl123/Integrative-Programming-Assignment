@@ -53,14 +53,13 @@ interface ComplaintObserver
      *        service holds this, because by the time an observer runs the
      *        complaint has already been saved.
      * @param string|null $forReporter
-     *        Something an administrator typed FOR the reporter to read, as
-     *        opposed to $remarks, which is written for the record. They are
-     *        separate parameters because they are separate pieces of writing
-     *        with separate readers: "Collection scheduled (schedule #3)." is
-     *        what the history needs and is meaningless to the person waiting
-     *        to hear, and "we are short-staffed today, it will be after
-     *        lunch" is the opposite. Overloading one field with both would
-     *        force every caller to choose which reader to fail.
+     *        Something an administrator typed FOR the reporter to read.
+     *        $remarks is the reason the status moved and belongs to the
+     *        complaint; this is a message addressed to one person and belongs
+     *        in their notification. They stay separate because a caller may
+     *        have one and not the other: the Scheduling module supplies a
+     *        message only if the administrator typed one, and a cancellation
+     *        has a reason but nobody to speak for it.
      */
     public function changed(
         Complaint $complaint,
@@ -120,22 +119,17 @@ class ComplaintNotificationObserver implements ComplaintObserver
     ): void {
         $binCode = $complaint->getBin()?->getBinCode() ?? 'an unknown bin';
 
-        // Remarks are not repeated to the reporter on the two middle steps.
-        // Those are raised by the Scheduling module, whose remark names the
-        // schedule it created - "Collection scheduled (schedule #3)." - which
-        // is the right thing for the history and nothing at all to somebody
-        // who cannot open a schedule and has no idea there are three. Both
-        // bodies below already say what happened in full. Resolved and
-        // Rejected keep theirs, because there the reason IS the message, and
-        // a rejection cannot be saved without one.
+        // Remarks are not repeated to the reporter on the two middle steps,
+        // and $forReporter is what is added instead. On those steps the
+        // Scheduling module supplies both, and the remark it supplies is
+        // either the administrator's own message - in which case repeating it
+        // would say the same sentence twice in one notification - or a plain
+        // stand-in ("A cleaner has been booked for this bin.") that the body
+        // below already says at more length.
         //
-        // Leaving the schedule number out, though, left the middle steps with
-        // no way for a person to say anything at all: the booking form asked
-        // for notes for the cleaner and nothing for the reporter, so the one
-        // party actually waiting for an answer got the same fixed sentence
-        // every time. $forReporter is that missing half - written by the
-        // administrator, addressed to the reporter, and kept apart from the
-        // remark so that neither has to be phrased for both audiences.
+        // Resolved and Rejected keep their remarks, because there the reason
+        // IS the message: it is what the reporter is owed, and a rejection
+        // cannot be saved without one.
         if ($event === self::EVENT_WITHDRAWN) {
             // Administrators are told, because a report they may already have
             // read and planned around has just left their list. The reporter
