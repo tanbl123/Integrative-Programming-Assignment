@@ -100,6 +100,19 @@ class SchedulingService {
             ]);
         }
 
+        // The form withdraws once a collection exists, but the form is not the
+        // guarantee: two tabs, a double submit or a posted request would
+        // otherwise send a second cleaner to a bin somebody is already on
+        // their way to. Duplicate reports make this likely rather than
+        // theoretical - three people report one bin, and each of their
+        // complaints offers to book somebody.
+        if ($complaint->binHasOpenCollection()) {
+            throw new ValidationException([
+                        'schedule' => 'A cleaner is already booked to visit this bin. '
+                                    . 'Mark this complaint Assigned instead of booking a second visit.'
+            ]);
+        }
+
         [$date, $timeSlot, , $cleaner, $notes] = $this->validateSchedule(
                 $data + ['strategy' => 'Complaint Priority']
         );

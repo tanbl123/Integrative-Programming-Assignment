@@ -319,6 +319,12 @@ class ComplaintController extends Controller
             'statuses'            => $this->service->nextStatusesFor($complaint),
             // For the booking form shown when Assigned is not yet available.
             'cleaners'            => User::findActiveCleaners(),
+            // Every open report of this issue on this bin, including this one.
+            // Acting on a complaint from here bypasses the duplicates panel on
+            // the listing, so the group has to be visible from inside too.
+            'openGroup'           => UserPermissions::can($user, 'complaint.manage')
+                ? Complaint::openForBinAndType($complaint->getBinId(), $complaint->getType())
+                : [],
             'errors'              => $errors,
             'user'                => $user,
             'canEdit'             => $this->service->canEdit($complaint, $user),

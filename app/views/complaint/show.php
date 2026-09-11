@@ -209,6 +209,50 @@ $assignments = $complaint->assignmentCounts();
 <?php endif; ?>
 
 <?php /*
+ * This complaint is one of several open reports of the same issue.
+ *
+ * Author : Tan Boon Leong (2402865)
+ * Module : Complaint / Report Management
+ *
+ * The duplicates panel sits on the listing, so an Administrator who arrives
+ * here from the table can act on one report without ever seeing that two
+ * others say the same thing - booking a cleaner for it, or resolving it and
+ * leaving the rest open. Nothing here forbids that: three reports sharing a
+ * bin and an issue type are not necessarily the same problem, and that is the
+ * Administrator's judgement to make. What was missing was the information to
+ * make it with.
+ */ ?>
+<?php if (count($openGroup) > 1): ?>
+    <div class="alert alert-warning">
+        <p>
+            <strong><?= count($openGroup) ?> open reports</strong> name
+            <?= e($complaint->getType()) ?> on
+            <?= e($complaint->getBin()?->getBinCode() ?? 'this bin') ?>, including this one:
+        </p>
+        <ul>
+            <?php foreach ($openGroup as $sibling): ?>
+                <li>
+                    <?php if ((int) $sibling->getKey() === (int) $complaint->getKey()): ?>
+                        <strong><?= e($sibling->getNumber()) ?></strong> &mdash; this one
+                    <?php else: ?>
+                        <a href="<?= url('complaint/show/' . $sibling->getKey()) ?>">
+                            <?= e($sibling->getNumber()) ?></a>
+                        &mdash; <?= e($sibling->getReporter()?->getFullName() ?? 'Unknown') ?>,
+                        <?= e($sibling->getStatus()) ?>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+        <p>
+            Deal with them together from
+            <a href="<?= url('complaint') ?>">the duplicate reports panel</a>
+            to keep one and reject the rest, so every reporter is told the same outcome
+            at the same time. Acting on this one alone leaves the others open.
+        </p>
+    </div>
+<?php endif; ?>
+
+<?php /*
  * Book a cleaner, without leaving the complaint.
  *
  * Author : Tan Boon Leong (2402865)
