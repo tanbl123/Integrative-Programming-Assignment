@@ -16,6 +16,7 @@ class LocationApiController extends ApiController
 
     public function index(): void
     {
+        $this->apiEnableIfa();
         $this->apiAllow(['GET']);
         try {
             $this->apiRequireTracking();
@@ -38,6 +39,7 @@ class LocationApiController extends ApiController
 
     public function show(int $id): void
     {
+        $this->apiEnableIfa();
         $this->apiAllow(['GET']);
         try {
             $this->apiRequireTracking();
@@ -58,6 +60,7 @@ class LocationApiController extends ApiController
 
     public function resource(?int $id = null): void
     {
+        $this->apiEnableIfa();
         try {
             $this->apiAllow($id === null ? ['GET', 'POST'] : ['GET', 'PUT', 'PATCH', 'DELETE']);
             if ($this->apiMethod() === 'GET') {

@@ -28,12 +28,7 @@ class UserApiController extends ApiController
             $data = $this->apiPayload();
             $this->apiWriteGuard($data);
             if ($method === 'POST') {
-                [$createdUser, $temporaryPassword] = $service->createByAdministrator($data);
-                $this->apiRespond(
-                    $createdUser->apiData() + ['temporary_password' => $temporaryPassword],
-                    201,
-                    'User created with a temporary password.'
-                );
+                $this->apiRespond($service->createByAdministrator($data)->apiData(), 201, 'User created.');
             } elseif ($method === 'DELETE') {
                 $service->deleteByAdministrator($id);
                 $this->apiRespond(null, 200, 'Account deleted; historical records preserved.');

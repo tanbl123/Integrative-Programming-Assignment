@@ -9,6 +9,7 @@
 abstract class ApiController extends Controller
 {
     private ?string $apiRequestId = null;
+    private bool $apiIfaEnabled = false;
 
     protected function apiMethod(): string
     {
@@ -51,6 +52,7 @@ abstract class ApiController extends Controller
      */
     protected function apiRequireTracking(?array $payload = null): void
     {
+        $this->apiEnableIfa();
         $requestId = trim((string) (
             $_GET['requestID']
             ?? $_GET['requestId']
@@ -89,6 +91,12 @@ abstract class ApiController extends Controller
         $this->apiRequestId = $requestId !== '' ? $requestId : $this->newApiRequestId();
     }
 
+    /** Enables the IFA response envelope for endpoints that opt into it. */
+    protected function apiEnableIfa(): void
+    {
+        $this->apiIfaEnabled = true;
+    }
+
     protected function apiWriteGuard(?array $payload = null): void
     {
         Auth::requireLogin();
@@ -105,7 +113,10 @@ abstract class ApiController extends Controller
     ): void
     {
         header('Cache-Control: no-store');
-        $this->json(array_merge($extra, $this->apiEnvelope('S', true, $data, $message)), $httpStatus);
+        $payload = $this->apiIfaEnabled
+            ? $this->apiEnvelope('S', true, $data, $message)
+            : ['success' => true, 'data' => $data, 'message' => $message];
+        $this->json(array_merge($extra, $payload), $httpStatus);
     }
 
     protected function apiAllow(array $methods): void
@@ -125,12 +136,10 @@ abstract class ApiController extends Controller
             $error instanceof OutOfBoundsException => 404,
             default => 500,
         };
-        $result = $this->apiEnvelope(
-            $status === 500 ? 'E' : 'F',
-            false,
-            null,
-            $status === 500 ? 'The service is temporarily unavailable.' : $error->getMessage()
-        );
+        $message = $status === 500 ? 'The service is temporarily unavailable.' : $error->getMessage();
+        $result = $this->apiIfaEnabled
+            ? $this->apiEnvelope($status === 500 ? 'E' : 'F', false, null, $message)
+            : ['success' => false, 'data' => null, 'message' => $message];
         if ($error instanceof ValidationException) { $result['errors'] = $error->getErrors(); }
         if ($status === 500) { error_log((string) $error); }
         $this->json($result, $status);
@@ -138,7 +147,10 @@ abstract class ApiController extends Controller
 
     private function apiErrorResponse(string $message, int $httpStatus): void
     {
-        $this->json($this->apiEnvelope($httpStatus >= 500 ? 'E' : 'F', false, null, $message), $httpStatus);
+        $payload = $this->apiIfaEnabled
+            ? $this->apiEnvelope($httpStatus >= 500 ? 'E' : 'F', false, null, $message)
+            : ['success' => false, 'data' => null, 'message' => $message];
+        $this->json($payload, $httpStatus);
     }
 
     private function apiEnvelope(string $status, bool $success, mixed $data, ?string $message): array

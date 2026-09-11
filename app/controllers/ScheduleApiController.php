@@ -12,6 +12,7 @@ class ScheduleApiController extends ApiController
      */
     public function binStatus(int $binId): void
     {
+        $this->apiEnableIfa();
         $this->apiAllow(['GET']);
         try {
             $this->apiRequireTracking();

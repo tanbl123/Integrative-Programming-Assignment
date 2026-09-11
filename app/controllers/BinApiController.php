@@ -21,6 +21,7 @@ class BinApiController extends ApiController
 
     public function index(): void
     {
+        $this->apiEnableIfa();
         $this->apiAllow(['GET']);
         try {
             $this->apiRequireTracking();
@@ -48,6 +49,7 @@ class BinApiController extends ApiController
 
     public function show(int $id): void
     {
+        $this->apiEnableIfa();
         $this->apiAllow(['GET']);
         try {
             $this->apiRequireTracking();
@@ -63,6 +65,7 @@ class BinApiController extends ApiController
 
     public function updateStatus(int $id): void
     {
+        $this->apiEnableIfa();
         try {
             $this->apiAllow(['POST']);
             $payload = $this->apiPayload();
@@ -84,6 +87,7 @@ class BinApiController extends ApiController
 
     public function resource(?int $id = null): void
     {
+        $this->apiEnableIfa();
         try {
             $this->apiAllow($id === null ? ['GET', 'POST'] : ['GET', 'PUT', 'PATCH', 'DELETE']);
             if ($this->apiMethod() === 'GET') {
