@@ -24,6 +24,26 @@ class ComplaintAttachment extends Model
     public function getFileSize(): int { return (int) $this->get('file_size'); }
     public function getUploadedAt(): string { return (string) $this->get('uploaded_at'); }
 
+    /**
+     * The name shown to a user and offered when the file is downloaded.
+     *
+     * A reporter's own filename says nothing useful about the evidence and is
+     * seen by the administrator handling the complaint as well as by the
+     * reporter, so a neutral name is presented instead. The filename the
+     * reporter used is still recorded in original_name, which keeps the
+     * provenance of the file without putting it on screen.
+     *
+     * The extension comes from stored_name, which was built from the media
+     * type finfo read out of the file itself - never from the name the
+     * browser supplied.
+     */
+    public function getDisplayName(): string
+    {
+        $extension = pathinfo($this->getStoredName(), PATHINFO_EXTENSION);
+
+        return $extension === '' ? 'PhotoEvidence' : 'PhotoEvidence.' . $extension;
+    }
+
     /** The stored size written the way a person reads it, such as 284 KB. */
     public function getReadableSize(): string
     {

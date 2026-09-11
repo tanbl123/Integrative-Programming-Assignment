@@ -104,22 +104,21 @@ $removeConfirm = $isAdmin
     <section class="content-card">
         <h2>Photo evidence</h2>
 
-        <?php /* The reporter's own filename is kept rather than replaced with a
-                 generic label. This is evidence an administrator may act on, so
-                 what matters is that it is the file the reporter sent, named as
-                 they named it. The size and upload time sit beside it, which is
-                 what turns a stray filename into a caption. */ ?>
+        <?php /* A neutral name is shown rather than the reporter's own filename,
+                 which says nothing about the evidence and is read by the
+                 administrator as well as the reporter. The original filename
+                 stays recorded in the attachment row. */ ?>
         <?php foreach ($attachments as $attachment): ?>
             <a href="<?= url('complaint/attachment/' . $attachment->getKey()) ?>" target="_blank">
                 <img 
                     class="complaint-photo" 
                     src="<?= url('complaint/attachment/' . $attachment->getKey()) ?>" 
-                    alt="Photo submitted with this complaint: <?= e($attachment->getOriginalName()) ?>"
+                    alt="Photo submitted with this complaint"
                 >
             </a>
 
             <p class="field-help">
-                <strong><?= e($attachment->getOriginalName()) ?></strong>
+                <strong><?= e($attachment->getDisplayName()) ?></strong>
                 &middot; <?= e($attachment->getReadableSize()) ?>
                 &middot; uploaded <?= e($attachment->getUploadedAt()) ?>
             </p>

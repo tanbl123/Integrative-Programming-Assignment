@@ -215,7 +215,10 @@ class ComplaintController extends Controller
                 $this->entityNotFound('Attachment');
                 return;
             }
-            $safeName = preg_replace('/[^A-Za-z0-9._-]/', '_', $attachment->getOriginalName());
+            // The neutral name the page shows, so a downloaded file matches
+            // its caption. It is built from the verified media type and needs
+            // no sanitising, but the guard stays in case that ever changes.
+            $safeName = preg_replace('/[^A-Za-z0-9._-]/', '_', $attachment->getDisplayName());
             header('Content-Type: ' . $attachment->getMimeType());
             header('Content-Length: ' . filesize($path));
             header('Content-Disposition: inline; filename="' . $safeName . '"');
