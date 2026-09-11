@@ -570,6 +570,14 @@ class SchedulingService {
     ): void {
         foreach (Complaint::openForBin($binId) as $complaint) {
             if ($complaint->getStatus() !== Complaint::STATUS_NEW) {
+                // Already being dealt with, so the status is right where it is.
+                // The message is not the status, though: the administrator
+                // wrote it for everybody waiting on this bin, and skipping the
+                // whole complaint used to mean only the reporters whose reports
+                // happened to still be New ever saw it.
+                if ($reporterMessage !== null) {
+                    $complaints->messageReporter($complaint, $administrator, $reporterMessage);
+                }
                 continue;
             }
 

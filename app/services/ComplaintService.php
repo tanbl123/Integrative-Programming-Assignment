@@ -259,6 +259,39 @@ class ComplaintService
      * changes is that nothing stops them recording the assignment by hand when
      * the work is going to somebody other than a cleaner.
      */
+    /**
+     * Passes an administrator's message to one reporter, changing nothing else.
+     *
+     * Author : Tan Boon Leong (2402865)
+     *
+     * For a complaint that is already being dealt with when the administrator
+     * writes to everyone waiting on a bin. updateStatus() cannot carry it -
+     * there is no Assigned to Assigned step, and inventing one would put a
+     * transition in the history that did not happen. So the message is raised
+     * as its own event: the notification observer delivers it, and the other
+     * three ignore it, because nothing about the complaint changed.
+     */
+    public function messageReporter(Complaint $complaint, User $administrator, string $message): void
+    {
+        UserPermissions::require('complaint.manage');
+
+        $message = trim($message);
+        if ($message === '' || $complaint->isDeleted()) {
+            return;
+        }
+
+        $this->subject->notify(
+            $complaint,
+            $complaint->getStatus(),
+            $complaint->getStatus(),
+            $administrator,
+            null,
+            ComplaintObserver::EVENT_MESSAGE,
+            null,
+            $message
+        );
+    }
+
     public function requiresCollectionForAssigned(Complaint $complaint): bool
     {
         return ComplaintType::marksBinFullByName($complaint->getType());

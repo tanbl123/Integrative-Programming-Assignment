@@ -48,6 +48,24 @@ interface ComplaintObserver
     public const EVENT_WITHDRAWN = 'Withdrawn';
 
     /**
+     * An administrator wrote to the reporter, with nothing about the complaint
+     * itself changing.
+     *
+     * This exists because of a hole. Booking a cleaner moves every open report
+     * of that bin to Assigned and gives each reporter the message the
+     * administrator typed - but only reports that are still New can move,
+     * because the lifecycle has no Assigned to Assigned step. A report already
+     * marked Assigned by an earlier booking was therefore skipped entirely,
+     * and its reporter heard nothing: three people report one bin, the
+     * administrator writes one sentence for all of them, and one of them
+     * receives it.
+     *
+     * The status is right to stay put - they were already being dealt with.
+     * The silence was not. This event carries the message on its own.
+     */
+    public const EVENT_MESSAGE = 'Message';
+
+    /**
      * @param array{bin:int,type:string,description:string}|null $previous
      *        What the complaint said before an EVENT_DETAILS edit. Only the
      *        service holds this, because by the time an observer runs the
@@ -89,6 +107,14 @@ class ComplaintHistoryObserver implements ComplaintObserver
         ?array $previous = null,
         ?string $forReporter = null
     ): void {
+        // A message changes nothing about the complaint, so there is no
+        // transition to record - and change_type is an ENUM of the three that
+        // are. Writing one here would be a row saying Assigned became
+        // Assigned, which is not true of anything.
+        if ($event === self::EVENT_MESSAGE) {
+            return;
+        }
+
         // All three kinds of event are recorded. An edit and a withdrawal both
         // carry the same status on each side, and change_type is what tells
         // them apart from a transition when the history is read back.
@@ -143,6 +169,25 @@ class ComplaintNotificationObserver implements ComplaintObserver
                 'Complaint ' . $complaint->getNumber() . ' withdrawn',
                 ($actor?->getFullName() ?? 'Someone') . ' withdrew the ' . $complaint->getType()
                     . ' report about ' . $binCode . '.'
+            );
+            $notification->save();
+            return;
+        }
+
+        if ($event === self::EVENT_MESSAGE) {
+            // The reporter of a complaint that did not move, being told the
+            // same thing as the reporters whose complaints did. Nothing here
+            // claims a change of status, because there was not one.
+            $message = $forReporter === null ? '' : trim($forReporter);
+            if ($message === '') {
+                return;
+            }
+            $notification = new ComplaintNotification();
+            $notification->setDetails(
+                $complaint->getKey(),
+                User::ROLE_REPORTER,
+                'Complaint ' . $complaint->getNumber() . ' - a message from the administrator',
+                'About your report on ' . $binCode . ': ' . $message
             );
             $notification->save();
             return;
