@@ -116,11 +116,13 @@ $removeConfirm = $isAdmin
 
             <?php foreach ($revisions as $index => $revision): ?>
                 <article class="revision">
-                    <p class="field-help">
-                        Version <?= count($revisions) - $index ?>,
-                        replaced <?= e($revision->getEditedAt()) ?>
-                        by <?= e($revision->getEditedBy()?->getFullName() ?? 'a deleted account') ?>
-                    </p>
+                    <header class="revision-head">
+                        <span class="badge badge-status">Version <?= count($revisions) - $index ?></span>
+                        <span class="field-help">
+                            replaced <?= e($revision->getEditedAt()) ?>
+                            by <?= e($revision->getEditedBy()?->getFullName() ?? 'a deleted account') ?>
+                        </span>
+                    </header>
 
                     <p class="field-help">
                         <?= e($revision->getBin()?->getBinCode() ?? 'Bin no longer on record') ?>
@@ -129,22 +131,26 @@ $removeConfirm = $isAdmin
 
                     <p class="pre-wrap"><?= e($revision->getDescription()) ?></p>
 
-                    <?php /* The photograph this edit replaced. It is marked
+                    <?php /* The photograph this edit replaced, in the same card
+                             the edit form uses for the current one, so the two
+                             read as the same kind of thing. It is marked
                              superseded rather than deleted, so swapping a
                              damning photo for an innocuous one is as visible as
                              rewriting the words. */ ?>
                     <?php if ($revision->getAttachment() !== null): ?>
-                        <a
-                            class="current-photo"
-                            href="<?= url('complaint/attachment/' . $revision->getAttachment()->getKey()) ?>"
-                            target="_blank"
-                        >
-                            <img src="<?= url('complaint/attachment/' . $revision->getAttachment()->getKey()) ?>" alt="">
-                            <span>
-                                <strong>Photo on the complaint before this edit</strong>
-                                <small><?= e($revision->getAttachment()->getReadableSize()) ?></small>
-                            </span>
-                        </a>
+                        <div class="current-photo">
+                            <a
+                                class="current-photo-link"
+                                href="<?= url('complaint/attachment/' . $revision->getAttachment()->getKey()) ?>"
+                                target="_blank"
+                            >
+                                <img src="<?= url('complaint/attachment/' . $revision->getAttachment()->getKey()) ?>" alt="">
+                                <span>
+                                    <strong>Photo before this edit</strong>
+                                    <small><?= e($revision->getAttachment()->getReadableSize()) ?> &middot; opens in a new tab</small>
+                                </span>
+                            </a>
+                        </div>
                     <?php endif; ?>
                 </article>
             <?php endforeach; ?>

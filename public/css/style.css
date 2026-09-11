@@ -1438,8 +1438,26 @@ td.duplicate-reason {
     margin: 0 0 0.35rem;
 }
 
-.revision p:last-child {
+.revision p:last-child,
+.revision .current-photo {
     margin-bottom: 0;
+}
+
+.revision-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.35rem;
+}
+
+/* The wording that was replaced is the point of the panel, so it is set as
+   quoted text rather than as another grey line among the labels. */
+.revision .pre-wrap {
+    margin: 0.35rem 0 0.5rem;
+    padding-left: 0.7rem;
+    border-left: 2px solid var(--line);
+    color: var(--ink);
 }
 
 /* Removing the photo already on a complaint.
