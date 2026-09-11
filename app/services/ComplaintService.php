@@ -17,11 +17,13 @@ class ComplaintService
     {
         $this->subject = new ComplaintStatusSubject();
 
-        // Three independent reactions to one complaint event. The service
+        // Four independent reactions to one complaint event. The service
         // knows only that it must notify - not what any observer does.
         $this->subject->attach(new ComplaintHistoryObserver());
         $this->subject->attach(new ComplaintNotificationObserver());
-        $this->subject->attach(new ComplaintBinFlagObserver());
+        // Given the Bin module's own service, so a complaint's claim about a
+        // bin is validated and recorded by the module that owns the record.
+        $this->subject->attach(new ComplaintBinFlagObserver(new BinLocationService()));
         // Added last, and needing no change to this service beyond this line.
         $this->subject->attach(new ComplaintRevisionObserver());
     }

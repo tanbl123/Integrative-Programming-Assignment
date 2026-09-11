@@ -147,26 +147,55 @@ class ComplaintNotificationObserver implements ComplaintObserver
 }
 
 /**
- * Observer 3 - keeps the affected bin's fill status honest.
+ * Observer 3 - tells the Bin module what a complaint reported.
  *
- * A newly reported issue that means "this bin needs collecting" corrects the
- * Bin module's record. Once every complaint against that bin is closed, and
- * nothing else is outstanding, the bin is recorded as emptied.
+ * A complaint cannot establish that a bin is full. Nobody measured it: a
+ * reporter looked at a bin and said so, and they may be mistaken. This
+ * observer therefore records a CLAIM, attributed to the complaint that made
+ * it, rather than asserting a fact.
  *
- * Which issue types carry that meaning is read from complaint_types, not
- * listed here. It was listed here once, as the literal strings 'Overflow'
- * and 'Full Bin', which was sound while the types were a fixed ENUM. Once an
- * Administrator could maintain them it was not: renaming 'Overflow' cascades
- * into every complaint and this observer would quietly match nothing, and a
- * seventh type meaning the same thing would never be recognised at all. A
- * name is a label; marks_bin_full is the meaning, and renaming cannot reach
- * it.
+ * That distinction is the whole design here, and it was got wrong twice.
+ *
+ * The first attempt decided which complaints meant "full" by comparing the
+ * issue type against the literal strings 'Overflow' and 'Full Bin'. That was
+ * sound while the types were a fixed ENUM and stopped being sound the moment
+ * an Administrator could maintain them - a rename cascades into every
+ * complaint and the comparison then matches nothing, silently. Which types
+ * carry the meaning is now marks_bin_full, a column a rename cannot reach.
+ *
+ * The second was worse and is what this class now fixes. It wrote
+ * bins.fill_status directly - $bin->setFillStatus(); $bin->save() - which
+ * reaches into another module's table behind that module's back. The Bin
+ * module keeps every status change in bin_status_updates, with who made it
+ * and why; a complaint-driven change appeared in none of them, so a bin
+ * could turn Full with nothing anywhere to say what did it. It also skipped
+ * that service's own checks, so a complaint could mark an inactive bin Full.
+ *
+ * Going through updateBinStatus() means the claim arrives the same way a
+ * cleaner's does: validated, and recorded with its reason. An unreliable
+ * claim is then merely wrong and visible, and anyone can correct it from the
+ * bin's own screen - rather than silently corrupting a record whose owner
+ * never heard about the change.
+ *
+ * Note that a complaint is not the only route from a report to a cleaner,
+ * and not the important one. ComplaintPrioritySelectionStrategy schedules
+ * straight off Complaint::unresolved(), needing no type, no flag and no
+ * judgement from anybody. That path is exact. This one exists so that a bin
+ * a reporter says is full looks full on the bin board too.
  *
  * Bins under maintenance are never touched - that status is owned by the Bin
  * module and must not be overwritten by a complaint.
  */
 class ComplaintBinFlagObserver implements ComplaintObserver
 {
+    /**
+     * The Bin module's own service, so its rules and its audit trail apply.
+     * Injected so a test can watch what this observer asks for.
+     */
+    public function __construct(private ?BinLocationServiceInterface $bins = null)
+    {
+    }
+
 
     public function changed(
         Complaint $complaint,
@@ -183,16 +212,28 @@ class ComplaintBinFlagObserver implements ComplaintObserver
         }
         $bin = $complaint->getBin();
 
-        if ($bin === null || $bin->getFillStatus() === Bin::STATUS_MAINTENANCE) {
+        // An inactive bin is checked here as well as inside the Bin service,
+        // because there it is a ValidationException - correct for a cleaner
+        // filling in a form, and no way to answer a reporter who has just
+        // submitted an unrelated complaint.
+        if ($bin === null
+            || !$bin->isActive()
+            || $bin->getFillStatus() === Bin::STATUS_MAINTENANCE) {
             return;
         }
 
-        // A fresh report of a type that means "full" means the bin needs
-        // collecting. The type itself says so; this observer does not decide.
+        $bins = $this->bins ?? new BinLocationService();
+
+        // A fresh report of a type that means "full". The type says so, this
+        // observer does not decide; and the Bin module records who said it.
         if ($oldStatus === null && ComplaintType::marksBinFullByName($complaint->getType())) {
             if ($bin->getFillStatus() !== Bin::STATUS_FULL) {
-                $bin->setFillStatus(Bin::STATUS_FULL);
-                $bin->save();
+                $bins->updateBinStatus(
+                    (int) $bin->getKey(),
+                    Bin::STATUS_FULL,
+                    'Reported full by complaint ' . $complaint->getNumber() . '.',
+                    $complaint->getReporterId()
+                );
             }
             return;
         }
@@ -201,8 +242,12 @@ class ComplaintBinFlagObserver implements ComplaintObserver
         if ($newStatus === Complaint::STATUS_RESOLVED
             && Complaint::countUnresolvedForBin((int) $bin->getKey()) === 0
             && $bin->getFillStatus() === Bin::STATUS_FULL) {
-            $bin->setFillStatus(Bin::STATUS_EMPTY);
-            $bin->save();
+            $bins->updateBinStatus(
+                (int) $bin->getKey(),
+                Bin::STATUS_EMPTY,
+                'Complaint ' . $complaint->getNumber() . ' resolved; no reports left open.',
+                $actor?->getKey() ?? $complaint->getReporterId()
+            );
         }
     }
 }
