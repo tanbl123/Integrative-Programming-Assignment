@@ -93,13 +93,18 @@ installation should use one of the two clean setup choices above.
 
 ### Sample accounts
 
-All seeded accounts use the password `password123`.
+All seeded accounts use the password `password123`. The full list, with what
+each role can reach, is in [`ACCOUNTS.md`](ACCOUNTS.md).
 
 | Email | Role |
 |---|---|
 | admin@ecocampus.my | Administrator |
+| zizhang@ecocampus.my | Administrator |
 | siti@student.ecocampus.my | Reporter |
+| weijie@student.ecocampus.my | Reporter |
+| raj@staff.ecocampus.my | Reporter |
 | zaki@cleaner.ecocampus.my | Cleaner |
+| mary@cleaner.ecocampus.my | Cleaner |
 
 ---
 
