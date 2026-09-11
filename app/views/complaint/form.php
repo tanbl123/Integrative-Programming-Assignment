@@ -108,9 +108,14 @@
                      baseline; the script turns it into the button. Nothing
                      happens until the form is saved. */ ?>
             <?php foreach ($attachments as $current): ?>
-                <div class="current-photo-row">
+                <?php /* The card is a plain container, not the link. A button
+                         inside a link is invalid, and a click meant for the
+                         button would open the photograph. The link covers the
+                         thumbnail and the filename; the button sits beside it
+                         at the end of the same card. */ ?>
+                <div class="current-photo">
                     <a
-                        class="current-photo"
+                        class="current-photo-link"
                         href="<?= url('complaint/attachment/' . $current->getKey()) ?>"
                         target="_blank"
                     >
@@ -451,9 +456,19 @@
     button.type = 'button';
     button.className = 'button button-secondary';
 
+    // The cross is decoration beside the word, so a screen reader announces
+    // "Remove" rather than "Remove multiplication sign".
+    const cross = document.createElement('span');
+    cross.className = 'remove-photo-cross';
+    cross.setAttribute('aria-hidden', 'true');
+    cross.textContent = '\u00d7';
+
     const render = () => {
         const removing = box.checked;
-        button.textContent = removing ? 'Keep this photo' : 'Remove photo';
+        button.textContent = removing ? 'Keep this photo' : 'Remove';
+        if (!removing) {
+            button.append(cross);
+        }
         note.textContent = removing ? 'This photo will be removed when you save.' : '';
         photo.classList.toggle('is-removing', removing);
     };

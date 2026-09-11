@@ -1366,17 +1366,6 @@ td.duplicate-reason {
     margin-top: 0.85rem;
 }
 
-/* A link, so clicking it opens the photograph. It must stay outside the
-   file field's <label>, or the click opens the file picker instead. */
-a.current-photo {
-    text-decoration: none;
-    color: inherit;
-}
-
-a.current-photo:hover {
-    border-color: var(--green);
-}
-
 .current-photo {
     display: flex;
     align-items: center;
@@ -1386,9 +1375,26 @@ a.current-photo:hover {
     border: 1px solid var(--line);
     border-radius: 10px;
     background: #fff;
+    flex-wrap: wrap;
 }
 
-.current-photo img {
+/* The link half of the card: the thumbnail and the filename. It must stay
+   outside the file field's <label>, or a click opens the file picker. */
+.current-photo-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1 1 220px;
+    min-width: 0;
+    text-decoration: none;
+    color: inherit;
+}
+
+.current-photo-link:hover strong {
+    text-decoration: underline;
+}
+
+.current-photo-link img {
     width: 56px;
     height: 56px;
     object-fit: cover;
@@ -1438,26 +1444,25 @@ a.current-photo:hover {
 
 /* Removing the photo already on a complaint.
  * Author : Tan Boon Leong (2402865) · Module : Complaint / Report Management */
-/* The photograph and its Remove button on one row: the photo takes the space
-   that is left, the button keeps its own width at the end. They stack instead
-   of squeezing on a narrow screen. */
-.current-photo-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-}
-
-.current-photo-row .current-photo {
-    flex: 1 1 260px;
-    margin-top: 0;
-}
-
+/* The Remove button lives inside the photo card, at its far end, so it plainly
+   acts on the photograph it shares a border with. The card is the flex row;
+   the link takes the space that is left. */
 .remove-photo {
     display: flex;
     align-items: center;
     gap: 0.6rem;
     flex: 0 0 auto;
+}
+
+.remove-photo button {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.82rem;
+}
+
+.remove-photo-cross {
+    margin-left: 0.4rem;
+    font-size: 1.05em;
+    line-height: 1;
 }
 
 #remove-photo-note:not(:empty) {
@@ -1476,7 +1481,12 @@ a.current-photo:hover {
 }
 
 .current-photo.is-removing {
-    opacity: 0.45;
     border-style: dashed;
     border-color: var(--danger);
+}
+
+/* Only the photograph fades. Dimming the card would fade the button that
+   undoes this, which is the one control that must stay easy to read. */
+.current-photo.is-removing .current-photo-link {
+    opacity: 0.45;
 }
