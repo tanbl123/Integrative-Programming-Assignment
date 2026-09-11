@@ -1490,3 +1490,12 @@ td.duplicate-reason {
 .current-photo.is-removing .current-photo-link {
     opacity: 0.45;
 }
+
+/* The chosen photo's thumbnail opens full size, so it reads as clickable. */
+#attachment-thumb {
+    cursor: zoom-in;
+}
+
+#attachment-thumb:hover {
+    border-color: var(--green);
+}

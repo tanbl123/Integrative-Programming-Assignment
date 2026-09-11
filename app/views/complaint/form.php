@@ -165,7 +165,10 @@
                 </p>
 
                 <div class="dropzone-preview" id="attachment-preview" hidden>
-                    <img id="attachment-thumb" alt="" hidden>
+                    <?php /* Clickable: 72 pixels is enough to see that a photo
+                             was attached, not enough to see whether it is the
+                             right one. */ ?>
+                    <img id="attachment-thumb" alt="Open this photo full size" hidden>
                     <span class="dropzone-file">
                         <strong id="attachment-name"></strong>
                         <small id="attachment-size"></small>
@@ -360,6 +363,7 @@
             objectUrl = URL.createObjectURL(file);
             thumb.src = objectUrl;
             thumb.hidden = false;
+            size.textContent = readableSize(file.size) + ' \u00b7 click the photo to see it full size';
         } else {
             thumb.hidden = true;
             thumb.removeAttribute('src');
@@ -399,6 +403,23 @@
         const dropped = event.dataTransfer && event.dataTransfer.files[0];
         if (dropped) {
             accept(dropped);
+        }
+    });
+
+    /*
+     * Opening the chosen photo full size, before it is uploaded.
+     *
+     * The file is not on the server yet, so there is nothing to link to; the
+     * object URL the preview already holds is what the new tab is given. The
+     * click is stopped from travelling any further because this thumbnail sits
+     * inside the label that wraps the file input, and the label would take a
+     * stray click as a request to open the file picker again.
+     */
+    thumb.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (objectUrl !== null) {
+            window.open(objectUrl, '_blank', 'noopener');
         }
     });
 
