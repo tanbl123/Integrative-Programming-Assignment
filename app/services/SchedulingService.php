@@ -44,10 +44,10 @@ class SchedulingService {
 
                 $assignment->save();
 
-                $this->markComplaintAssigned(
+                $this->markComplaintsAssigned(
                         $complaints,
-                        $selection['complaint_id'],
-                        $schedule->getKey(),
+                        (int) $selection['bin']->getKey(),
+                        (int) $schedule->getKey(),
                         $administrator
                 );
             }
@@ -142,9 +142,9 @@ class SchedulingService {
             );
             $assignment->save();
 
-            $this->markComplaintAssigned(
+            $this->markComplaintsAssigned(
                     new ComplaintService(),
-                    (int) $complaint->getKey(),
+                    (int) $bin->getKey(),
                     (int) $schedule->getKey(),
                     $administrator
             );
@@ -382,20 +382,23 @@ class SchedulingService {
     }
 
     /**
-     * Moves the complaint a task was raised from to Assigned.
+     * Moves every open complaint against a booked bin to Assigned.
      *
      * Author : Tan Boon Leong (2402865)
      * Module : Complaint / Report Management - cross-module integration
      *
-     * Only the Complaint Priority strategy carries a complaint; a full-bin or
-     * routine round passes null and nothing happens here. Without this the
-     * complaint stayed New while a cleaner was already scheduled against it,
-     * so the reporter saw no sign that anything had begun.
+     * Every open report of that bin, not only the one the task was raised
+     * from. A strategy picks one complaint per bin, so booking a bin that
+     * three people had reported used to move one of them and leave the other
+     * two reading New while a cleaner was on the way to the very bin they
+     * wrote about - the reporters heard nothing, and an administrator looking
+     * at one of those reports saw no sign the work existed. The collection
+     * answers the bin, so it answers all of them.
      *
      * It goes through ComplaintService rather than writing complaint_status,
-     * so the complaint module's own rules apply and its observers run: the
-     * change is recorded in the history against this administrator, and the
-     * reporter is notified.
+     * so the complaint module's own rules apply and its observers run: each
+     * change is recorded in the history against this administrator, and each
+     * reporter is notified separately.
      *
      * Only a New complaint is moved. Assigned, Resolved and Rejected are all
      * refused by the lifecycle, and a refusal here would throw and take the
@@ -411,30 +414,24 @@ class SchedulingService {
      * scheduled" note on the complaint, which is read from the assignments
      * themselves and so corrects itself.
      */
-    private function markComplaintAssigned(
+    private function markComplaintsAssigned(
             ComplaintService $complaints,
-            ?int $complaintId,
+            int $binId,
             int $scheduleId,
             User $administrator
     ): void {
-        if ($complaintId === null) {
-            return;
+        foreach (Complaint::openForBin($binId) as $complaint) {
+            if ($complaint->getStatus() !== Complaint::STATUS_NEW) {
+                continue;
+            }
+
+            $complaints->updateStatus(
+                    (int) $complaint->getKey(),
+                    Complaint::STATUS_ASSIGNED,
+                    'Collection scheduled (schedule #' . $scheduleId . ').',
+                    $administrator
+            );
         }
-
-        $complaint = Complaint::find($complaintId);
-
-        if ($complaint === null
-                || $complaint->isDeleted()
-                || $complaint->getStatus() !== Complaint::STATUS_NEW) {
-            return;
-        }
-
-        $complaints->updateStatus(
-                $complaintId,
-                Complaint::STATUS_ASSIGNED,
-                'Collection scheduled (schedule #' . $scheduleId . ').',
-                $administrator
-        );
     }
 
     private function validateSchedule(array $data): array {

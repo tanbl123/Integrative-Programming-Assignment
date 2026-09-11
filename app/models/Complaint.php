@@ -383,6 +383,28 @@ class Complaint extends Model
         return self::hydrateAll($rows);
     }
 
+    /**
+     * Every open report against one bin, whatever issue type it names.
+     *
+     * A collection is booked for a BIN, and it answers every report of that
+     * bin at once. openForBinAndType() is the narrower question the duplicates
+     * panel asks; this is the one the scheduler asks.
+     *
+     * @return list<Complaint>
+     */
+    public static function openForBin(int $binId): array
+    {
+        $rows = Database::getInstance()->selectAll(
+            'SELECT * FROM complaints'
+            . ' WHERE deleted_at IS NULL AND bin_id = ?'
+            . ' AND complaint_status IN (?, ?)'
+            . ' ORDER BY complaint_id ASC',
+            [$binId, self::STATUS_NEW, self::STATUS_ASSIGNED]
+        );
+
+        return self::hydrateAll($rows);
+    }
+
     public static function countUnresolvedForBin(int $binId): int
     {
         $row = Database::getInstance()->selectOne(
