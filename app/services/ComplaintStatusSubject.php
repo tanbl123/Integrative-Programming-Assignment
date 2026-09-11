@@ -149,16 +149,24 @@ class ComplaintNotificationObserver implements ComplaintObserver
 /**
  * Observer 3 - keeps the affected bin's fill status honest.
  *
- * A newly reported overflow or full bin means the bin really is full, so the
- * Bin module's record is corrected. Once every complaint against that bin is
- * closed, and nothing else is outstanding, the bin is recorded as emptied.
+ * A newly reported issue that means "this bin needs collecting" corrects the
+ * Bin module's record. Once every complaint against that bin is closed, and
+ * nothing else is outstanding, the bin is recorded as emptied.
+ *
+ * Which issue types carry that meaning is read from complaint_types, not
+ * listed here. It was listed here once, as the literal strings 'Overflow'
+ * and 'Full Bin', which was sound while the types were a fixed ENUM. Once an
+ * Administrator could maintain them it was not: renaming 'Overflow' cascades
+ * into every complaint and this observer would quietly match nothing, and a
+ * seventh type meaning the same thing would never be recognised at all. A
+ * name is a label; marks_bin_full is the meaning, and renaming cannot reach
+ * it.
  *
  * Bins under maintenance are never touched - that status is owned by the Bin
  * module and must not be overwritten by a complaint.
  */
 class ComplaintBinFlagObserver implements ComplaintObserver
 {
-    private const FULL_TYPES = ['Overflow', 'Full Bin'];
 
     public function changed(
         Complaint $complaint,
@@ -179,8 +187,9 @@ class ComplaintBinFlagObserver implements ComplaintObserver
             return;
         }
 
-        // A fresh overflow report means the bin needs collecting.
-        if ($oldStatus === null && in_array($complaint->getType(), self::FULL_TYPES, true)) {
+        // A fresh report of a type that means "full" means the bin needs
+        // collecting. The type itself says so; this observer does not decide.
+        if ($oldStatus === null && ComplaintType::marksBinFullByName($complaint->getType())) {
             if ($bin->getFillStatus() !== Bin::STATUS_FULL) {
                 $bin->setFillStatus(Bin::STATUS_FULL);
                 $bin->save();

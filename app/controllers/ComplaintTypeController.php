@@ -30,7 +30,8 @@ class ComplaintTypeController extends Controller
             $type = $edit === false || $edit === null ? null : ComplaintType::find((int) $edit);
 
             $this->render($user, [], $type === null ? [] : [
-                'type_name' => $type->getName(),
+                'type_name'      => $type->getName(),
+                'marks_bin_full' => $type->marksBinFull() ? '1' : '',
             ], $type?->getKey());
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);
@@ -94,8 +95,8 @@ class ComplaintTypeController extends Controller
             Flash::set('success', $id === null
                 ? 'Issue type "' . $type->getName() . '" added. Check the spelling, then '
                 . 'make it available - reporters cannot choose it until you do.'
-                : 'Issue type renamed to "' . $type->getName() . '". Complaints filed under the '
-                . 'old name now show the new one.');
+                : '"' . $type->getName() . '" saved. Any rename has been applied to every '
+                . 'complaint filed under the old name.');
             $this->redirect('complaint-type');
         } catch (ValidationException $error) {
             http_response_code(422);

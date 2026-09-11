@@ -349,6 +349,7 @@ class ComplaintService
 
         $type->setDetails(
             $name,
+            ($data['marks_bin_full'] ?? '') === '1',
             $id === null ? false : $type->isActive(),
             $id === null ? ComplaintType::nextSortOrder() : $type->getSortOrder()
         );
@@ -372,7 +373,7 @@ class ComplaintService
         if ($type === null) {
             throw new OutOfBoundsException('Issue type not found.');
         }
-        $type->setDetails($type->getName(), $active, $type->getSortOrder());
+        $type->setDetails($type->getName(), $type->marksBinFull(), $active, $type->getSortOrder());
         $type->save();
 
         return $type;

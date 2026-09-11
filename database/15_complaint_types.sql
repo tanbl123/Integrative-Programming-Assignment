@@ -30,6 +30,10 @@ USE ecocampus;
 CREATE TABLE IF NOT EXISTS complaint_types (
     type_id    INT AUTO_INCREMENT PRIMARY KEY,
     type_name  VARCHAR(50) NOT NULL UNIQUE,
+    -- Added by 17_type_marks_bin_full.sql, which sets it for the two
+    -- seeded types that carry the meaning. Listed here so a database
+    -- built from this file has the column from the start.
+    marks_bin_full TINYINT(1) NOT NULL DEFAULT 0,
     is_active  TINYINT(1) NOT NULL DEFAULT 1,
     -- Where the type sits in the reporter's dropdown. Not something an
     -- administrator sets: the six seeded types keep Other last, and a new

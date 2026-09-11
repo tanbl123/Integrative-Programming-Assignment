@@ -137,6 +137,11 @@ CREATE TABLE bin_status_updates (
 CREATE TABLE complaint_types (
     type_id    INT AUTO_INCREMENT PRIMARY KEY,
     type_name  VARCHAR(50) NOT NULL UNIQUE,
+    -- What the type means, as opposed to what it is called. A complaint of
+    -- a type marked here records that the bin needs collecting, so that
+    -- ComplaintBinFlagObserver asks the type rather than comparing the
+    -- name against a list it would have to be kept in step with.
+    marks_bin_full TINYINT(1) NOT NULL DEFAULT 0,
     is_active  TINYINT(1) NOT NULL DEFAULT 1,
     -- Where the type sits in the reporter's dropdown. Seeded so that Other
     -- stays last; a type added later is appended after it.

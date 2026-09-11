@@ -19,7 +19,7 @@
 >
     <?= csrfField() ?>
 
-    <h2><?= $editing ? 'Rename issue type' : 'Add an issue type' ?></h2>
+    <h2><?= $editing ? 'Edit issue type' : 'Add an issue type' ?></h2>
 
     <?php if (!empty($errors['type'])): ?>
         <div class="alert alert-error"><?= e($errors['type']) ?></div>
@@ -31,7 +31,8 @@
              leaves a gap in which to check it. */ ?>
     <p class="field-help">
         <?= $editing
-            ? 'Renaming updates every complaint filed under the old name.'
+            ? 'Renaming updates every complaint filed under the old name. What the type '
+            . 'means to the bin record is set separately below, so a rename cannot change it.'
             : 'Added as not available, so no reporter can choose it yet. '
             . 'Check the spelling, then make it available from the table below.' ?>
     </p>
@@ -53,7 +54,27 @@
         <?php endif; ?>
     </label>
 
-    <button class="button" type="submit"><?= $editing ? 'Save name' : 'Add issue type' ?></button>
+    <?php /* The type's meaning, kept separate from its name. The bin observer
+             reads this column, so renaming a type never changes what it does.
+             Checked here rather than guessed from the wording: "Bin Spilling
+             Over" and "Overflow" mean the same thing, and no rule could tell. */ ?>
+    <label class="checkbox-label">
+        <input
+            type="checkbox"
+            name="marks_bin_full"
+            value="1"
+            <?= ($values['marks_bin_full'] ?? '') === '1' ? 'checked' : '' ?>
+        >
+        A complaint of this type means the bin needs collecting
+    </label>
+    <p class="field-help">
+        Tick this for issues like a full or overflowing bin. The bin is marked
+        Full automatically as soon as a reporter files one, so a cleaner can be
+        sent without waiting. Leave it clear for issues that say nothing about
+        how full the bin is, such as a damaged bin or a dirty area.
+    </p>
+
+    <button class="button" type="submit"><?= $editing ? 'Save changes' : 'Add issue type' ?></button>
     <?php if ($editing): ?>
         <a class="button button-secondary" href="<?= url('complaint-type') ?>">Cancel</a>
     <?php endif; ?>
@@ -85,7 +106,8 @@
             <tr>
                 <th><button type="button" class="sort-header" data-column="0">Issue type</button></th>
                 <th><button type="button" class="sort-header" data-column="1">Available</button></th>
-                <th><button type="button" class="sort-header" data-column="2">Complaints filed</button></th>
+                <th><button type="button" class="sort-header" data-column="2">Marks bin as full</button></th>
+                <th><button type="button" class="sort-header" data-column="3">Complaints filed</button></th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -104,11 +126,12 @@
                             <?= $type->isActive() ? 'Available' : 'Not available' ?>
                         </span>
                     </td>
+                    <td><?= $type->marksBinFull() ? 'Yes' : 'No' ?></td>
                     <td><?= $used ?></td>
                     <td>
                         <div class="button-row">
                             <a class="button button-secondary"
-                               href="<?= url('complaint-type?edit=' . $type->getKey()) ?>">Rename</a>
+                               href="<?= url('complaint-type?edit=' . $type->getKey()) ?>">Edit</a>
 
                             <?php /* Withdrawing is the counterpart to deleting, and for a
                                      type anyone has used it is the only option: the row has
@@ -146,11 +169,11 @@
             <?php endforeach; ?>
 
             <tr id="noTypeResults" hidden>
-                <td colspan="4" class="empty">No issue types match the filters.</td>
+                <td colspan="5" class="empty">No issue types match the filters.</td>
             </tr>
 
             <?php if ($types === []): ?>
-                <tr><td colspan="4" class="empty">No issue types have been defined.</td></tr>
+                <tr><td colspan="5" class="empty">No issue types have been defined.</td></tr>
             <?php endif; ?>
         </tbody>
     </table>
