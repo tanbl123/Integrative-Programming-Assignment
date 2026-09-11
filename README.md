@@ -38,10 +38,15 @@ git clone https://github.com/tanbl123/Integrative-Programming-Assignment.git Eco
 ### 3. Create the database
 
 Start Apache and MySQL in the XAMPP Control Panel, then open
-<http://localhost/phpmyadmin> and import, **in this order**:
+<http://localhost/phpmyadmin>. For the quickest complete demonstration setup,
+start with an empty `ecocampus` database and import, **in this order**:
 
-1. `database/01_schema.sql` — creates the `ecocampus` database and its tables
-2. `database/02_seed.sql` — inserts sample bins, users and complaints
+1. `database/14_ecocampus_export.sql` — complete schema and demonstration data
+2. `database/18_history_withdrawn.sql` — adds the newest complaint history event
+
+Do not run files 01 to 17 after file 14. As an alternative clean setup, files
+`01_schema.sql` and `02_seed.sql` already contain the current schema and seed
+data, including the change made by migration 18.
 
 ### 4. Configure (only if needed)
 
@@ -62,7 +67,8 @@ That file is git-ignored, so credentials never reach GitHub.
 The dashboard shows bin and user counts read live from MySQL. If those
 numbers appear, MVC, the ORM and the database connection are all working.
 
-For an existing database, run the numbered module migrations in order:
+For an older existing database, run each migration it is missing in number
+order. The complete migration sequence is:
 
 1. `database/03_bin_location_module.sql`
 2. `database/04_user_access_module.sql`
@@ -71,10 +77,17 @@ For an existing database, run the numbered module migrations in order:
 5. `database/07_user_demographics.sql`
 6. `database/08_module_soft_delete.sql`
 7. `database/09_location_soft_delete.sql`
+8. `database/10_complaint_notifications.sql`
+9. `database/11_complaint_history_change_type.sql`
+10. `database/12_complaint_revisions.sql`
+11. `database/13_superseded_photos.sql`
+12. `database/15_complaint_types.sql`
+13. `database/16_drop_type_description.sql`
+14. `database/17_type_marks_bin_full.sql`
+15. `database/18_history_withdrawn.sql`
 
-The last three migrations add optional profile demographics and recoverable
-deletion markers. New installations already receive these columns from
-`01_schema.sql`.
+The numbered migrations are designed for existing installations. A new
+installation should use one of the two clean setup choices above.
 
 ### Sample accounts
 
@@ -152,6 +165,12 @@ Authenticated JSON endpoints are available at:
 - `POST /EcoCampus/bin-api/update-status/{id}` (Cleaner + CSRF token)
 - `GET /EcoCampus/location-api`
 
+The Bin details page consumes Scheduling's
+`GET /EcoCampus/schedule-api/bin-status/{binId}` REST endpoint through
+`ScheduleServiceClient::getBinScheduleStatus()`. This keeps Scheduling's table
+access inside its own module and displays the next planned collection on the
+Bin page.
+
 ### Remaining design patterns and web services
 
 - **Observer:** `ComplaintStatusSubject` notifies `ComplaintHistoryObserver`
@@ -166,6 +185,7 @@ Additional authenticated JSON endpoints:
 - `GET /EcoCampus/complaint-api/unresolved`
 - `GET /EcoCampus/user-api/cleaners`
 - `GET /EcoCampus/schedule-api/mine`
+- `GET /EcoCampus/schedule-api/bin-status/{binId}`
 
 The schedule generation screen consumes the Bin, Complaint, and User JSON
 services to preview eligible work and active cleaners before submission.
@@ -188,6 +208,10 @@ Writes require an authenticated session, the correct role permission, JSON
 input, and the session CSRF token in the `X-CSRF-Token` header. The existing
 `/bin-api`, `/complaint-api/unresolved`, and `/user-api/cleaners` calls in the
 schedule form demonstrate service consumption between modules.
+
+Bin, Location, and Bin Scheduling-status requests also follow the Interface
+Agreement: send `requestID` or `timeStamp` (`YYYY-MM-DD HH:MM:SS`). Responses
+echo `requestID` and include `status` (`S`, `F`, or `E`) and `timeStamp`.
 
 To repeat the local MySQL/HTTP regression checks from PowerShell:
 

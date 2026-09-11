@@ -21,8 +21,10 @@ class BinApiController extends ApiController
 
     public function index(): void
     {
+        $this->apiEnableIfa();
         $this->apiAllow(['GET']);
         try {
+            $this->apiRequireTracking();
             $location = filter_var($_GET['location_id'] ?? null, FILTER_VALIDATE_INT);
             $location = $location === false ? null : $location;
             $user = Auth::requireLogin();
@@ -34,42 +36,40 @@ class BinApiController extends ApiController
                 $includeInactive
             );
 
-            $this->json([
-                'success' => true,
-                'data' => array_map([$this, 'serializeBin'], $bins),
-                'meta' => ['count' => count($bins)],
-                'message' => null,
-            ]);
+            $this->apiRespond(
+                array_map([$this, 'serializeBin'], $bins),
+                200,
+                null,
+                ['meta' => ['count' => count($bins)]]
+            );
         } catch (Throwable $error) {
-            $this->jsonFailure($error);
+            $this->apiFailure($error);
         }
     }
 
     public function show(int $id): void
     {
+        $this->apiEnableIfa();
         $this->apiAllow(['GET']);
         try {
+            $this->apiRequireTracking();
             $bin = $this->service->findBin($id);
             if ($bin === null) {
                 throw new OutOfBoundsException('Bin not found.');
             }
-            $this->json([
-                'success' => true,
-                'data' => $this->serializeBin($bin),
-                'message' => null,
-            ]);
+            $this->apiRespond($this->serializeBin($bin));
         } catch (Throwable $error) {
-            $this->jsonFailure($error);
+            $this->apiFailure($error);
         }
     }
 
     public function updateStatus(int $id): void
     {
+        $this->apiEnableIfa();
         try {
-            if (!$this->isPost()) {
-                $this->json(['success' => false, 'data' => null, 'message' => 'POST required.'], 405);
-            }
+            $this->apiAllow(['POST']);
             $payload = $this->apiPayload();
+            $this->apiRequireTracking($payload);
             $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($payload['_token'] ?? null);
             Csrf::requireValid(is_string($token) ? $token : null);
             $user = Auth::requireLogin();
@@ -79,18 +79,15 @@ class BinApiController extends ApiController
                 trim((string) ($payload['remarks'] ?? '')),
                 (int) $user->getKey()
             );
-            $this->json([
-                'success' => true,
-                'data' => $this->serializeBin($bin),
-                'message' => 'Bin status recorded.',
-            ]);
+            $this->apiRespond($this->serializeBin($bin), 200, 'Bin status recorded.');
         } catch (Throwable $error) {
-            $this->jsonFailure($error);
+            $this->apiFailure($error);
         }
     }
 
     public function resource(?int $id = null): void
     {
+        $this->apiEnableIfa();
         try {
             $this->apiAllow($id === null ? ['GET', 'POST'] : ['GET', 'PUT', 'PATCH', 'DELETE']);
             if ($this->apiMethod() === 'GET') {
@@ -98,6 +95,7 @@ class BinApiController extends ApiController
                 return;
             }
             $payload = $this->apiPayload();
+            $this->apiRequireTracking($payload);
             $this->apiWriteGuard($payload);
             $this->service->authorizeAdministrator();
             if ($this->apiMethod() === 'DELETE') {
@@ -136,30 +134,4 @@ class BinApiController extends ApiController
         ];
     }
 
-    private function payload(): array
-    {
-        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-        if (str_contains($contentType, 'application/json')) {
-            $decoded = json_decode((string) file_get_contents('php://input'), true);
-            return is_array($decoded) ? $decoded : [];
-        }
-        return $_POST;
-    }
-
-    private function jsonFailure(Throwable $error): void
-    {
-        $status = match (true) {
-            $error instanceof AuthenticationException => 401,
-            $error instanceof AuthorizationException => 403,
-            $error instanceof ValidationException => 422,
-            $error instanceof OutOfBoundsException => 404,
-            default => 500,
-        };
-        $message = $status === 500 && !DEBUG ? 'The service is temporarily unavailable.' : $error->getMessage();
-        $payload = ['success' => false, 'data' => null, 'message' => $message];
-        if ($error instanceof ValidationException) {
-            $payload['errors'] = $error->getErrors();
-        }
-        $this->json($payload, $status);
-    }
 }

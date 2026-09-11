@@ -15,29 +15,53 @@ function Login($email) {
 }
 function Api($account, $method, $path, $body, $expected=200, [bool]$csrf=$true) {
     $account.Session.Headers.Remove('X-CSRF-Token') | Out-Null
-    $arguments = @{Uri="$BaseUrl/$path";WebSession=$account.Session;Method=$method;SkipHttpErrorCheck=$true}
+    $requestId = "TEST-$([guid]::NewGuid().ToString('N'))"
+    $timeStamp = [uri]::EscapeDataString((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))
+    $separator = if ($path.Contains('?')) { '&' } else { '?' }
+    $trackedPath = "$path${separator}requestID=$requestId&timeStamp=$timeStamp"
+    $arguments = @{Uri="$BaseUrl/$trackedPath";WebSession=$account.Session;Method=$method;SkipHttpErrorCheck=$true}
     if ($csrf) { $arguments.Headers=@{'X-CSRF-Token'=$account.Token} }
     if ($null -ne $body) { $arguments.ContentType='application/json';$arguments.Body=ConvertTo-Json -InputObject $body -Compress }
     $result=Invoke-WebRequest @arguments
     Check ($result.StatusCode -eq $expected) "$method $path expected $expected got $($result.StatusCode): $($result.Content)"
     Check ($result.Headers.'Content-Type' -match 'application/json') 'API did not return JSON'
-    return ($result.Content | ConvertFrom-Json)
+    $json = $result.Content | ConvertFrom-Json
+    $expectedStatus = if ($expected -ge 500) { 'E' } elseif ($expected -ge 400) { 'F' } else { 'S' }
+    Check ($json.status -eq $expectedStatus) "$method $path returned IFA status '$($json.status)' instead of '$expectedStatus'"
+    Check ($json.requestID -eq $requestId) "$method $path returned requestID '$($json.requestID)' instead of '$requestId'"
+    Check (-not [string]::IsNullOrWhiteSpace($json.timeStamp)) "$method $path omitted timeStamp"
+    return $json
 }
 $admin=Login 'admin@ecocampus.my'
 $reporter=Login 'siti@student.ecocampus.my'
 $suffix=[guid]::NewGuid().ToString('N').Substring(0,10).ToUpperInvariant()
 $locationId=$null; $binId=$null
 try {
-    $location=Api $admin POST 'location-api' @{location_name="REST-$suffix";building_name='Test building';floor_no='Ground';description='Disposable integration fixture'} 201
+    $missingTracking=Invoke-WebRequest "$BaseUrl/bin-api" -WebSession $admin.Session -SkipHttpErrorCheck
+    Check ($missingTracking.StatusCode -eq 422) 'Bin API accepted a request without requestID or timeStamp'
+    $missingTrackingJson=$missingTracking.Content | ConvertFrom-Json
+    Check ($missingTrackingJson.status -eq 'F') 'Missing tracking fields did not return IFA failure status'
+    Check (-not [string]::IsNullOrWhiteSpace($missingTrackingJson.timeStamp)) 'IFA failure omitted response timeStamp'
+    $timestampOnly=[uri]::EscapeDataString((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))
+    $timestampReply=Invoke-WebRequest "$BaseUrl/bin-api?timeStamp=$timestampOnly" -WebSession $admin.Session -SkipHttpErrorCheck
+    $timestampJson=$timestampReply.Content | ConvertFrom-Json
+    Check ($timestampReply.StatusCode -eq 200 -and $timestampJson.status -eq 'S') 'Bin API rejected a timestamp-only tracked request'
+    Check (-not [string]::IsNullOrWhiteSpace($timestampJson.requestID)) 'Timestamp-only request did not receive a generated requestID'
+    $location=Api $admin POST 'location-api' @{location_name="REST-$suffix";building_name='Block C';floor_no='Ground';description='Disposable integration fixture'} 201
     $locationId=[int]$location.data.location_id
     $read=Api $admin GET "location-api/$locationId" $null
     Check ($read.data.name -eq "REST-$suffix") 'Location read mismatch'
     $patched=Api $admin PATCH "location-api/$locationId" @{description='Updated through REST'}
     Check ($patched.data.description -eq 'Updated through REST') 'Location PATCH failed'
-    $null=Api $admin PUT "location-api/$locationId" @{location_name="REST-$suffix";building_name='Updated building';floor_no='First';description='Replaced'}
+    $null=Api $admin PUT "location-api/$locationId" @{location_name="REST-$suffix";building_name='Block D';floor_no='First';description='Replaced'}
     $bin=Api $admin POST 'bin-api' @{bin_code="TEST-$suffix";location_id=$locationId;category_id=1;capacity_litre=100;is_active=1} 201
     $binId=[int]$bin.data.id
     $null=Api $admin GET "bin-api/$binId" $null
+    $scheduleStatus=Api $admin GET "schedule-api/bin-status/$binId" $null
+    Check ($scheduleStatus.data.binId -eq $binId) 'Scheduling service returned the wrong bin'
+    Check ($null -ne $scheduleStatus.data.hasOpenAssignment) 'Scheduling service omitted assignment status'
+    $binPage=Invoke-WebRequest "$BaseUrl/bin/show/$binId" -WebSession $admin.Session
+    Check ($binPage.Content -match 'Loaded from the Scheduling REST service') 'Bin page did not consume the Scheduling REST service'
     $patched=Api $admin PATCH "bin-api/$binId" @{capacity_litre=200}
     Check ($patched.data.capacity_litre -eq 200) 'Bin PATCH did not persist'
     $null=Api $admin PUT "bin-api/$binId" @{bin_code="TEST-$suffix";location_id=$locationId;category_id=1;capacity_litre=300;is_active=1}

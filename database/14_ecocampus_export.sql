@@ -23,7 +23,11 @@
 -- complaint_types (15), the dropped description column (16) and
 -- marks_bin_full (17). The file keeps the number 14 it was first given,
 -- because that is the name the team knows it by; it is not a step in the
--- sequence and nothing after it needs running.
+-- sequence.
+--
+-- Migration 18 was created after this export. After importing this file into
+-- an empty database, also run 18_history_withdrawn.sql so complaint deletion
+-- can store the Withdrawn Observer event.
 --
 -- The numbered files are still the record of how the schema was designed
 -- and who owns each table; this file is the quickest way to a working
