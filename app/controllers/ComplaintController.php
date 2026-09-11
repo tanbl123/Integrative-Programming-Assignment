@@ -34,6 +34,10 @@ class ComplaintController extends Controller
                 'duplicateGroups' => UserPermissions::can($user, 'complaint.manage')
                     ? Complaint::duplicateGroups()
                     : [],
+                // For booking a cleaner straight from a duplicate group.
+                'cleaners' => UserPermissions::can($user, 'complaint.manage')
+                    ? User::findActiveCleaners()
+                    : [],
             ]);
         } catch (AuthenticationException|AuthorizationException $error) {
             $this->handleAccessFailure($error);
@@ -134,7 +138,7 @@ class ComplaintController extends Controller
             $user = Auth::requireLogin();
             UserPermissions::require('complaint.manage');
             Csrf::requireValid($_POST['_token'] ?? null);
-            $this->requireScalar(['schedule_date', 'time_slot', 'cleaner_id', 'notes']);
+            $this->requireScalar(['schedule_date', 'time_from', 'time_to', 'cleaner_id', 'notes', 'from']);
 
             $complaint = $this->service->findVisible($user, $id);
             if ($complaint === null) {
@@ -147,8 +151,10 @@ class ComplaintController extends Controller
             Flash::set('success', 'Cleaner booked for '
                 . ($complaint->getBin()?->getBinCode() ?? 'the bin')
                 . ' on ' . $schedule->getDate() . '. This complaint is now Assigned '
-                . 'and the reporter has been told.');
-            $this->redirect('complaint/show/' . $id);
+                . 'and every reporter has been told.');
+            // A fixed marker chooses between two known pages; nothing posted
+            // can name a destination of its own.
+            $this->redirect($this->input('from') === 'list' ? 'complaint' : 'complaint/show/' . $id);
         } catch (ValidationException $error) {
             $complaint = Complaint::find($id);
             if ($complaint === null) {
@@ -203,34 +209,35 @@ class ComplaintController extends Controller
     }
 
     /**
-     * Closes a group of duplicate reports, keeping the one the administrator
-     * chose. Each rejected complaint notifies its own reporter.
+     * Closes a whole group of reports of the same issue together.
+     *
+     * Every one of them is resolved, not one kept and the others rejected.
+     * Each reporter is notified individually by the observers.
      */
-    public function rejectDuplicates(): void
+    public function resolveDuplicates(): void
     {
         $this->requirePost();
         try {
             Csrf::requireValid($_POST['_token'] ?? null);
-            $this->requireScalar(['bin_id', 'complaint_type', 'keep_id']);
+            $this->requireScalar(['bin_id', 'complaint_type', 'remarks']);
 
-            $binId  = filter_var($_POST['bin_id'] ?? null, FILTER_VALIDATE_INT);
-            $keepId = filter_var($_POST['keep_id'] ?? null, FILTER_VALIDATE_INT);
-            if ($binId === false || $keepId === false) {
+            $binId = filter_var($_POST['bin_id'] ?? null, FILTER_VALIDATE_INT);
+            if ($binId === false) {
                 throw new ValidationException(['complaint' => 'Choose a valid group of reports.']);
             }
 
-            $rejected = $this->service->rejectDuplicates(
+            ['resolved' => $resolved, 'waiting' => $waiting] = $this->service->resolveDuplicates(
                 (int) $binId,
                 $this->input('complaint_type'),
-                (int) $keepId,
+                $this->input('remarks'),
                 Auth::requireLogin()
             );
 
-            $kept = Complaint::find((int) $keepId);
-            Flash::set('success', $rejected . ' duplicate report'
-                . ($rejected === 1 ? '' : 's')
-                . ' rejected. Complaint ' . ($kept?->getNumber() ?? '#' . (int) $keepId)
-                . ' remains open, and every reporter has been notified.');
+            Flash::set('success', $resolved . ' report' . ($resolved === 1 ? '' : 's')
+                . ' resolved, and every reporter has been told.'
+                . ($waiting === [] ? '' : ' ' . implode(', ', $waiting)
+                    . (count($waiting) === 1 ? ' is' : ' are')
+                    . ' still waiting for a cleaner to be booked.'));
             $this->redirect('complaint');
         } catch (ValidationException $error) {
             Flash::set('error', implode(' ', $error->getErrors()));

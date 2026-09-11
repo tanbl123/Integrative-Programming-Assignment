@@ -23,8 +23,9 @@
     <section class="content-card duplicate-groups">
         <h2>Duplicate reports</h2>
         <p class="lead">
-            These bins have more than one open report of the same issue.
-            Keep one and reject the rest; every reporter is told the outcome.
+            These bins have more than one open report of the same issue. One
+            collection answers all of them, so close them together and every
+            reporter is told the same thing.
         </p>
 
         <?php foreach ($duplicateGroups as $group): ?>
@@ -36,43 +37,29 @@
                     <small><?= e($group['bin']?->getLocation()?->getFullLabel() ?? '') ?></small>
                 </summary>
 
-                <?php /* The confirmation belongs on the form: ui.js reads
-                         data-confirm from the form element, so a copy on the
-                         button is silently ignored and the reports are rejected
-                         on the first click. */ ?>
-                <form
-                    method="post"
-                    action="<?= url('complaint/reject-duplicates') ?>"
-                    data-confirm="Reject the other <?= count($group['complaints']) - 1 ?> report(s) as duplicates? Each reporter will be notified."
-                >
-                    <?= csrfField() ?>
-                    <input type="hidden" name="bin_id" value="<?= (int) ($group['bin']?->getKey() ?? 0) ?>">
-                    <input type="hidden" name="complaint_type" value="<?= e($group['type']) ?>">
-
+                <?php
+                /* A group needs one of two things, never both: a cleaner sent,
+                   or - once one has been - closing together. Asking the first
+                   report in the group is enough; they all name the same bin. */
+                $booked = $group['complaints'][0]->binHasOpenCollection();
+                $first = (int) $group['complaints'][0]->getKey();
+                ?>
                     <div class="table-scroll">
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th>Keep</th><th>Complaint ID</th><th>Reporter</th>
+                                    <th>Complaint ID</th><th>Reporter</th>
                                     <th>Reason given</th><th>Status</th><th>Submitted</th><th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                             <?php foreach ($group['complaints'] as $item): ?>
                                 <tr>
-                                    <td>
-                                        <input
-                                            type="radio"
-                                            name="keep_id"
-                                            value="<?= (int) $item->getKey() ?>"
-                                            <?= (int) $item->getKey() === $group['keepId'] ? 'checked' : '' ?>
-                                            aria-label="Keep complaint #<?= (int) $item->getKey() ?>">
-                                    </td>
                                     <td><?= e($item->getNumber()) ?></td>
                                     <td><?= e($item->getReporter()?->getFullName() ?? 'Unknown') ?></td>
                                     <?php /* Each reporter described the issue in their own words. The
-                                            administrator needs them side by side to judge which report
-                                            to keep, and whether they really are the same issue. */ ?>
+                                            administrator needs them side by side to judge whether
+                                            they really are the same issue. */ ?>
                                     <td class="duplicate-reason"><?= e($item->getDescription()) ?></td>
                                     <td><span class="badge badge-status"><?= e($item->getStatus()) ?></span></td>
                                     <td><?= e($item->getCreatedAt()) ?></td>
@@ -83,12 +70,103 @@
                         </table>
                     </div>
 
-                    <button
-                        class="button button-danger"
-                        type="submit">
-                        Keep selected &middot; reject the other <?= count($group['complaints']) - 1 ?>
-                    </button>
-                </form>
+                <?php if (!$booked): ?>
+                    <?php /* Booked here rather than from the Schedules tab. A
+                             strategy chooses its own bins and sweeps up every
+                             open complaint on the campus, which is the right
+                             shape for planning a round and the wrong one for
+                             answering the group in front of you. This books
+                             the one bin these reports name; the Scheduling
+                             module still does the work, through the same
+                             endpoint the complaint page uses, and all of these
+                             reports move to Assigned with it. */ ?>
+                    <form method="post" action="<?= url('complaint/assign/' . $first) ?>">
+                        <?= csrfField() ?>
+                        <?php /* So the administrator comes back to the list they
+                                 were working through, not to one report of the
+                                 group. A fixed marker, not a URL, so nothing
+                                 posted here can choose where the site goes. */ ?>
+                        <input type="hidden" name="from" value="list">
+
+                        <p class="field-help">
+                            No cleaner is booked for
+                            <strong><?= e($group['bin']?->getBinCode() ?? 'this bin') ?></strong> yet.
+                            One visit answers all <?= count($group['complaints']) ?> reports, and every
+                            reporter is told.
+                        </p>
+
+                        <div class="form-grid time-grid">
+                            <label>
+                                Collection date
+                                <input type="date" name="schedule_date" required
+                                       min="<?= e(date('Y-m-d')) ?>" value="<?= e(date('Y-m-d')) ?>"
+                                       data-message-required="Choose the day the cleaner should go.">
+                            </label>
+
+                            <div class="time-range-field">
+                                <span class="time-range-legend">Time slot</span>
+                                <div class="time-range">
+                                    <label>From
+                                        <input type="time" name="time_from" required value="09:00"
+                                               data-message-required="Choose a start time."></label>
+                                    <label>To
+                                        <input type="time" name="time_to" required value="12:00"
+                                               data-message-required="Choose an end time."></label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <label>
+                            Cleaner
+                            <select name="cleaner_id" required>
+                                <option value="">Select a cleaner</option>
+                                <?php foreach ($cleaners as $cleaner): ?>
+                                    <option value="<?= (int) $cleaner->getKey() ?>">
+                                        <?= e($cleaner->getFullName()) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php if ($cleaners === []): ?>
+                                <span class="field-error">No active cleaner is available to assign.</span>
+                            <?php endif; ?>
+                        </label>
+
+                        <button class="button" type="submit" <?= $cleaners === [] ? 'disabled' : '' ?>>
+                            Book a cleaner for all <?= count($group['complaints']) ?> reports
+                        </button>
+                    </form>
+                <?php else: ?>
+                    <?php /* The confirmation belongs on the form: ui.js reads
+                             data-confirm from the form element, so a copy on
+                             the button is silently ignored and the reports are
+                             closed on the first click. */ ?>
+                    <form
+                        method="post"
+                        action="<?= url('complaint/resolve-duplicates') ?>"
+                        data-confirm="Resolve all <?= count($group['complaints']) ?> reports of this issue? Each reporter is told separately, and none of it can be undone."
+                    >
+                        <?= csrfField() ?>
+                        <input type="hidden" name="bin_id" value="<?= (int) ($group['bin']?->getKey() ?? 0) ?>">
+                        <input type="hidden" name="complaint_type" value="<?= e($group['type']) ?>">
+
+                        <label>
+                            What was done
+                            <input
+                                name="remarks"
+                                required
+                                maxlength="255"
+                                placeholder="e.g. Bin emptied and the area around it cleaned."
+                                data-message-required="Say what was done; every reporter is told this."
+                            >
+                            <span class="field-help">
+                                Sent to all <?= count($group['complaints']) ?> reporters with the outcome.
+                            </span>
+                        </label>
+
+                        <button class="button" type="submit">
+                            Resolve all <?= count($group['complaints']) ?> reports
+                        </button>
+                    </form>
+                <?php endif; ?>
             </details>
         <?php endforeach; ?>
     </section>
