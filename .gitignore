@@ -7,10 +7,15 @@ dist/
 # Local configuration (each developer has their own)
 config/config.local.php
 
-# Uploaded complaint photos - never commit user content
-uploads/*
-!uploads/.gitkeep
-!uploads/.htaccess
+# Complaint photos.
+#
+# Normally user uploads are kept out of version control. They are tracked here
+# on purpose: the demo database rows in complaint_attachments name files by
+# their stored_name, so without the files themselves every teammate importing
+# that data would see a broken image and think the module was faulty.
+#
+# The consequence is that any photo uploaded while testing will appear in
+# git status. Commit the ones the demo data needs and leave the rest alone.
 
 # Logs
 *.log
