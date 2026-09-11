@@ -206,12 +206,16 @@ class ComplaintService
         if ($complaint === null) { throw new OutOfBoundsException('Complaint not found.'); }
         if (!$this->canEdit($complaint, $user)) {
             throw new ValidationException([
-                'complaint' => $complaint->getReporterId() === $user->getKey()
-                    ? 'Only new complaints without open assignments can be edited.'
-                    : 'Only the reporter who submitted a complaint can change its details. '
-                    . 'Reject it with a reason instead, so the decision is recorded.']);
+                'complaint' => 'Only new complaints without open assignments can be edited.']);
         }
         [$binId, $type, $description] = $this->validateComplaint(array_replace($complaint->toArray(), $data));
+
+        // What the complaint said before, so the audit row can name what moved.
+        $before = [
+            'bin' => $complaint->getBinId(),
+            'issue type' => $complaint->getType(),
+            'description' => $complaint->getDescription(),
+        ];
 
         $stored = (new ComplaintUploadService())->validateAndStore($upload);
         $superseded = [];
@@ -233,6 +237,28 @@ class ComplaintService
                 $attachment = new ComplaintAttachment();
                 $attachment->setDetails($complaint->getKey(), $stored);
                 $attachment->save();
+            }
+
+            $changed = array_keys(array_diff_assoc(
+                ['bin' => $binId, 'issue type' => $type, 'description' => $description],
+                $before
+            ));
+            if ($stored !== null) {
+                $changed[] = 'photo';
+            } elseif ($superseded !== []) {
+                $changed[] = 'photo removed';
+            }
+
+            // Saving without changing anything is not an event worth recording.
+            if ($changed !== []) {
+                $this->subject->notify(
+                    $complaint,
+                    $complaint->getStatus(),
+                    $complaint->getStatus(),
+                    $user,
+                    'Edited: ' . implode(', ', $changed) . '.',
+                    ComplaintObserver::EVENT_DETAILS
+                );
             }
             $pdo->commit();
         } catch (Throwable $error) {
@@ -276,26 +302,27 @@ class ComplaintService
     /**
      * True when this user may change this complaint's own details right now.
      *
-     * Only the reporter who wrote it. The description is that person's account
-     * of what they saw, and update() writes no history and notifies nobody, so
-     * an Administrator editing it could soften a report - five people say a bin
-     * has vanished, the wording becomes something milder - and leave no trace
-     * that the words ever changed. The duplicate panel depends on the same
-     * thing: it sets each reporter's own wording side by side so an
-     * Administrator can judge which reports are the same issue, which is only
-     * evidence while that wording is theirs.
+     * The reporter who wrote it, or an Administrator. Editing stays shut once a
+     * complaint leaves New or a cleaner is assigned, because from that point
+     * the description is what somebody is acting upon.
      *
-     * An Administrator who believes a complaint is wrong is not without a
-     * remedy. Rejecting it passes through updateStatus(), which records a
-     * reason in the history and notifies the reporter through the observers.
-     * The judgement is then on the record, under the name of whoever made it.
-     * This is the rule that already governs deletion, applied to editing.
+     * An Administrator editing another person's report is a real power - the
+     * description is that reporter's account of what they saw, and a bin that
+     * keeps vanishing could be reworded into something milder. It is allowed
+     * because an Administrator does need to fix a plainly wrong bin so the
+     * right cleaner is sent, and because moderating abusive wording is part of
+     * running the system. What makes it safe is not the permission but the
+     * record: update() raises ComplaintObserver::EVENT_DETAILS, so the history
+     * gains a row naming who edited it and which fields changed, and the
+     * reporter is notified that their words were altered. The power exists and
+     * is answerable, rather than being silent.
      */
     public function canEdit(Complaint $complaint, User $user): bool
     {
         return $complaint->getStatus() === Complaint::STATUS_NEW
             && !$complaint->hasOpenAssignments()
-            && $complaint->getReporterId() === $user->getKey();
+            && ($complaint->getReporterId() === $user->getKey()
+                || UserPermissions::can($user, 'complaint.manage'));
     }
 
     /** True when this user may remove this complaint right now. */

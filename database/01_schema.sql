@@ -185,6 +185,9 @@ CREATE TABLE complaint_status_history (
     updated_by   INT NULL,
     old_status   VARCHAR(50) NULL,
     new_status   VARCHAR(50) NOT NULL,
+    -- Status for a lifecycle transition, Details when a complaint's own
+    -- fields were edited. Both are written by the observers.
+    change_type  ENUM('Status', 'Details') NOT NULL DEFAULT 'Status',
     remarks      VARCHAR(255) NULL,
     updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_history_complaint

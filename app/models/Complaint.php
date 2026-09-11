@@ -114,6 +114,7 @@ class Complaint extends Model
     }
 
     public function getReporterId(): int { return (int) $this->get('reporter_id'); }
+    public function getBinId(): int { return (int) $this->get('bin_id'); }
     public function getType(): string { return (string) $this->get('complaint_type'); }
     public function getDescription(): string { return (string) $this->get('description'); }
     public function getStatus(): string { return (string) $this->get('complaint_status'); }

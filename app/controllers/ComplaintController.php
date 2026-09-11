@@ -126,8 +126,7 @@ class ComplaintController extends Controller
             $complaint = $this->service->findVisible($user, $id);
             if ($complaint === null) { $this->entityNotFound('Complaint'); return; }
             if (!$this->service->canEdit($complaint, $user)) {
-                Flash::set('error', 'Only the reporter who submitted a complaint can change its '
-                    . 'details. Reject it with a reason instead, so the decision is recorded.');
+                Flash::set('error', 'Only new complaints without open assignments can be edited.');
                 $this->redirect('complaint/show/' . $id);
                 return;
             }
