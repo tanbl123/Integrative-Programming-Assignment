@@ -286,35 +286,39 @@ $assignments = $complaint->assignmentCounts();
             and moves this complaint to Assigned. The reporter is told.
         </p>
 
-        <label>
-            Collection date
-            <input
-                type="date"
-                name="schedule_date"
-                required
-                min="<?= e(date('Y-m-d')) ?>"
-                value="<?= e((string) ($_POST['schedule_date'] ?? date('Y-m-d'))) ?>"
-                data-message-required="Choose the day the cleaner should go."
-            >
-            <?php if (!empty($errors['schedule_date'])): ?>
-                <span class="field-error"><?= e($errors['schedule_date']) ?></span>
-            <?php endif; ?>
-        </label>
+        <?php /* When and how long sit together: they are one decision, and the
+                 same two-column grid the User and Schedule forms use. */ ?>
+        <div class="form-grid">
+            <label>
+                Collection date
+                <input
+                    type="date"
+                    name="schedule_date"
+                    required
+                    min="<?= e(date('Y-m-d')) ?>"
+                    value="<?= e((string) ($_POST['schedule_date'] ?? date('Y-m-d'))) ?>"
+                    data-message-required="Choose the day the cleaner should go."
+                >
+                <?php if (!empty($errors['schedule_date'])): ?>
+                    <span class="field-error"><?= e($errors['schedule_date']) ?></span>
+                <?php endif; ?>
+            </label>
 
-        <label>
-            Time slot
-            <input
-                name="time_slot"
-                required
-                maxlength="50"
-                placeholder="e.g. 09:00-12:00"
-                value="<?= e((string) ($_POST['time_slot'] ?? '')) ?>"
-                data-message-required="Give the time slot for the visit."
-            >
-            <?php if (!empty($errors['time_slot'])): ?>
-                <span class="field-error"><?= e($errors['time_slot']) ?></span>
-            <?php endif; ?>
-        </label>
+            <label>
+                Time slot
+                <input
+                    name="time_slot"
+                    required
+                    maxlength="50"
+                    placeholder="e.g. 09:00-12:00"
+                    value="<?= e((string) ($_POST['time_slot'] ?? '')) ?>"
+                    data-message-required="Give the time slot for the visit."
+                >
+                <?php if (!empty($errors['time_slot'])): ?>
+                    <span class="field-error"><?= e($errors['time_slot']) ?></span>
+                <?php endif; ?>
+            </label>
+        </div>
 
         <label>
             Cleaner
@@ -344,12 +348,11 @@ $assignments = $complaint->assignmentCounts();
             <?php endif; ?>
         </label>
 
-        <div class="form-actions">
-            <button class="button" type="submit" <?= $cleaners === [] ? 'disabled' : '' ?>>
-                Book cleaner and mark Assigned
-            </button>
-            <button class="button button-secondary" type="reset">Clear fields</button>
-        </div>
+        <?php /* No reset button here: ui.js appends one to every form that does
+                 not opt out, and declaring a second produced two. */ ?>
+        <button class="button" type="submit" <?= $cleaners === [] ? 'disabled' : '' ?>>
+            Book cleaner and mark Assigned
+        </button>
     </form>
 <?php endif; ?>
 
