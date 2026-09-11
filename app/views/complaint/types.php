@@ -42,7 +42,10 @@
             required
             maxlength="50"
             title="Give the issue type a name of 1-50 characters."
-            placeholder="Pest Sighting"
+            <?php /* "e.g." and not a bare example: on a form with one field and
+                     no other content, grey text that reads like a real value is
+                     taken for one already filled in. */ ?>
+            placeholder="e.g. Pest Sighting"
             value="<?= e((string) ($values['type_name'] ?? '')) ?>"
         >
         <?php if (!empty($errors['type_name'])): ?>
