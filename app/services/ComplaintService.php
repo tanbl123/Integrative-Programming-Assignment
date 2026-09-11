@@ -204,8 +204,12 @@ class ComplaintService
     ): Complaint {
         $complaint = $this->findVisible($user, $id);
         if ($complaint === null) { throw new OutOfBoundsException('Complaint not found.'); }
-        if ($complaint->getStatus() !== Complaint::STATUS_NEW || $complaint->hasOpenAssignments()) {
-            throw new ValidationException(['complaint' => 'Only new complaints without open assignments can be edited.']);
+        if (!$this->canEdit($complaint, $user)) {
+            throw new ValidationException([
+                'complaint' => $complaint->getReporterId() === $user->getKey()
+                    ? 'Only new complaints without open assignments can be edited.'
+                    : 'Only the reporter who submitted a complaint can change its details. '
+                    . 'Reject it with a reason instead, so the decision is recorded.']);
         }
         [$binId, $type, $description] = $this->validateComplaint(array_replace($complaint->toArray(), $data));
 
@@ -268,6 +272,31 @@ class ComplaintService
         Complaint::STATUS_NEW, Complaint::STATUS_RESOLVED, Complaint::STATUS_REJECTED,
     ];
     private const WITHDRAWABLE_BY_REPORTER = [Complaint::STATUS_NEW];
+
+    /**
+     * True when this user may change this complaint's own details right now.
+     *
+     * Only the reporter who wrote it. The description is that person's account
+     * of what they saw, and update() writes no history and notifies nobody, so
+     * an Administrator editing it could soften a report - five people say a bin
+     * has vanished, the wording becomes something milder - and leave no trace
+     * that the words ever changed. The duplicate panel depends on the same
+     * thing: it sets each reporter's own wording side by side so an
+     * Administrator can judge which reports are the same issue, which is only
+     * evidence while that wording is theirs.
+     *
+     * An Administrator who believes a complaint is wrong is not without a
+     * remedy. Rejecting it passes through updateStatus(), which records a
+     * reason in the history and notifies the reporter through the observers.
+     * The judgement is then on the record, under the name of whoever made it.
+     * This is the rule that already governs deletion, applied to editing.
+     */
+    public function canEdit(Complaint $complaint, User $user): bool
+    {
+        return $complaint->getStatus() === Complaint::STATUS_NEW
+            && !$complaint->hasOpenAssignments()
+            && $complaint->getReporterId() === $user->getKey();
+    }
 
     /** True when this user may remove this complaint right now. */
     public function canDelete(Complaint $complaint, User $user): bool

@@ -1,9 +1,10 @@
 <?php /** Complaint details/history. Author: Tan Boon Leong (2402865). Module: Complaint / Report Management. */ ?>
 
 <?php
-$canEditComplaint =
-    $complaint->getStatus() === Complaint::STATUS_NEW &&
-    !$complaint->hasOpenAssignments();
+// Decided by ComplaintService::canEdit() so the button and the service agree:
+// only the reporter who wrote a complaint may change its details, and only
+// while nobody has acted on it.
+$canEditComplaint = $canEdit;
 
 // Decided by ComplaintService::canDelete() so the button and the service
 // agree: a Reporter may withdraw only an untouched complaint, an

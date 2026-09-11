@@ -122,8 +122,15 @@ class ComplaintController extends Controller
     public function edit(int $id): void
     {
         try {
-            $complaint = $this->service->findVisible(Auth::requireLogin(), $id);
+            $user = Auth::requireLogin();
+            $complaint = $this->service->findVisible($user, $id);
             if ($complaint === null) { $this->entityNotFound('Complaint'); return; }
+            if (!$this->service->canEdit($complaint, $user)) {
+                Flash::set('error', 'Only the reporter who submitted a complaint can change its '
+                    . 'details. Reject it with a reason instead, so the decision is recorded.');
+                $this->redirect('complaint/show/' . $id);
+                return;
+            }
             $this->renderForm([], $complaint->toArray(), $id, $complaint->getAttachments());
         } catch (AuthenticationException|AuthorizationException $error) { $this->handleAccessFailure($error); }
     }
@@ -266,6 +273,7 @@ class ComplaintController extends Controller
             'statuses'            => Complaint::allowedNextStatuses($complaint->getStatus()),
             'errors'              => $errors,
             'user'                => $user,
+            'canEdit'             => $this->service->canEdit($complaint, $user),
             'canDelete'           => $this->service->canDelete($complaint, $user),
             'isAdmin'             => UserPermissions::can($user, 'complaint.manage'),
             'binInfo'             => $binInfo,
