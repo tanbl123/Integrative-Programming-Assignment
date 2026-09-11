@@ -1438,11 +1438,30 @@ a.current-photo:hover {
 
 /* Removing the photo already on a complaint.
  * Author : Tan Boon Leong (2402865) · Module : Complaint / Report Management */
+/* The photograph and its Remove button on one row: the photo takes the space
+   that is left, the button keeps its own width at the end. They stack instead
+   of squeezing on a narrow screen. */
+.current-photo-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.current-photo-row .current-photo {
+    flex: 1 1 260px;
+    margin-top: 0;
+}
+
 .remove-photo {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    margin-top: 0.5rem;
+    flex: 0 0 auto;
+}
+
+#remove-photo-note:not(:empty) {
+    margin-top: 0.4rem;
 }
 
 /* The checkbox is the baseline and only hides once the button replaces it.

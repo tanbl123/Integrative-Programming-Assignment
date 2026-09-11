@@ -98,32 +98,39 @@
         <div class="field-block">
             <span class="field-help">Current photo</span>
 
-            <?php foreach ($attachments as $current): ?>
-                <a
-                    class="current-photo"
-                    href="<?= url('complaint/attachment/' . $current->getKey()) ?>"
-                    target="_blank"
-                >
-                    <img src="<?= url('complaint/attachment/' . $current->getKey()) ?>" alt="">
-                    <span>
-                        <strong><?= e($current->getDisplayName()) ?></strong>
-                        <small><?= e($current->getReadableSize()) ?> &middot; opens in a new tab</small>
-                    </span>
-                </a>
-            <?php endforeach; ?>
+            <?php /* The photograph and the control that removes it sit on one
+                     row, so the button reads as belonging to the photo beside
+                     it rather than to the drop zone below.
 
-            <?php /* Photo evidence is optional, so a reporter must be able to
+                     Photo evidence is optional, so a reporter must be able to
                      get back to having none without withdrawing the complaint
                      and losing its number and history. The checkbox is the
-                     baseline; the script turns it into a button beside the
-                     photo, where what it removes is not in question. Nothing
+                     baseline; the script turns it into the button. Nothing
                      happens until the form is saved. */ ?>
-            <div class="remove-photo" id="remove-photo-field">
-                <label class="checkbox-label">
-                    <input type="checkbox" name="remove_attachment" value="1" id="remove-attachment">
-                    Remove this photo when I save
-                </label>
-            </div>
+            <?php foreach ($attachments as $current): ?>
+                <div class="current-photo-row">
+                    <a
+                        class="current-photo"
+                        href="<?= url('complaint/attachment/' . $current->getKey()) ?>"
+                        target="_blank"
+                    >
+                        <img src="<?= url('complaint/attachment/' . $current->getKey()) ?>" alt="">
+                        <span>
+                            <strong><?= e($current->getDisplayName()) ?></strong>
+                            <small><?= e($current->getReadableSize()) ?> &middot; opens in a new tab</small>
+                        </span>
+                    </a>
+
+                    <div class="remove-photo" id="remove-photo-field">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="remove_attachment" value="1" id="remove-attachment">
+                            Remove this photo when I save
+                        </label>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+
+            <span class="field-help" id="remove-photo-note"></span>
         </div>
     <?php endif; ?>
 
@@ -433,16 +440,16 @@
     const field = document.getElementById('remove-photo-field');
     const box = document.getElementById('attachment-remove-box') || document.getElementById('remove-attachment');
     const photo = document.querySelector('.current-photo');
-    if (!field || !box || !photo) return;
+    // Below the row rather than inside it, so a long sentence cannot squash
+    // the photograph or push the button out of line.
+    const note = document.getElementById('remove-photo-note');
+    if (!field || !box || !photo || !note) return;
 
     field.classList.add('is-enhanced');
 
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button button-secondary';
-
-    const note = document.createElement('span');
-    note.className = 'field-help';
 
     const render = () => {
         const removing = box.checked;
@@ -461,7 +468,7 @@
     // Clear fields resets the checkbox; the button has to follow it.
     box.addEventListener('change', render);
 
-    field.append(button, note);
+    field.append(button);
     render();
 })();
 </script>
