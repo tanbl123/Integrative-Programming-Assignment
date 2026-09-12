@@ -232,7 +232,9 @@ document.addEventListener('DOMContentLoaded', function () {
     location.addEventListener('change', filterBins);
 
     if (includeInactive) {
-        includeInactive.addEventListener('change', filterBins);
+        includeInactive.addEventListener('change', function () {
+            form.submit();
+        });
     }
 
     clear.addEventListener('click', function () {
