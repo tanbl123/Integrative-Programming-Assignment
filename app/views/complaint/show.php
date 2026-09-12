@@ -361,6 +361,8 @@ $assignments = $complaint->assignmentCounts();
                             required
                             value="<?= e((string) ($_POST['time_to'] ?? '12:00')) ?>"
                             data-message-required="Choose an end time."
+                            data-after="time_from"
+                            data-message-after="The end time must be later than the start time."
                         >
                     </label>
                 </div>

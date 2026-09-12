@@ -78,6 +78,8 @@ $action = $isEdit ? url('schedule/update/' . $schedule->getKey()) : url('schedul
                         required
                         value="<?= e((string) ($values['time_to'] ?? $slot['to'])) ?>"
                         data-message-required="Choose an end time."
+                        data-after="time_from"
+                        data-message-after="The end time must be later than the start time."
                     >
                 </label>
             </div>

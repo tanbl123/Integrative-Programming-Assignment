@@ -124,7 +124,9 @@
                                                data-message-required="Choose a start time."></label>
                                     <label>To
                                         <input type="time" name="time_to" required value="12:00"
-                                               data-message-required="Choose an end time."></label>
+                                               data-message-required="Choose an end time."
+                                               data-after="time_from"
+                                               data-message-after="The end time must be later than the start time."></label>
                                 </div>
                             </div>
                         </div>

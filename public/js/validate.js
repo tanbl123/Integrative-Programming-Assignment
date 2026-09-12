@@ -177,6 +177,18 @@
             }
         }
 
+        // A field that must be strictly later than another, for a time range.
+        // The 24 hour values an <input type="time"> posts compare correctly as
+        // text, so no parsing is needed. Only checked once both have a value,
+        // so an empty end time is caught by required rather than by this.
+        const afterName = field.getAttribute('data-after');
+        if (afterName !== null && value !== '') {
+            const earlier = field.form && field.form.elements[afterName];
+            if (earlier && String(earlier.value) !== '' && value <= String(earlier.value)) {
+                return say(field, 'after', '{label} must be later than the start time.', tokens);
+            }
+        }
+
         const pattern = field.getAttribute('pattern');
         if (pattern !== null && pattern !== '') {
             let expression = null;
@@ -252,20 +264,24 @@
          * filled it in and moved on. Complaining about an empty field before
          * it has been touched is noise rather than help.
          */
-        // A confirmation field must be re-checked when the field it mirrors
-        // changes, not only when the confirmation itself does.
-        const mirrors = fields.filter(field => field.getAttribute('data-match') !== null);
+        // A field that depends on another - a confirmation that must match it,
+        // or an end time that must fall after it - has to be re-checked when
+        // the field it depends on changes, not only when it itself does.
+        const dependants = fields.filter(field =>
+            field.getAttribute('data-match') !== null
+            || field.getAttribute('data-after') !== null);
 
         fields.forEach(field => {
             const recheck = () => {
                 if (field.dataset.touched === '1') {
                     check(field);
                 }
-                mirrors.forEach(mirror => {
-                    if (mirror !== field
-                        && mirror.getAttribute('data-match') === field.name
-                        && mirror.dataset.touched === '1') {
-                        check(mirror);
+                dependants.forEach(dependant => {
+                    if (dependant !== field
+                        && (dependant.getAttribute('data-match') === field.name
+                            || dependant.getAttribute('data-after') === field.name)
+                        && dependant.dataset.touched === '1') {
+                        check(dependant);
                     }
                 });
             };
