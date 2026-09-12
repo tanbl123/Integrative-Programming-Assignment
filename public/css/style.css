@@ -2024,6 +2024,28 @@ td.duplicate-reason {
     margin-bottom: 0;
 }
 
+/* Only the time-grid forms bottom-align the date to the time column
+   (.time-grid > label { align-self: end }), so only they had the bug where an
+   end-before-start error grew the time column and dragged the date down with
+   it. Anchoring the message below the inputs keeps it out of the column's
+   height, and the reserved space beneath the row stops it overlapping the next
+   field. Forms that use .form-grid without .time-grid are left untouched. */
+.time-grid .time-range-field {
+    position: relative;
+}
+
+.time-grid .time-range-field > .field-error {
+    position: absolute;
+    top: calc(100% + 0.2rem);
+    left: 0;
+    right: 0;
+    margin: 0;
+}
+
+.form-grid.time-grid {
+    margin-bottom: 2.75rem;
+}
+
 /* ---------- Footer ---------- */
 .site-footer {
     flex-shrink: 0;
